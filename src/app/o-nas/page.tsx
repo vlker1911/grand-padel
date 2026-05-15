@@ -10,9 +10,9 @@ export const metadata: Metadata = {
 };
 
 const ARENAS = [
-  { city: "Olomouc",      date: "září / říjen 2026",          courts: 7,  detail: "První hala sítě Grand Padel. 7 kurtů s nejvyšším standardem povrchu a zázemím." },
-  { city: "Ostrava",      date: "listopad / prosinec 2026",   courts: 8,  detail: "Druhá hala otevírá ještě před koncem roku 2026. 8 kurtů pro celou Moravskoslezskou aglomeraci." },
-  { city: "Praha Zličín", date: "březen 2027",                 courts: 10, detail: "Největší hala sítě. 10 kurtů v západní části Prahy s výbornou dopravní dostupností." },
+  { city: "Olomouc",      date: "září / říjen 2026",          courts: 7,  detail: "První hala sítě Grand Padel. 7 kurtů s nejvyšším standardem povrchu a zázemím.",                            photo: "/photos/padel1.png" },
+  { city: "Ostrava",      date: "listopad / prosinec 2026",   courts: 8,  detail: "Druhá hala otevírá ještě před koncem roku 2026. 8 kurtů pro celou Moravskoslezskou aglomeraci.",             photo: "/photos/padel2.png" },
+  { city: "Praha Zličín", date: "březen 2027",                 courts: 10, detail: "Největší hala sítě. 10 kurtů v západní části Prahy s výbornou dopravní dostupností.",                       photo: "/photos/padel3.png" },
 ];
 
 export default function ONas() {
@@ -25,7 +25,7 @@ export default function ONas() {
           badge="O nás"
           title="Budujeme padel v Česku"
           subtitle="Grand Padel s.r.o. staví síť moderních indoor padelových hal — s důrazem na kvalitu, komfort a jedinečný zážitek pro každého hráče."
-          photo="/photos/about.jpg"
+          photo="/photos/padel2.png"
           photoAlt="Grand Padel padel hala"
         />
 
@@ -90,7 +90,7 @@ export default function ONas() {
               {ARENAS.map((a, i) => (
                 <div key={a.city} className="rounded-2xl border border-zinc-100 overflow-hidden grid md:grid-cols-[200px_1fr_auto] hover:shadow-md transition-shadow">
                   <div className="relative h-36 md:h-auto">
-                    <Image src="/photos/arena.jpg" alt={`Grand Padel ${a.city}`} fill className="object-cover" />
+                    <Image src={a.photo} alt={`Grand Padel ${a.city}`} fill className="object-cover" />
                   </div>
                   <div className="p-6">
                     <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#801A28" }}>{i === 2 ? "2027" : "2026"} — {a.date}</span>

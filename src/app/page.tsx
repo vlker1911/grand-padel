@@ -10,9 +10,15 @@ const FEATURES = [
 ];
 
 const ARENAS = [
-  { city: "Olomouc",      date: "září / říjen 2026",          courts: 7,  status: "brzy" },
-  { city: "Ostrava",      date: "listopad / prosinec 2026",   courts: 8,  status: "brzy" },
-  { city: "Praha Zličín", date: "březen 2027",                 courts: 10, status: "plánováno" },
+  { city: "Olomouc",      date: "září / říjen 2026",          courts: 7,  status: "brzy",      photo: "/photos/padel1.png" },
+  { city: "Ostrava",      date: "listopad / prosinec 2026",   courts: 8,  status: "brzy",      photo: "/photos/padel2.png" },
+  { city: "Praha Zličín", date: "březen 2027",                 courts: 10, status: "plánováno", photo: "/photos/padel3.png" },
+];
+
+const IG_POSTS = [
+  { src: "/photos/ig1.png", caption: "Grand Padel startuje na podzim 2026 v Olomouci. Poté přidáme Ostravu a na jaře 2027 i Prahu.", href: "https://www.instagram.com/p/DYUCvb3iJNT/", title: "Co nás čeká?" },
+  { src: "/photos/ig2.png", caption: "Moderní klubová atmosféra, komunita, turnaje i hry pro každého. Přidej se!", href: "https://www.instagram.com/grandpadelcz/", title: "Komunita" },
+  { src: "/photos/ig3.png", caption: "Center kurt s tribunami — unikát, který v České republice nemá obdoby.", href: "https://www.instagram.com/grandpadelcz/", title: "Center kurt" },
 ];
 
 export default function Home() {
@@ -22,13 +28,15 @@ export default function Home() {
 
       {/* Hero — bordó s foto overlay */}
       <section className="relative flex items-center justify-center py-32 px-4 text-white overflow-hidden" style={{ backgroundColor: "#801A28", minHeight: "70vh" }}>
-        <Image
-          src="/photos/hero-homepage.jpg"
-          alt="Grand Padel — indoor padel hala"
-          fill
-          className="object-cover opacity-25"
-          priority
-        />
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
+        >
+          <source src="/video/hero.mp4" type="video/mp4" />
+        </video>
         <div className="relative z-10 max-w-3xl text-center">
           <span className="inline-block rounded-full px-4 py-1 text-sm font-medium mb-6" style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
             Olomouc · Ostrava · Praha — od 2026
@@ -62,7 +70,7 @@ export default function Home() {
             {ARENAS.map((a) => (
               <div key={a.city} className="rounded-2xl border border-zinc-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
                 <div className="relative h-44">
-                  <Image src="/photos/arena.jpg" alt={`Grand Padel ${a.city}`} fill className="object-cover" />
+                  <Image src={a.photo} alt={`Grand Padel ${a.city}`} fill className="object-cover" />
                   <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(128,26,40,0.7) 0%, transparent 60%)" }} />
                   <span className="absolute bottom-3 left-4 text-white font-bold text-lg">{a.city}</span>
                   <span className="absolute top-3 right-3 rounded-full px-2.5 py-1 text-xs font-medium text-white" style={{ backgroundColor: "rgba(128,26,40,0.85)" }}>{a.status}</span>
@@ -127,24 +135,23 @@ export default function Home() {
             </a>
           </div>
 
-          {/* Post karta */}
-          <div className="max-w-sm">
-            <a href="https://www.instagram.com/p/DYUCvb3iJNT/" target="_blank" rel="noopener noreferrer"
-              className="block rounded-2xl overflow-hidden border border-zinc-100 hover:shadow-md transition-shadow">
-              <div className="relative h-72">
-                <Image src="/photos/hero-homepage.jpg" alt="Co nás čeká?" fill className="object-cover" />
-                <div className="absolute inset-0 flex items-end p-4" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)" }}>
-                  <span className="text-white font-bold text-2xl">Co nás čeká?</span>
+          {/* Post karty */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {IG_POSTS.map((post) => (
+              <a key={post.title} href={post.href} target="_blank" rel="noopener noreferrer"
+                className="block rounded-2xl overflow-hidden border border-zinc-100 hover:shadow-md transition-shadow">
+                <div className="relative h-72">
+                  <Image src={post.src} alt={post.title} fill className="object-cover" />
+                  <div className="absolute inset-0 flex items-end p-4" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)" }}>
+                    <span className="text-white font-bold text-xl">{post.title}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="p-4">
-                <p className="text-sm leading-relaxed" style={{ color: "#374151" }}>
-                  Grand Padel startuje na podzim 2026 v Olomouci. Poté přidáme Ostravu a na jaře 2027 i Prahu.
-                  Čeká tě moderní klubová atmosféra, komunita, turnaje i hry pro každého.
-                </p>
-                <p className="text-xs mt-3" style={{ color: "#9ca3af" }}>@grandpadelcz</p>
-              </div>
-            </a>
+                <div className="p-4">
+                  <p className="text-sm leading-relaxed" style={{ color: "#374151" }}>{post.caption}</p>
+                  <p className="text-xs mt-3" style={{ color: "#9ca3af" }}>@grandpadelcz</p>
+                </div>
+              </a>
+            ))}
           </div>
         </div>
       </section>
