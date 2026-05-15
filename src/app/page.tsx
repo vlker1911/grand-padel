@@ -121,7 +121,10 @@ export default function Home() {
               <Link key={link.href} href={link.href} className="hover:text-white transition-colors">{link.label}</Link>
             ))}
           </div>
-          <div className="text-xs self-end" style={{ color: "#4b5563" }}>© {new Date().getFullYear()} Grand Padel s.r.o. Všechna práva vyhrazena.</div>
+          <div className="text-xs self-end" style={{ color: "#4b5563" }}>
+            <div>© {new Date().getFullYear()} Grand Padel s.r.o. Všechna práva vyhrazena.</div>
+            <div className="mt-1" style={{ color: "#374151" }}>v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
+          </div>
         </div>
       </footer>
     </div>
