@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import MobileMenu from "./MobileMenu";
+import NavbarAuth from "./NavbarAuth";
 
 const NAV_LINKS = [
   { href: "/rezervace", label: "Rezervace" },
@@ -41,13 +42,7 @@ export default function Navbar() {
             </Link>
           ))}
         </nav>
-        <Link
-          href="/kontakt"
-          className="hidden md:inline-flex rounded-full px-5 py-2 text-sm font-semibold text-white transition-colors"
-          style={{ backgroundColor: "#801A28" }}
-        >
-          Mám zájem
-        </Link>
+        <NavbarAuth />
         <MobileMenu />
       </div>
     </header>
