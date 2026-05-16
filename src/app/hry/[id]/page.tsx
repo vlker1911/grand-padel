@@ -1522,53 +1522,121 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
 
       {/* ===== PORADI ZAPASU ===== */}
       {aktivniTab === "poradi" && (() => {
-        const kurty = [...new Set(harmonogram.map(h => h.kurt))].sort((a, b) => a - b);
+        // CAS format: synchronizovana kola po kurtech s fixnimi casy
+        if (scoringTyp === "cas") {
+          const kurty = [...new Set(harmonogram.map(h => h.kurt))].sort((a, b) => a - b);
+          return (
+            <div className="flex flex-col gap-4">
+              <p className="text-xs" style={{ color: "#9ca3af" }}>
+                Synchronizovana kola — vsechny kurty zacinaji a konci spolu. Cas kola: <strong>{scoringLimit} min</strong>.
+              </p>
+              {kurty.map(kurt => {
+                const zapasyKurtu = harmonogram.filter(h => h.kurt === kurt).sort((a, b) => a.casStartMin - b.casStartMin);
+                return (
+                  <section key={kurt} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                    <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
+                      <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Kurt {kurt}</p>
+                    </div>
+                    <div className="divide-y divide-zinc-50">
+                      {zapasyKurtu.map(h => {
+                        const z = zapasy.find(zz => zz.id === h.zapasId);
+                        if (!z) return null;
+                        const hotovo = z.skore_tym1 != null;
+                        const skupinaLabel = z.skupina ? `Skupina ${z.skupina}` : z.faze === "playoff" ? "Finale" : z.faze.replace("playoff_pas_", "Pas ");
+                        return (
+                          <div key={h.zapasId} className="px-5 py-3 flex items-center gap-3">
+                            <div className="shrink-0 text-right w-12">
+                              <p className="text-xs font-bold tabular-nums" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>{casMinToStr(h.casStartMin)}</p>
+                              <p className="text-xs" style={{ color: "#d1d5db" }}>{casMinToStr(h.casEndMin)}</p>
+                            </div>
+                            <div className="w-px self-stretch" style={{ backgroundColor: hotovo ? "#e5e7eb" : "#801A28", opacity: 0.4 }} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs mb-0.5" style={{ color: "#9ca3af" }}>{skupinaLabel}</p>
+                              <p className="text-sm font-semibold truncate" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>
+                                {jmenoTymu(z.tym1_id)} <span style={{ color: "#d1d5db" }}>vs</span> {jmenoTymu(z.tym2_id)}
+                              </p>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              {hotovo
+                                ? <span className="text-sm font-bold" style={{ color: "#6b7280" }}>{z.skore_tym1} : {z.skore_tym2}</span>
+                                : z.stav === "probiha"
+                                ? <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
+                                : <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Planovany</span>
+                              }
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          );
+        }
+
+        // GAMY / BODY format: fronta bez fixnich casu
+        // Razeni: skupiny nejdriv (po skupinach abecedne, v ramci zapasy po poradi), pak playoff (po fazich)
+        const skupinyZapasy = zapasySkupin.slice().sort((a, b) => {
+          const sa = a.skupina ?? "", sb = b.skupina ?? "";
+          if (sa !== sb) return sa.localeCompare(sb);
+          return (a.created_at ?? "").localeCompare(b.created_at ?? "");
+        });
+        const playoffZapasy = zapasyPlayoff.slice().sort((a, b) => (a.faze ?? "").localeCompare(b.faze ?? ""));
+        const fronta = [...skupinyZapasy, ...playoffZapasy];
+        const pocetKurtu = hra.pocet_kurtu;
+
         return (
           <div className="flex flex-col gap-4">
-            <p className="text-xs" style={{ color: "#9ca3af" }}>
-              Odhadovany rozpis dle poctu kurtu. Cas je orientacni — fronta se prepocita po dokonceni zapasu.
-            </p>
-            {kurty.map(kurt => {
-              const zapasyKurtu = harmonogram.filter(h => h.kurt === kurt).sort((a, b) => a.casStartMin - b.casStartMin);
-              return (
-                <section key={kurt} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
-                  <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
-                    <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Kurt {kurt}</p>
-                  </div>
-                  <div className="divide-y divide-zinc-50">
-                    {zapasyKurtu.map(h => {
-                      const z = zapasy.find(zz => zz.id === h.zapasId);
-                      if (!z) return null;
-                      const hotovo = z.skore_tym1 != null;
-                      const skupinaLabel = z.skupina ? `Skupina ${z.skupina}` : z.faze === "playoff" ? "Finale" : z.faze.replace("playoff_pas_", "Pas ");
-                      return (
-                        <div key={h.zapasId} className="px-5 py-3 flex items-center gap-3">
-                          <div className="shrink-0 text-right w-12">
-                            <p className="text-xs font-bold tabular-nums" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>{casMinToStr(h.casStartMin)}</p>
-                            <p className="text-xs" style={{ color: "#d1d5db" }}>{casMinToStr(h.casEndMin)}</p>
-                          </div>
-                          <div className="w-px self-stretch" style={{ backgroundColor: hotovo ? "#e5e7eb" : "#801A28", opacity: 0.4 }} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs mb-0.5" style={{ color: "#9ca3af" }}>{skupinaLabel}</p>
-                            <p className="text-sm font-semibold truncate" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>
-                              {jmenoTymu(z.tym1_id)} <span style={{ color: "#d1d5db" }}>vs</span> {jmenoTymu(z.tym2_id)}
-                            </p>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            {hotovo
-                              ? <span className="text-sm font-bold" style={{ color: "#6b7280" }}>{z.skore_tym1} : {z.skore_tym2}</span>
-                              : z.stav === "probiha"
-                              ? <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
-                              : <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Planovany</span>
-                            }
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
-              );
-            })}
+            <div className="rounded-xl p-3" style={{ backgroundColor: "#F2EDE4" }}>
+              <p className="text-xs" style={{ color: "#374151" }}>
+                <strong>Fronta zapasu</strong> — prvni {pocetKurtu} zapasy startuji na vsech kurtech v {hra.settings?.cas_od}.
+                Po dokonceni zapasu se uvolneny kurt prevezme dalsim zapasem v poradi.
+                <br/><span style={{ color: "#9ca3af" }}>Kurt se prirazuje dynamicky — gamy a body neumi predikovat presny cas konce zapasu (6:0 vs 7:6 tiebreak).</span>
+              </p>
+            </div>
+            <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+              <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
+                <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Fronta zapasu ({fronta.length})</p>
+              </div>
+              <div className="divide-y divide-zinc-50">
+                {fronta.map((z, idx) => {
+                  const hotovo = z.skore_tym1 != null;
+                  const skupinaLabel = z.skupina ? `Skupina ${z.skupina}` : z.faze === "playoff" ? "Finale" : z.faze.replace("playoff_pas_", "Pas ");
+                  const prvni = idx < pocetKurtu;
+                  return (
+                    <div key={z.id} className="px-5 py-3 flex items-center gap-3">
+                      <div className="shrink-0 w-10 text-center">
+                        <p className="text-xs font-bold" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>#{idx + 1}</p>
+                        {prvni && !hotovo && z.stav !== "probiha" && (
+                          <p className="text-xs mt-0.5" style={{ color: "#801A28" }}>Kurt {idx + 1}</p>
+                        )}
+                        {z.kurt && (z.stav === "probiha" || hotovo) && (
+                          <p className="text-xs mt-0.5" style={{ color: "#801A28" }}>Kurt {z.kurt}</p>
+                        )}
+                      </div>
+                      <div className="w-px self-stretch" style={{ backgroundColor: hotovo ? "#e5e7eb" : "#801A28", opacity: 0.4 }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs mb-0.5" style={{ color: "#9ca3af" }}>{skupinaLabel}</p>
+                        <p className="text-sm font-semibold truncate" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>
+                          {jmenoTymu(z.tym1_id)} <span style={{ color: "#d1d5db" }}>vs</span> {jmenoTymu(z.tym2_id)}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        {hotovo
+                          ? <span className="text-sm font-bold" style={{ color: "#6b7280" }}>{z.skore_tym1} : {z.skore_tym2}</span>
+                          : z.stav === "probiha"
+                          ? <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
+                          : prvni
+                          ? <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#fff5f5", color: "#801A28" }}>Pripraveny</span>
+                          : <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Ve fronte</span>
+                        }
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           </div>
         );
       })()}

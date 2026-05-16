@@ -588,13 +588,18 @@ export default function NovaHraPage() {
                             )}
                             {turnajSeNevejde && (
                               <div className="rounded-xl p-3 mt-1" style={{ backgroundColor: "#fef2f2", borderLeft: "3px solid #801A28" }}>
-                                <p className="text-xs font-semibold mb-1" style={{ color: "#801A28" }}>Turnaj se nemusi vejit do casu</p>
+                                <p className="text-xs font-semibold mb-1" style={{ color: "#801A28" }}>Turnaj nelze stihnout</p>
                                 <p className="text-xs" style={{ color: "#7f1d1d" }}>
-                                  Odhad: {odhadTurnaje?.text}, k dispozici jen {celkemMinut} min.
-                                  Doporucujeme prepnout na format <strong>Cas</strong> — kolo se prizpusobi automaticky.
+                                  Odhad casu: <strong>{odhadTurnaje?.text}</strong>, k dispozici jen <strong>{Math.floor(celkemMinut/60)}h {celkemMinut % 60}min</strong>.
+                                  <br/>Mas tri moznosti:
                                 </p>
+                                <ul className="text-xs mt-1.5 ml-3 list-disc" style={{ color: "#7f1d1d" }}>
+                                  <li>Prodlouz cas (zmen <em>Cas k dispozici</em> vyse)</li>
+                                  <li>Pridej kurty (zmen <em>Pocet kurtu</em> vyse)</li>
+                                  <li>Prepnout na format <strong>Cas</strong> — kolo se prizpusobi automaticky:</li>
+                                </ul>
                                 <button onClick={() => { setScoringTyp("cas"); setScoringLimit(12); setScoringLimitPlayoff(12); }}
-                                  className="text-xs underline mt-1.5" style={{ color: "#801A28" }}>
+                                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white mt-2" style={{ backgroundColor: "#801A28" }}>
                                   Prepnout na Cas
                                 </button>
                               </div>
@@ -641,10 +646,16 @@ export default function NovaHraPage() {
                 </div>
               )}
 
-              <button onClick={() => setKrok(2)} disabled={!typ || (typ === "turnaj" && scoringTyp === "cas" && autoKolo !== null && !autoKolo.validni)}
-                className="w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-40"
+              <button onClick={() => setKrok(2)} disabled={
+                !typ ||
+                (typ === "turnaj" && scoringTyp === "cas" && autoKolo !== null && !autoKolo.validni) ||
+                (typ === "turnaj" && scoringTyp !== "cas" && turnajSeNevejde)
+              }
+                className="w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#801A28" }}>
-                Pokracovat
+                {typ === "turnaj" && turnajSeNevejde && scoringTyp !== "cas"
+                  ? "Turnaj se nevejde do casu"
+                  : "Pokracovat"}
               </button>
             </div>
           )}
