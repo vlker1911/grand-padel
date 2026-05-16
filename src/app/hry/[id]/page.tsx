@@ -1103,7 +1103,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
         )}
         {!zobrazInputy && (
           <p className="text-xs mt-1 text-right" style={{ color: "#9ca3af" }}>
-            {scoringTyp === "gamy" ? `gamy do ${limit}` : `${limit} bodu`}
+            {scoringTyp === "gamy" ? `do ${limit} gamu` : scoringTyp === "cas" ? `${limit} minut` : `${limit} bodu`}
           </p>
         )}
       </div>
@@ -1130,7 +1130,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
           <span style={{ color: "#d1d5db" }}>·</span>
           <span><strong>{skupinyNazvy.length}</strong> {skupinyNazvy.length === 1 ? "skupina" : skupinyNazvy.length < 5 ? "skupiny" : "skupin"}</span>
           <span style={{ color: "#d1d5db" }}>·</span>
-          <span>{scoringTyp === "gamy" ? `gamy do ${scoringLimit}` : `${scoringLimit} bodu/zapas`}</span>
+          <span>{scoringTyp === "gamy" ? `do ${scoringLimit} gamu` : scoringTyp === "cas" ? `${scoringLimit} min/zapas` : `${scoringLimit} bodu/zapas`}</span>
           {playoff && <><span style={{ color: "#d1d5db" }}>·</span><span>playoff</span></>}
           {hra.settings?.cas_od && hra.settings?.cas_do && (
             <><span style={{ color: "#d1d5db" }}>·</span><span>{hra.settings.cas_od} – {hra.settings.cas_do}</span></>

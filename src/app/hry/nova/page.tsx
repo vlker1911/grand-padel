@@ -382,17 +382,11 @@ export default function NovaHraPage() {
                   {typ === "americano" && (
                     <div className="flex flex-col gap-1.5">
                       <label className="text-sm font-medium" style={{ color: "#374151" }}>Body na zapas</label>
-                      <div className="flex gap-2 items-center">
-                        {[16, 24, 32].map(b => (
-                          <button key={b} onClick={() => setBodyNaZapas(b)}
-                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${bodyNaZapas === b ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                            {b}
-                          </button>
-                        ))}
+                      <div className="flex items-center gap-3">
                         <input type="number" min={8} max={99} value={bodyNaZapas} onChange={e => setBodyNaZapas(Number(e.target.value))}
-                          className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none" />
+                          className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                        <p className="text-sm flex-1" style={{ color: "#6b7280" }}>= cca {odhadMinut(bodyNaZapas)} minut na zapas</p>
                       </div>
-                      <p className="text-xs" style={{ color: "#9ca3af" }}>{bodyNaZapas} bodu = cca {odhadMinut(bodyNaZapas)} minut na zapas</p>
                     </div>
                   )}
 
@@ -409,15 +403,10 @@ export default function NovaHraPage() {
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-medium" style={{ color: "#374151" }}>Minut na kolo</label>
-                        <div className="flex gap-2 items-center">
-                          {[10, 12, 15].map(m => (
-                            <button key={m} onClick={() => setMinutNaKolo(m)}
-                              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${minutNaKolo === m ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                              {m} min
-                            </button>
-                          ))}
-                          <input type="number" min={5} max={30} value={minutNaKolo} onChange={e => setMinutNaKolo(Number(e.target.value))}
-                            className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none" />
+                        <div className="flex items-center gap-3">
+                          <input type="number" min={1} max={60} value={minutNaKolo} onChange={e => setMinutNaKolo(Number(e.target.value))}
+                            className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                          <span className="text-sm" style={{ color: "#6b7280" }}>min</span>
                         </div>
                         {(() => {
                           const [hOd, mOd] = casOd.split(":").map(Number);
@@ -429,16 +418,11 @@ export default function NovaHraPage() {
                         })()}
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Cas na presun (min)</label>
-                        <div className="flex gap-2 items-center">
-                          {[2, 3, 5].map(m => (
-                            <button key={m} onClick={() => setMinutPresunu(m)}
-                              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${minutPresunu === m ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                              {m} min
-                            </button>
-                          ))}
-                          <input type="number" min={1} max={15} value={minutPresunu} onChange={e => setMinutPresunu(Number(e.target.value))}
-                            className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none" />
+                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Cas na presun</label>
+                        <div className="flex items-center gap-3">
+                          <input type="number" min={0} max={30} value={minutPresunu} onChange={e => setMinutPresunu(Number(e.target.value))}
+                            className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                          <span className="text-sm" style={{ color: "#6b7280" }}>min</span>
                         </div>
                       </div>
                     </>
@@ -513,44 +497,31 @@ export default function NovaHraPage() {
                         <label className="text-sm font-medium" style={{ color: "#374151" }}>Format zapasu</label>
                         <div className="flex gap-2">
                           {(["gamy", "body", "cas"] as const).map(t => (
-                            <button key={t} onClick={() => { setScoringTyp(t); setScoringLimit(t === "gamy" ? 6 : t === "body" ? 24 : 12); }}
+                            <button key={t} onClick={() => { setScoringTyp(t); setScoringLimit(t === "gamy" ? 6 : t === "body" ? 24 : 12); setScoringLimitPlayoff(t === "gamy" ? 6 : t === "body" ? 24 : 12); }}
                               className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${scoringTyp === t ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
                               {t === "gamy" ? "Gamy" : t === "body" ? "Body" : "Cas"}
                             </button>
                           ))}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs shrink-0" style={{ color: "#6b7280" }}>
-                            {scoringTyp === "gamy" ? "Gamy na zapas:" : scoringTyp === "body" ? "Body na zapas:" : "Minut na zapas:"}
-                          </label>
-                          <div className="flex gap-1.5 flex-1">
-                            {(scoringTyp === "gamy" ? [4, 5, 6] : scoringTyp === "body" ? [16, 24, 32] : [10, 12, 15]).map(n => (
-                              <button key={n} onClick={() => setScoringLimit(n)}
-                                className={`flex-1 rounded-lg py-2 text-sm font-semibold border-2 transition-all ${scoringLimit === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                                {n}
-                              </button>
-                            ))}
-                            <input type="number" min={1} max={99} value={scoringLimit} onChange={e => setScoringLimit(Number(e.target.value))}
-                              className="w-14 rounded-lg border-2 border-zinc-200 px-2 py-2 text-sm text-center focus:outline-none" />
-                          </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <input type="number" min={1} max={99} value={scoringLimit} onChange={e => setScoringLimit(Number(e.target.value))}
+                            className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                          <span className="text-sm" style={{ color: "#6b7280" }}>
+                            {scoringTyp === "gamy" ? "gamy na zapas" : scoringTyp === "body" ? "bodu na zapas" : "minut na zapas"}
+                          </span>
                         </div>
-                        <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "#6b7280" }}>
+                        <label className="flex items-center gap-2 text-xs cursor-pointer mt-1" style={{ color: "#6b7280" }}>
                           <input type="checkbox" checked={odlisnyScoring} onChange={e => setOdlisnyScoring(e.target.checked)} className="rounded" />
                           Jiny format pro playoff
                         </label>
                         {odlisnyScoring && (
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs shrink-0" style={{ color: "#6b7280" }}>Playoff:</label>
-                            <div className="flex gap-1.5 flex-1">
-                              {(scoringTyp === "gamy" ? [4, 5, 6] : scoringTyp === "body" ? [16, 24, 32] : [10, 12, 15]).map(n => (
-                                <button key={n} onClick={() => setScoringLimitPlayoff(n)}
-                                  className={`flex-1 rounded-lg py-2 text-sm font-semibold border-2 transition-all ${scoringLimitPlayoff === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                                  {n}
-                                </button>
-                              ))}
-                              <input type="number" min={1} max={99} value={scoringLimitPlayoff} onChange={e => setScoringLimitPlayoff(Number(e.target.value))}
-                                className="w-14 rounded-lg border-2 border-zinc-200 px-2 py-2 text-sm text-center focus:outline-none" />
-                            </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs shrink-0" style={{ color: "#6b7280" }}>Playoff:</span>
+                            <input type="number" min={1} max={99} value={scoringLimitPlayoff} onChange={e => setScoringLimitPlayoff(Number(e.target.value))}
+                              className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                            <span className="text-sm" style={{ color: "#6b7280" }}>
+                              {scoringTyp === "gamy" ? "gamy" : scoringTyp === "body" ? "bodu" : "minut"}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -828,8 +799,18 @@ export default function NovaHraPage() {
               <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col gap-1.5">
                 <p className="text-sm font-semibold mb-1" style={{ color: "#0A0A0A" }}>Souhrn</p>
                 <p className="text-xs" style={{ color: "#6b7280" }}>
-                  Scoring: {scoringTyp === "gamy" ? `gamy do ${scoringLimit}` : `${scoringLimit} bodu na zapas`}
-                  {odlisnyScoring ? ` · playoff: ${scoringTyp === "gamy" ? `do ${scoringLimitPlayoff}` : `${scoringLimitPlayoff} b`}` : ""}
+                  Format: {scoringTyp === "gamy"
+                    ? `do ${scoringLimit} gamu`
+                    : scoringTyp === "body"
+                    ? `${scoringLimit} bodu na zapas`
+                    : `${scoringLimit} minut na zapas`}
+                  {odlisnyScoring
+                    ? ` · playoff: ${scoringTyp === "gamy"
+                        ? `do ${scoringLimitPlayoff}`
+                        : scoringTyp === "body"
+                        ? `${scoringLimitPlayoff} bodu`
+                        : `${scoringLimitPlayoff} minut`}`
+                    : ""}
                 </p>
                 <p className="text-xs" style={{ color: "#6b7280" }}>
                   Playoff: {playoff
