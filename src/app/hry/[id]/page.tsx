@@ -30,6 +30,9 @@ type Hra = {
     typ_playoff?: "krizovy" | "primy";
     multi_tier?: boolean;
     typ_parovani?: "pary" | "singles" | "mix";
+    popis?: string;
+    pravidla?: string;
+    rezim_kurtu?: "auto" | "1-1" | "2-1";
   } | null;
 };
 
@@ -755,7 +758,14 @@ type TurnajZapas = {
   tym2_id: string;
   skore_tym1: number | null;
   skore_tym2: number | null;
+  vitez_id: string | null;
+  kurt: number | null;
+  poradi_fronta: number | null;
+  cas_zacatek: string | null;
+  cas_konec: string | null;
+  umisteni: string | null;
   stav: string;
+  created_at: string | null;
 };
 
 type TurnajSettings = {
@@ -893,11 +903,11 @@ function pairPlayoffMatches(
   const zapasy: Omit<TurnajZapas, "id">[] = [];
   if (typPlayoff === "krizovy" && skupNames.length >= 2) {
     for (let i = 0; i + 1 < tymy.length; i += 2) {
-      zapasy.push({ hra_id: hraId, faze, skupina: null, kolo, tym1_id: tymy[i].id, tym2_id: tymy[i + 1].id, skore_tym1: null, skore_tym2: null, stav: "ceka" });
+      zapasy.push({ hra_id: hraId, faze, skupina: null, kolo, tym1_id: tymy[i].id, tym2_id: tymy[i + 1].id, skore_tym1: null, skore_tym2: null, vitez_id: null, kurt: null, poradi_fronta: null, cas_zacatek: null, cas_konec: null, umisteni: null, stav: "ceka", created_at: null });
     }
   } else {
     for (let i = 0; i + 1 < tymy.length; i += 2) {
-      zapasy.push({ hra_id: hraId, faze, skupina: null, kolo, tym1_id: tymy[i].id, tym2_id: tymy[i + 1].id, skore_tym1: null, skore_tym2: null, stav: "ceka" });
+      zapasy.push({ hra_id: hraId, faze, skupina: null, kolo, tym1_id: tymy[i].id, tym2_id: tymy[i + 1].id, skore_tym1: null, skore_tym2: null, vitez_id: null, kurt: null, poradi_fronta: null, cas_zacatek: null, cas_konec: null, umisteni: null, stav: "ceka", created_at: null });
     }
   }
   return zapasy;
@@ -915,12 +925,20 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
 
   const [tymy, setTymy] = useState<TurnajTym[]>([]);
   const [zapasy, setZapasy] = useState<TurnajZapas[]>([]);
+  const [hraciDB, setHraciDB] = useState<Ucastnik[]>([]);
   const [loading, setLoading] = useState(true);
   const [scoreMap, setScoreMap] = useState<Record<string, { s1: string; s2: string }>>({});
   const [ukladam, setUkladam] = useState<string | null>(null);
   const [upravitId, setUpravitId] = useState<string | null>(null);
   const [generujiPlayoff, setGenerujiPlayoff] = useState(false);
-  const [aktivniFaze, setAktivniFaze] = useState<"skupiny" | "playoff" | "harmonogram">("skupiny");
+  type Tab = "info" | "rozlosovani" | "poradi" | "tabulky" | "scoreboard" | "hraci";
+  const [aktivniTab, setAktivniTab] = useState<Tab>("info");
+  const [filtrSkupiny, setFiltrSkupiny] = useState<string>("vse");
+  const [hledat, setHledat] = useState("");
+  const [editInfo, setEditInfo] = useState(false);
+  const [popis, setPopis] = useState((hra.settings as { popis?: string })?.popis ?? "");
+  const [pravidla, setPravidla] = useState((hra.settings as { pravidla?: string })?.pravidla ?? "");
+  const [ukladamInfo, setUkladamInfo] = useState(false);
   const [zrusitModal, setZrusitModal] = useState(false);
   const [zrusitDuvod, setZrusitDuvod] = useState("");
   const [zrusujem, setZrusujem]   = useState(false);
@@ -928,12 +946,14 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   const jeZruseno = hra.settings?.zruseno === true;
 
   const nactiTurnaj = useCallback(async () => {
-    const [{ data: tymyData }, { data: zapasyData }] = await Promise.all([
+    const [{ data: tymyData }, { data: zapasyData }, { data: hraciData }] = await Promise.all([
       supabase.from("turnaj_tymy").select("*").eq("hra_id", hra.id).order("nasazeni"),
       supabase.from("turnaj_zapasy").select("*").eq("hra_id", hra.id),
+      supabase.from("hra_ucastnici").select("*").eq("hra_id", hra.id),
     ]);
     setTymy(tymyData ?? []);
     setZapasy(zapasyData ?? []);
+    setHraciDB(hraciData ?? []);
     setLoading(false);
   }, [hra.id, supabase]);
 
@@ -1069,6 +1089,15 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
     nactiTurnaj();
   }
 
+  async function ulozInfo() {
+    setUkladamInfo(true);
+    const noveSettings = { ...(hra.settings ?? {}), popis: popis.trim(), pravidla: pravidla.trim() };
+    await supabase.from("hry").update({ settings: noveSettings }).eq("id", hra.id);
+    setEditInfo(false);
+    setUkladamInfo(false);
+    nactiTurnaj();
+  }
+
   async function provedZruseniTurnaje() {
     if (!zrusitDuvod.trim()) return;
     setZrusujem(true);
@@ -1090,7 +1119,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
     const noveZapasy = generujPlayoff(skupinyMap, zapasySkupin, typPlayoff, multiTier, hra.id);
     await supabase.from("turnaj_zapasy").insert(noveZapasy);
     nactiTurnaj();
-    setAktivniFaze("playoff");
+    setAktivniTab("tabulky");
     setGenerujiPlayoff(false);
   }
 
@@ -1259,159 +1288,150 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
         </div>
       </section>
 
-      {/* Faze prepinac */}
-      <div className="flex gap-2">
+      {/* Tab switcher — 6 tabu, horizontalne scrollovatelne */}
+      <div className="flex gap-1 overflow-x-auto border-b border-zinc-200 -mx-4 px-4 sm:mx-0 sm:px-0">
         {([
-          { k: "skupiny", l: "Skupiny" },
-          ...(playoffExistuje ? [{ k: "playoff", l: "Playoff" }] : []),
-          { k: "harmonogram", l: "Harmonogram" },
-        ] as { k: typeof aktivniFaze; l: string }[]).map(f => (
-          <button key={f.k} onClick={() => setAktivniFaze(f.k)}
-            className="flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all"
-            style={{ borderColor: aktivniFaze === f.k ? "#801A28" : "#e5e7eb", color: aktivniFaze === f.k ? "#801A28" : "#6b7280", backgroundColor: aktivniFaze === f.k ? "#fff5f5" : "white" }}>
-            {f.l}
+          { k: "info",         l: "Info" },
+          { k: "rozlosovani",  l: "Rozlosovani" },
+          { k: "poradi",       l: "Poradi zapasu" },
+          { k: "tabulky",      l: "Tabulky" },
+          { k: "scoreboard",   l: "Scoreboard" },
+          { k: "hraci",        l: "Hraci" },
+        ] as { k: Tab; l: string }[]).map(t => (
+          <button key={t.k} onClick={() => setAktivniTab(t.k)}
+            className="px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap border-b-2 -mb-px"
+            style={{ borderColor: aktivniTab === t.k ? "#801A28" : "transparent", color: aktivniTab === t.k ? "#801A28" : "#6b7280" }}>
+            {t.l}
           </button>
         ))}
       </div>
 
-      {/* ===== SKUPINY ===== */}
-      {aktivniFaze === "skupiny" && skupinyNazvy.map(sName => {
-        const tymySkupiny = skupinyMap[sName] ?? [];
-        const zapasyTeto = zapasySkupin.filter(z => z.skupina === sName);
-        const tabulka = skupinaTabulka(tymySkupiny, zapasyTeto);
-
-        return (
-          <div key={sName} className="flex flex-col gap-3">
-            {/* Tabulka skupiny */}
-            <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
-              <div className="px-5 py-4 border-b border-zinc-100">
-                <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Skupina {sName}</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[400px]">
-                  <thead>
-                    <tr style={{ backgroundColor: "#fafafa" }}>
-                      <th className="text-left pl-5 pr-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>#</th>
-                      <th className="text-left px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>Tym</th>
-                      <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>V</th>
-                      <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>R</th>
-                      <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>P</th>
-                      <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>Skore</th>
-                      <th className="text-center px-2 pr-5 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>+/-</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tabulka.map((t, i) => (
-                      <tr key={t.id} className="border-t border-zinc-50">
-                        <td className="pl-5 pr-2 py-3 font-bold text-xs" style={{ color: i < 2 ? "#801A28" : "#9ca3af" }}>{i + 1}</td>
-                        <td className="px-2 py-3 font-semibold text-sm" style={{ color: "#0A0A0A" }}>{t.nazev}</td>
-                        <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#16a34a" }}>{t.vyhry}</td>
-                        <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#6b7280" }}>{t.remisy}</td>
-                        <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#dc2626" }}>{t.prohry}</td>
-                        <td className="px-2 py-3 text-center text-xs font-bold" style={{ color: "#801A28" }}>{t.skore}</td>
-                        <td className="px-2 pr-5 py-3 text-center text-xs font-semibold" style={{ color: t.rozdil >= 0 ? "#16a34a" : "#dc2626" }}>
-                          {t.rozdil >= 0 ? "+" : ""}{t.rozdil}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            {/* Zapasy skupiny */}
-            <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
-              <div className="px-5 py-4 border-b border-zinc-100">
-                <p className="text-xs font-medium" style={{ color: "#6b7280" }}>Zapasy — skupina {sName}</p>
-              </div>
-              <div className="divide-y divide-zinc-50">
-                {zapasyTeto.map(z => renderZapas(z, scoringLimit))}
-              </div>
-            </section>
+      {/* ===== INFO ===== */}
+      {aktivniTab === "info" && (
+        <section className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Informace o turnaji</h2>
+            {jeEditor && !editInfo && !jeZruseno && (
+              <button onClick={() => setEditInfo(true)} className="text-xs underline" style={{ color: "#801A28" }}>upravit</button>
+            )}
           </div>
-        );
-      })}
+          {editInfo ? (
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Popis turnaje</label>
+                <textarea value={popis} onChange={e => setPopis(e.target.value)} rows={3}
+                  placeholder="Napr. otevreny mix turnaj pro hrace 4+, prizes..."
+                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28] resize-none" />
+              </div>
+              <div>
+                <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Pravidla</label>
+                <textarea value={pravidla} onChange={e => setPravidla(e.target.value)} rows={3}
+                  placeholder="Napr. tie-break v rozhodujicim gemu, lerne case..."
+                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28] resize-none" />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => { setEditInfo(false); setPopis((hra.settings as { popis?: string })?.popis ?? ""); setPravidla((hra.settings as { pravidla?: string })?.pravidla ?? ""); }}
+                  className="rounded-lg px-3 py-2 text-xs font-medium border border-zinc-200" style={{ color: "#374151" }}>Zrusit</button>
+                <button onClick={ulozInfo} disabled={ukladamInfo}
+                  className="rounded-lg px-4 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: "#801A28" }}>
+                  {ukladamInfo ? "Ukladam..." : "Ulozit"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 text-sm" style={{ color: "#374151" }}>
+              {(hra.settings as { popis?: string })?.popis ? (
+                <div><p className="text-xs font-semibold mb-1" style={{ color: "#9ca3af" }}>POPIS</p><p className="whitespace-pre-wrap">{(hra.settings as { popis?: string }).popis}</p></div>
+              ) : <p className="text-xs italic" style={{ color: "#9ca3af" }}>Popis turnaje zatim nevyplnen.</p>}
+              {(hra.settings as { pravidla?: string })?.pravidla && (
+                <div><p className="text-xs font-semibold mb-1" style={{ color: "#9ca3af" }}>PRAVIDLA</p><p className="whitespace-pre-wrap">{(hra.settings as { pravidla?: string }).pravidla}</p></div>
+              )}
+            </div>
+          )}
 
-      {/* Generovat playoff */}
-      {aktivniFaze === "skupiny" && jeEditor && playoff && vsechnySkupinyHotove && !playoffExistuje && (
-        <button onClick={vytvorPlayoff} disabled={generujiPlayoff}
-          className="w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: "#801A28" }}>
-          {generujiPlayoff ? "Generuji playoff..." : "Zahajit playoff"}
-        </button>
+          {/* Meta info — vzdy viditelne */}
+          <div className="border-t border-zinc-100 pt-4 grid grid-cols-2 gap-3 text-xs" style={{ color: "#6b7280" }}>
+            <div><span style={{ color: "#9ca3af" }}>Format:</span> <strong>{scoringTyp === "gamy" ? `do ${scoringLimit} gamu` : scoringTyp === "cas" ? `${scoringLimit} minut` : `${scoringLimit} bodu`}</strong></div>
+            <div><span style={{ color: "#9ca3af" }}>Pocet tymu:</span> <strong>{tymy.length}</strong></div>
+            <div><span style={{ color: "#9ca3af" }}>Skupin:</span> <strong>{skupinyNazvy.length}</strong></div>
+            <div><span style={{ color: "#9ca3af" }}>Playoff:</span> <strong>{playoff ? "ano" : "ne"}</strong></div>
+            {hra.settings?.cas_od && hra.settings?.cas_do && (
+              <div className="col-span-2"><span style={{ color: "#9ca3af" }}>Cas:</span> <strong>{hra.settings.cas_od} – {hra.settings.cas_do}</strong></div>
+            )}
+          </div>
+        </section>
       )}
 
-      {/* Vyhodnotit — kdyz je vse hotovo */}
-      {vsechnoHotove && (
-        <>
-          <button onClick={() => setZobrazOhnostroj(true)}
-            className="w-full rounded-full py-3 text-sm font-semibold text-white"
-            style={{ backgroundColor: "#801A28" }}>
-            Vyhodnotit — zobrazit viteze
-          </button>
-          {finalniPoradi.length > 0 && (
+      {/* ===== ROZLOSOVANI ===== */}
+      {aktivniTab === "rozlosovani" && (
+        <div className="flex flex-col gap-4">
+          {skupinyNazvy.map(sName => {
+            const skupinaTymy = skupinyMap[sName] ?? [];
+            const zapasyTeto = zapasySkupin.filter(z => z.skupina === sName);
+            return (
+              <section key={sName} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
+                  <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Skupina {sName}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>{skupinaTymy.length} tymu · {(skupinaTymy.length * (skupinaTymy.length - 1)) / 2} zapasu</p>
+                </div>
+                <div className="divide-y divide-zinc-50">
+                  {skupinaTymy.map((t, i) => (
+                    <div key={t.id} className="px-5 py-2.5 flex items-center gap-3 text-sm">
+                      <span className="w-5 shrink-0 text-xs" style={{ color: "#9ca3af" }}>{i + 1}.</span>
+                      <span className="font-medium" style={{ color: "#0A0A0A" }}>{t.nazev}</span>
+                    </div>
+                  ))}
+                </div>
+                <details className="border-t border-zinc-50">
+                  <summary className="px-5 py-2 text-xs cursor-pointer hover:bg-zinc-50" style={{ color: "#9ca3af" }}>
+                    Zobrazit zapasy ({zapasyTeto.length})
+                  </summary>
+                  <div className="divide-y divide-zinc-50">
+                    {zapasyTeto.map(z => (
+                      <div key={z.id} className="px-5 py-2 flex items-center gap-2 text-xs" style={{ color: "#6b7280" }}>
+                        <span className="flex-1 text-right">{jmenoTymu(z.tym1_id)}</span>
+                        <span style={{ color: "#d1d5db" }}>vs</span>
+                        <span className="flex-1">{jmenoTymu(z.tym2_id)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              </section>
+            );
+          })}
+          {playoffExistuje && (
             <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
-              <div className="px-5 py-4 border-b border-zinc-100">
-                <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Konecne poradi</h2>
+              <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
+                <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Playoff</p>
+                <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>
+                  {typPlayoff === "krizovy" ? "Krizovy pavouk" : "Primy pavouk"}{multiTier ? " · vice pasem" : ""}
+                </p>
               </div>
               <div className="divide-y divide-zinc-50">
-                {finalniPoradi.map((t, i) => (
-                  <div key={t.nazev} className="px-5 py-3 flex items-center gap-3">
-                    <span className="text-sm font-bold w-6 text-right shrink-0" style={{ color: i === 0 ? "#f59e0b" : i === 1 ? "#9ca3af" : i === 2 ? "#cd7c32" : "#d1d5db" }}>{i + 1}.</span>
-                    <span className="flex-1 font-semibold text-sm" style={{ color: "#0A0A0A" }}>{t.nazev}</span>
-                    <span className="text-sm font-bold shrink-0" style={{ color: i === 0 ? "#801A28" : "#6b7280" }}>{t.skore} b</span>
+                {zapasyPlayoff.map(z => (
+                  <div key={z.id} className="px-5 py-2 flex items-center gap-2 text-xs" style={{ color: "#6b7280" }}>
+                    <span className="text-xs uppercase mr-2" style={{ color: "#9ca3af" }}>{z.faze === "playoff" ? "Finale" : z.faze.replace("playoff_pas_", "Pas ")}</span>
+                    <span className="flex-1 text-right">{jmenoTymu(z.tym1_id)}</span>
+                    <span style={{ color: "#d1d5db" }}>vs</span>
+                    <span className="flex-1">{jmenoTymu(z.tym2_id)}</span>
                   </div>
                 ))}
               </div>
             </section>
           )}
-        </>
+        </div>
       )}
 
-      {/* ===== PLAYOFF ===== */}
-      {aktivniFaze === "playoff" && (
-        <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-100">
-            <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Playoff</h2>
-            <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>
-              {typPlayoff === "krizovy" ? "Krizovy pavouk (1A vs 2B)" : "Primy pavouk (1 vs 4, 2 vs 3)"}
-              {multiTier ? " · vice pasem" : ""}
-            </p>
-          </div>
-          {(() => {
-            const faze = [...new Set(zapasyPlayoff.map(z => z.faze))].sort();
-            return faze.map(f => (
-              <div key={f}>
-                {faze.length > 1 && (
-                  <div className="px-5 py-2 border-b border-zinc-50" style={{ backgroundColor: "#fafafa" }}>
-                    <p className="text-xs font-semibold" style={{ color: "#6b7280" }}>
-                      {f === "playoff" ? "Finale" : f.replace("playoff_pas_", "Pas ")}
-                    </p>
-                  </div>
-                )}
-                <div className="divide-y divide-zinc-50">
-                  {zapasyPlayoff.filter(z => z.faze === f).map(z => renderZapas(z, scoringLimitPlayoff))}
-                </div>
-              </div>
-            ));
-          })()}
-        </section>
-      )}
-
-      {/* ===== HARMONOGRAM ===== */}
-      {aktivniFaze === "harmonogram" && (() => {
-        // Kurty — unique sorted
+      {/* ===== PORADI ZAPASU ===== */}
+      {aktivniTab === "poradi" && (() => {
         const kurty = [...new Set(harmonogram.map(h => h.kurt))].sort((a, b) => a - b);
-        // Seskupeni po kurtech
         return (
           <div className="flex flex-col gap-4">
             <p className="text-xs" style={{ color: "#9ca3af" }}>
-              Odhadovany rozpis — casy jsou vypocitane automaticky na zaklade poctu kurtu a delky zapasu.
+              Odhadovany rozpis dle poctu kurtu. Cas je orientacni — fronta se prepocita po dokonceni zapasu.
             </p>
             {kurty.map(kurt => {
-              const zapasyKurtu = harmonogram
-                .filter(h => h.kurt === kurt)
-                .sort((a, b) => a.casStartMin - b.casStartMin);
+              const zapasyKurtu = harmonogram.filter(h => h.kurt === kurt).sort((a, b) => a.casStartMin - b.casStartMin);
               return (
                 <section key={kurt} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
                   <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
@@ -1426,9 +1446,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
                       return (
                         <div key={h.zapasId} className="px-5 py-3 flex items-center gap-3">
                           <div className="shrink-0 text-right w-12">
-                            <p className="text-xs font-bold tabular-nums" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>
-                              {casMinToStr(h.casStartMin)}
-                            </p>
+                            <p className="text-xs font-bold tabular-nums" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>{casMinToStr(h.casStartMin)}</p>
                             <p className="text-xs" style={{ color: "#d1d5db" }}>{casMinToStr(h.casEndMin)}</p>
                           </div>
                           <div className="w-px self-stretch" style={{ backgroundColor: hotovo ? "#e5e7eb" : "#801A28", opacity: 0.4 }} />
@@ -1453,6 +1471,236 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
                 </section>
               );
             })}
+          </div>
+        );
+      })()}
+
+      {/* ===== TABULKY ===== */}
+      {aktivniTab === "tabulky" && (
+        <div className="flex flex-col gap-4">
+          {/* Filtr + search */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <select value={filtrSkupiny} onChange={e => setFiltrSkupiny(e.target.value)}
+              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]"
+              style={{ color: "#374151" }}>
+              <option value="vse">Vsechny skupiny</option>
+              {skupinyNazvy.map(s => <option key={s} value={s}>Skupina {s}</option>)}
+            </select>
+            <input type="text" value={hledat} onChange={e => setHledat(e.target.value)}
+              placeholder="Hledat tym podle nazvu..."
+              className="flex-1 rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+          </div>
+
+          {skupinyNazvy.filter(s => filtrSkupiny === "vse" || filtrSkupiny === s).map(sName => {
+            const tymySkupiny = (skupinyMap[sName] ?? []).filter(t => !hledat || t.nazev.toLowerCase().includes(hledat.toLowerCase()));
+            const zapasyTeto = zapasySkupin.filter(z => z.skupina === sName);
+            const tabulka = skupinaTabulka(tymySkupiny.length > 0 ? skupinyMap[sName] : [], zapasyTeto);
+            const filtrovanaTabulka = tabulka.filter(t => !hledat || t.nazev.toLowerCase().includes(hledat.toLowerCase()));
+            if (filtrovanaTabulka.length === 0 && hledat) return null;
+            return (
+              <div key={sName} className="flex flex-col gap-3">
+                <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-zinc-100">
+                    <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Skupina {sName}</h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm min-w-[400px]">
+                      <thead>
+                        <tr style={{ backgroundColor: "#fafafa" }}>
+                          <th className="text-left pl-5 pr-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>#</th>
+                          <th className="text-left px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>Tym</th>
+                          <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>V</th>
+                          <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>R</th>
+                          <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>P</th>
+                          <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>Skore</th>
+                          <th className="text-center px-2 pr-5 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>+/-</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtrovanaTabulka.map((t, i) => (
+                          <tr key={t.id} className="border-t border-zinc-50">
+                            <td className="pl-5 pr-2 py-3 font-bold text-xs" style={{ color: i < 2 ? "#801A28" : "#9ca3af" }}>{i + 1}</td>
+                            <td className="px-2 py-3 font-semibold text-sm" style={{ color: "#0A0A0A" }}>{t.nazev}</td>
+                            <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#16a34a" }}>{t.vyhry}</td>
+                            <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#6b7280" }}>{t.remisy}</td>
+                            <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#dc2626" }}>{t.prohry}</td>
+                            <td className="px-2 py-3 text-center text-xs font-bold" style={{ color: "#801A28" }}>{t.skore}</td>
+                            <td className="px-2 pr-5 py-3 text-center text-xs font-semibold" style={{ color: t.rozdil >= 0 ? "#16a34a" : "#dc2626" }}>
+                              {t.rozdil >= 0 ? "+" : ""}{t.rozdil}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+                {!hledat && (
+                  <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-zinc-100">
+                      <p className="text-xs font-medium" style={{ color: "#6b7280" }}>Zapasy — skupina {sName}</p>
+                    </div>
+                    <div className="divide-y divide-zinc-50">
+                      {zapasyTeto.map(z => renderZapas(z, scoringLimit))}
+                    </div>
+                  </section>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Generovat playoff */}
+          {jeEditor && playoff && vsechnySkupinyHotove && !playoffExistuje && !jeZruseno && (
+            <button onClick={vytvorPlayoff} disabled={generujiPlayoff}
+              className="w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-60"
+              style={{ backgroundColor: "#801A28" }}>
+              {generujiPlayoff ? "Generuji playoff..." : "Zahajit playoff"}
+            </button>
+          )}
+
+          {/* Playoff bracket */}
+          {playoffExistuje && (
+            <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-100">
+                <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Playoff</h2>
+              </div>
+              {(() => {
+                const faze = [...new Set(zapasyPlayoff.map(z => z.faze))].sort();
+                return faze.map(f => (
+                  <div key={f}>
+                    {faze.length > 1 && (
+                      <div className="px-5 py-2 border-b border-zinc-50" style={{ backgroundColor: "#fafafa" }}>
+                        <p className="text-xs font-semibold" style={{ color: "#6b7280" }}>
+                          {f === "playoff" ? "Finale" : f.replace("playoff_pas_", "Pas ")}
+                        </p>
+                      </div>
+                    )}
+                    <div className="divide-y divide-zinc-50">
+                      {zapasyPlayoff.filter(z => z.faze === f).map(z => renderZapas(z, scoringLimitPlayoff))}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </section>
+          )}
+
+          {/* Vyhodnotit + konecne poradi */}
+          {vsechnoHotove && (
+            <>
+              <button onClick={() => setZobrazOhnostroj(true)}
+                className="w-full rounded-full py-3 text-sm font-semibold text-white"
+                style={{ backgroundColor: "#801A28" }}>
+                Vyhodnotit — zobrazit viteze
+              </button>
+              {finalniPoradi.length > 0 && (
+                <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-zinc-100">
+                    <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Konecne poradi</h2>
+                  </div>
+                  <div className="divide-y divide-zinc-50">
+                    {finalniPoradi.map((t, i) => (
+                      <div key={t.nazev} className="px-5 py-3 flex items-center gap-3">
+                        <span className="text-sm font-bold w-6 text-right shrink-0" style={{ color: i === 0 ? "#f59e0b" : i === 1 ? "#9ca3af" : i === 2 ? "#cd7c32" : "#d1d5db" }}>{i + 1}.</span>
+                        <span className="flex-1 font-semibold text-sm" style={{ color: "#0A0A0A" }}>{t.nazev}</span>
+                        <span className="text-sm font-bold shrink-0" style={{ color: i === 0 ? "#801A28" : "#6b7280" }}>{t.skore} b</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ===== SCOREBOARD ===== */}
+      {aktivniTab === "scoreboard" && (() => {
+        const odehrane = zapasy.filter(z => z.skore_tym1 != null).sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+        if (odehrane.length === 0) {
+          return (
+            <section className="bg-white rounded-2xl border border-zinc-100 p-8 text-center">
+              <p className="text-sm" style={{ color: "#9ca3af" }}>Zatim zadne odehrane zapasy.</p>
+            </section>
+          );
+        }
+        return (
+          <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+            <div className="px-5 py-4 border-b border-zinc-100">
+              <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Odehrane zapasy</h2>
+              <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>{odehrane.length} zapasu · od nejnovejsiho</p>
+            </div>
+            <div className="divide-y divide-zinc-50">
+              {odehrane.map(z => {
+                const s1 = z.skore_tym1!, s2 = z.skore_tym2!;
+                const vitez = s1 > s2 ? z.tym1_id : s2 > s1 ? z.tym2_id : null;
+                const skupinaLabel = z.skupina ? `Skupina ${z.skupina}` : z.faze === "playoff" ? "Finale" : z.faze.replace("playoff_pas_", "Pas ");
+                return (
+                  <div key={z.id} className="px-5 py-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-medium" style={{ color: "#9ca3af" }}>{skupinaLabel}</p>
+                      {z.kurt && <p className="text-xs" style={{ color: "#9ca3af" }}>Kurt {z.kurt}</p>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <p className="flex-1 text-right text-sm" style={{ color: vitez === z.tym1_id ? "#801A28" : "#6b7280", fontWeight: vitez === z.tym1_id ? 700 : 500 }}>
+                        {jmenoTymu(z.tym1_id)}
+                      </p>
+                      <p className="shrink-0 text-base font-bold tabular-nums" style={{ color: "#0A0A0A" }}>{s1} : {s2}</p>
+                      <p className="flex-1 text-sm" style={{ color: vitez === z.tym2_id ? "#801A28" : "#6b7280", fontWeight: vitez === z.tym2_id ? 700 : 500 }}>
+                        {jmenoTymu(z.tym2_id)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
+
+      {/* ===== HRACI ===== */}
+      {aktivniTab === "hraci" && (() => {
+        const filtrovaneTymy = tymy.filter(t => !hledat || t.nazev.toLowerCase().includes(hledat.toLowerCase())
+          || (t.hrac1_id && hraciDB.find(h => h.id === t.hrac1_id)?.jmeno.toLowerCase().includes(hledat.toLowerCase()))
+          || (t.hrac2_id && hraciDB.find(h => h.id === t.hrac2_id)?.jmeno.toLowerCase().includes(hledat.toLowerCase()))
+        );
+        return (
+          <div className="flex flex-col gap-3">
+            <input type="text" value={hledat} onChange={e => setHledat(e.target.value)}
+              placeholder="Hledat tym nebo hrace..."
+              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+            <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-100">
+                <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Tymy a hraci</h2>
+                <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>{filtrovaneTymy.length} tymu</p>
+              </div>
+              <div className="divide-y divide-zinc-50">
+                {filtrovaneTymy.map(t => {
+                  const h1 = t.hrac1_id ? hraciDB.find(h => h.id === t.hrac1_id) : null;
+                  const h2 = t.hrac2_id ? hraciDB.find(h => h.id === t.hrac2_id) : null;
+                  return (
+                    <div key={t.id} className="px-5 py-3 flex items-center gap-3">
+                      <span className="text-xs font-bold w-5 shrink-0" style={{ color: "#9ca3af" }}>{t.skupina}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>{t.nazev}</p>
+                        {(h1 || h2) ? (
+                          <p className="text-xs" style={{ color: "#6b7280" }}>
+                            {h1?.jmeno ?? "—"}{h2 ? ` · ${h2.jmeno}` : ""}
+                          </p>
+                        ) : (
+                          <p className="text-xs italic" style={{ color: "#9ca3af" }}>Bez prirazenych hracu</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {jeEditor && !jeZruseno && (
+                <div className="px-5 py-3 border-t border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
+                  <p className="text-xs" style={{ color: "#9ca3af" }}>
+                    Editor hracu — moznost doplnit jmena k tymum bez prirazeni — bude doplneno v dalsi verzi.
+                  </p>
+                </div>
+              )}
+            </section>
           </div>
         );
       })()}
