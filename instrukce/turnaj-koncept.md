@@ -198,13 +198,31 @@ Body s auto-dopočtem: pokud uživatel napíše s1, doplníme s2 = limit - s1.
 
 ## 11. Roadmapa změn (v0.7.x a dál)
 
-### Kompletní bracket (v0.7.7+)
-- `generujPlayoff` vytvoří **semifinále (kolo=1)** ihned po zahájení playoff
-- **Finále + o 3. místo (kolo=2)** se **auto-vygeneruje** ve `ulozSkore`, jakmile jsou obě semifinále daného pásma dohraná
-- Pro 4-team pásmo (multi-tier nebo non-multi-tier s 2 skupinami): 2 semi + finále + o 3. místo = **4 zápasy**
-- Pro non-multi-tier s 6+ týmy v playoff: zatím jen první kolo (TODO: full bracket s BYE)
-- `umisteni` v `turnaj_zapasy`: `"final"` = finále vítězů, `"o3misto"` = o 3. místo
-- `finalniPoradi`: čte `umisteni="final"` (1.-2.) a `"o3misto"` (3.-4.) pro každé pásmo, takže multi-tier dává správně 1.-4., 5.-8., 9.-12.
+### Playoff módy (v0.7.11+)
+
+`settings.playoff_mode` určuje strukturu playoff:
+
+| Mód | Co se hraje | Počet zápasů (n týmů) |
+|---|---|---|
+| `bez` | Žádný playoff, pořadí podle skupin | 0 |
+| `medaile` | Final Four (top 4 → semis + finále + o3) | 4 (3 pro n=3, 1 pro n=2) |
+| `vitez` | Single elimination top {2^k}, bez 3. místa | bracketSize - 1, max 15 |
+| `umisteni` | Multi-tier (pásma po 4, každé hraje o své umístění) | dle distribuce do pásem |
+
+**Auto-generování dalších kol v `ulozSkore`:**
+- `medaile` / `umisteni`: po dvou semifinále → vygeneruje `kolo=2` (finále s `umisteni="final"` + o 3. místo s `umisteni="o3misto"`)
+- `vitez`: po dohrání všech zápasů v kole vygeneruje další kolo s vítězi, posledni kolo `umisteni="final"`
+
+**Generování první vlny v `generujPlayoff`:**
+- `bez`: []
+- `medaile`: 2 semis (1v4, 2v3) z top 4
+- `vitez`: bracketSize/2 zápasů (1vN, 2vN-1,...) z top bracketSize
+- `umisteni`: per pásmo 2 semis (1v4, 2v3)
+
+**Migrace ze starých settings:**
+- `playoff=false` → `bez`
+- `playoff=true & multi_tier=true` → `umisteni`
+- `playoff=true & multi_tier=false` → `medaile`
 
 - [x] v0.7.0 — 6-tabová struktura
 - [ ] v0.7.1 — Smazat turnaj, auto-výpočet kola pro Čas, validace času pro gamy/body, dokument turnaj-koncept

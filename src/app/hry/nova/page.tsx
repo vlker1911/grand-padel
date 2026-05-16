@@ -108,10 +108,13 @@ export default function NovaHraPage() {
   const [scoringLimit,       setScoringLimit]       = useState(4);
   const [scoringLimitPlayoff,setScoringLimitPlayoff]= useState(6);
   const [odlisnyScoring,     setOdlisnyScoring]     = useState(false);
-  const [playoff,            setPlayoff]            = useState(true);
-  const [typPlayoff,         setTypPlayoff]         = useState<"krizovy" | "primy">("krizovy");
-  const [multiTier,          setMultiTier]          = useState(true);
+  // playoffMode nahrazuje: playoff (bool), multiTier (bool), typPlayoff (krizovy/primy)
+  const [playoffMode,        setPlayoffMode]        = useState<"bez" | "medaile" | "vitez" | "umisteni">("umisteni");
   const [rezimKurtu,         setRezimKurtu]         = useState<"auto" | "1-1" | "2-1">("auto");
+  // Backwards compat — pro vytvoreniHru
+  const playoff = playoffMode !== "bez";
+  const multiTier = playoffMode === "umisteni";
+  const typPlayoff: "krizovy" | "primy" = "krizovy";
   const [pary,               setPary]               = useState<ParEntry[]>(Array.from({ length: 8 }, (_, i) => ({ id: i, nazevTymu: "", jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" })));
   const [singlesHraci,       setSinglesHraci]       = useState<SingEntry[]>(Array.from({ length: 8 }, (_, i) => ({ id: i, jmeno: "", pohlavi: "" })));
   const [losovanoSingles,    setLosovanoSingles]    = useState<ParEntry[]>([]);
@@ -200,29 +203,29 @@ export default function NovaHraPage() {
       const size = baseSize + (i < extra ? 1 : 0);
       skupinaZapasy += (size * (size - 1)) / 2;
     }
-    // Playoff: realne podle generujPlayoff + auto-gen finals (jen pri 2 semis v pasmu)
+    // Playoff zapasy podle modu
     let playoffZapasy = 0;
-    if (playoff) {
-      if (multiTier) {
-        const pocetPasem = Math.ceil(n / 4);
-        for (let p = 0; p < pocetPasem; p++) {
-          const tymyPasma = Math.min(4, n - p * 4);
-          if (tymyPasma === 4) playoffZapasy += 4;       // 2 semi + final + o3
-          else if (tymyPasma === 3) playoffZapasy += 1;  // 1 semi, no auto-gen
-          else if (tymyPasma === 2) playoffZapasy += 1;  // 1 zapas
-          // 1 tym → 0
-        }
-      } else {
-        // Non-multi-tier: top 2 z kazde skupiny do playoff
-        const tymyVPlayoff = pocetSkupinPred * 2;
-        // Pro pocetSkupin=2 (4 tymy): 2 semi → auto-gen final+o3 = 4
-        // Pro pocetSkupin>=3: jen first round (no auto-gen — vyzaduje presne 2 semis na faze)
-        if (pocetSkupinPred === 2) playoffZapasy = 4;
-        else playoffZapasy = Math.floor(tymyVPlayoff / 2);
+    if (playoffMode === "umisteni") {
+      // Multi-tier: kazde pasmo 4 tymy = 4 zapasy, mensi pasma = mene
+      const pocetPasem = Math.ceil(n / 4);
+      for (let p = 0; p < pocetPasem; p++) {
+        const tymyPasma = Math.min(4, n - p * 4);
+        if (tymyPasma === 4) playoffZapasy += 4;
+        else if (tymyPasma === 3) playoffZapasy += 1;
+        else if (tymyPasma === 2) playoffZapasy += 1;
       }
+    } else if (playoffMode === "vitez") {
+      // Single elimination: nejvetsi mocnina 2 <= n, max 16
+      let bracketSize = 2;
+      while (bracketSize * 2 <= n && bracketSize < 16) bracketSize *= 2;
+      playoffZapasy = bracketSize - 1;  // single elim, no 3rd place
+    } else if (playoffMode === "medaile") {
+      // Final Four: 2 semi + finale + o 3. misto = 4 zapasy
+      playoffZapasy = n >= 4 ? 4 : (n >= 2 ? 1 : 0);
     }
+    // "bez" → 0
     return { skupiny: skupinaZapasy, playoff: playoffZapasy, celkem: skupinaZapasy + playoffZapasy };
-  }, [pocetTymuPredikovany, playoff, multiTier]);
+  }, [pocetTymuPredikovany, playoffMode]);
 
   const pocetZapasu = pocetZapasuDetail.celkem;
 
@@ -356,6 +359,7 @@ export default function NovaHraPage() {
         scoring_limit: scoringLimit,
         scoring_limit_playoff: odlisnyScoring ? scoringLimitPlayoff : scoringLimit,
         playoff, typ_playoff: typPlayoff, multi_tier: multiTier,
+        playoff_mode: playoffMode,
         typ_parovani: typParovani,
         rezim_kurtu: rezimKurtu,
       },
@@ -702,20 +706,23 @@ export default function NovaHraPage() {
                         )}
                       </div>
 
-                      {/* Playoff */}
+                      {/* Playoff mod */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-medium" style={{ color: "#374151" }}>Playoff</label>
-                        <div className="flex gap-2">
-                          <button onClick={() => setPlayoff(true)}
-                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${playoff ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                            Ano
-                          </button>
-                          <button onClick={() => setPlayoff(false)}
-                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${!playoff ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                            Ne — jen skupiny
-                          </button>
+                        <div className="flex flex-col gap-2">
+                          {([
+                            { v: "umisteni", l: "Dohravat o umisteni (Multi-tier)", p: "Vsechny tymy hraji dal o sve umisteni (1.-4., 5.-8., ...). Nejvice zapasu." },
+                            { v: "vitez",    l: "Hrat o viteze (Single elim)",     p: "Top 8 tymu vyrazovaci pavouk — po prvni prohre konec. Bez 3. mista (7 zapasu)." },
+                            { v: "medaile",  l: "Jen o medaile (Final Four)",      p: "Top 4 tymy → semifinale + finale + o 3. misto (4 zapasy)." },
+                            { v: "bez",      l: "Bez playoff",                     p: "Konecne poradi podle skupin." },
+                          ] as const).map(m => (
+                            <button key={m.v} onClick={() => setPlayoffMode(m.v)}
+                              className={`text-left rounded-xl py-2.5 px-3 border-2 transition-all ${playoffMode === m.v ? "border-[#801A28] bg-red-50" : "border-zinc-200 hover:border-zinc-300"}`}>
+                              <p className="text-sm font-semibold" style={{ color: playoffMode === m.v ? "#801A28" : "#374151" }}>{m.l}</p>
+                              <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>{m.p}</p>
+                            </button>
+                          ))}
                         </div>
-                        {playoff && <p className="text-xs" style={{ color: "#9ca3af" }}>Typ playoff a pavouk se nastavi az pri zahajeni playoff.</p>}
                       </div>
 
                       {/* Rezim kurtu */}
