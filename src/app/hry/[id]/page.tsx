@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { spocitejTabulku } from "@/lib/americano";
@@ -938,10 +938,18 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   const [editInfo, setEditInfo] = useState(false);
   const [popis, setPopis] = useState((hra.settings as { popis?: string })?.popis ?? "");
   const [pravidla, setPravidla] = useState((hra.settings as { pravidla?: string })?.pravidla ?? "");
+  const [editNazev, setEditNazev] = useState(hra.nazev);
+  const [editCasOd, setEditCasOd] = useState(hra.settings?.cas_od ?? "");
+  const [editCasDo, setEditCasDo] = useState(hra.settings?.cas_do ?? "");
+  const [editPocetKurtu, setEditPocetKurtu] = useState<number | "">(hra.pocet_kurtu);
   const [ukladamInfo, setUkladamInfo] = useState(false);
   const [zrusitModal, setZrusitModal] = useState(false);
   const [zrusitDuvod, setZrusitDuvod] = useState("");
   const [zrusujem, setZrusujem]   = useState(false);
+  const [smazatModal, setSmazatModal] = useState(false);
+  const [mazem, setMazem] = useState(false);
+
+  const router = useRouter();
 
   const jeZruseno = hra.settings?.zruseno === true;
 
@@ -1091,11 +1099,21 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
 
   async function ulozInfo() {
     setUkladamInfo(true);
-    const noveSettings = { ...(hra.settings ?? {}), popis: popis.trim(), pravidla: pravidla.trim() };
-    await supabase.from("hry").update({ settings: noveSettings }).eq("id", hra.id);
+    const noveSettings = {
+      ...(hra.settings ?? {}),
+      popis: popis.trim(),
+      pravidla: pravidla.trim(),
+      cas_od: editCasOd,
+      cas_do: editCasDo,
+    };
+    await supabase.from("hry").update({
+      nazev: editNazev.trim() || hra.nazev,
+      pocet_kurtu: typeof editPocetKurtu === "number" ? editPocetKurtu : hra.pocet_kurtu,
+      settings: noveSettings,
+    }).eq("id", hra.id);
     setEditInfo(false);
     setUkladamInfo(false);
-    nactiTurnaj();
+    window.location.reload();
   }
 
   async function provedZruseniTurnaje() {
@@ -1107,6 +1125,17 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
     setZrusitDuvod("");
     setZrusujem(false);
     window.location.reload();
+  }
+
+  async function smazatTurnaj() {
+    setMazem(true);
+    // Smazat zavisle zaznamy (RLS by mela kaskadovat, ale jistota)
+    await supabase.from("turnaj_zapasy").delete().eq("hra_id", hra.id);
+    await supabase.from("turnaj_tymy").delete().eq("hra_id", hra.id);
+    await supabase.from("hra_ucastnici").delete().eq("hra_id", hra.id);
+    await supabase.from("hry").delete().eq("id", hra.id);
+    setMazem(false);
+    router.push("/hry");
   }
 
   async function zrusitSpusteni(zapasId: string) {
@@ -1231,13 +1260,48 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
       {/* Zruseny banner */}
       {jeZruseno && (
         <div className="rounded-2xl px-5 py-4 border" style={{ backgroundColor: "#fef2f2", borderColor: "#fecaca" }}>
-          <p className="text-sm font-semibold mb-1" style={{ color: "#801A28" }}>Turnaj byl zrusen</p>
-          <p className="text-xs" style={{ color: "#7f1d1d" }}>Duvod: {hra.settings?.duvod_zruseni}</p>
-          {hra.settings?.zruseno_at && (
-            <p className="text-xs mt-1" style={{ color: "#9ca3af" }}>
-              {new Date(hra.settings.zruseno_at).toLocaleString("cs-CZ")}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold mb-1" style={{ color: "#801A28" }}>Turnaj byl zrusen</p>
+              <p className="text-xs" style={{ color: "#7f1d1d" }}>Duvod: {hra.settings?.duvod_zruseni}</p>
+              {hra.settings?.zruseno_at && (
+                <p className="text-xs mt-1" style={{ color: "#9ca3af" }}>
+                  {new Date(hra.settings.zruseno_at).toLocaleString("cs-CZ")}
+                </p>
+              )}
+            </div>
+            {jeEditor && (
+              <button onClick={() => setSmazatModal(true)}
+                className="shrink-0 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium hover:bg-red-50"
+                style={{ color: "#801A28" }}>
+                Smazat trvale
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Smazat modal */}
+      {smazatModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => !mazem && setSmazatModal(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-2" style={{ color: "#801A28" }}>Trvale smazat turnaj?</h3>
+            <p className="text-sm mb-4" style={{ color: "#6b7280" }}>
+              Vsechny tymy, zapasy a vysledky budou trvale odstraneny z databaze. Tato akce je <strong>nevratna</strong>.
             </p>
-          )}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setSmazatModal(false)} disabled={mazem}
+                className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 hover:bg-zinc-50"
+                style={{ color: "#374151" }}>
+                Ponechat
+              </button>
+              <button onClick={smazatTurnaj} disabled={mazem}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                style={{ backgroundColor: "#801A28" }}>
+                {mazem ? "Mazu..." : "Ano, smazat trvale"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1318,6 +1382,29 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
           {editInfo ? (
             <div className="flex flex-col gap-3">
               <div>
+                <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Nazev turnaje</label>
+                <input type="text" value={editNazev} onChange={e => setEditNazev(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Cas od</label>
+                  <input type="time" value={editCasOd} onChange={e => setEditCasOd(e.target.value)}
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Cas do</label>
+                  <input type="time" value={editCasDo} onChange={e => setEditCasDo(e.target.value)}
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                </div>
+                <div className="w-24">
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Kurty</label>
+                  <input type="number" min={1} max={20} value={editPocetKurtu}
+                    onChange={e => { const n = parseInt(e.target.value); setEditPocetKurtu(isNaN(n) ? "" : n); }}
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                </div>
+              </div>
+              <div>
                 <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Popis turnaje</label>
                 <textarea value={popis} onChange={e => setPopis(e.target.value)} rows={3}
                   placeholder="Napr. otevreny mix turnaj pro hrace 4+, prizes..."
@@ -1329,8 +1416,19 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
                   placeholder="Napr. tie-break v rozhodujicim gemu, lerne case..."
                   className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28] resize-none" />
               </div>
+              <p className="text-xs" style={{ color: "#9ca3af" }}>
+                Format a scoring zatim nelze menit po vytvoreni — pripravujeme v dalsi verzi.
+              </p>
               <div className="flex gap-2 justify-end">
-                <button onClick={() => { setEditInfo(false); setPopis((hra.settings as { popis?: string })?.popis ?? ""); setPravidla((hra.settings as { pravidla?: string })?.pravidla ?? ""); }}
+                <button onClick={() => {
+                  setEditInfo(false);
+                  setPopis((hra.settings as { popis?: string })?.popis ?? "");
+                  setPravidla((hra.settings as { pravidla?: string })?.pravidla ?? "");
+                  setEditNazev(hra.nazev);
+                  setEditCasOd(hra.settings?.cas_od ?? "");
+                  setEditCasDo(hra.settings?.cas_do ?? "");
+                  setEditPocetKurtu(hra.pocet_kurtu);
+                }}
                   className="rounded-lg px-3 py-2 text-xs font-medium border border-zinc-200" style={{ color: "#374151" }}>Zrusit</button>
                 <button onClick={ulozInfo} disabled={ukladamInfo}
                   className="rounded-lg px-4 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: "#801A28" }}>
@@ -1785,7 +1883,10 @@ export default function HraDetailPage() {
                   {hra.typ.charAt(0).toUpperCase() + hra.typ.slice(1)}
                   {" · "}{hra.pocet_kurtu} {hra.pocet_kurtu === 1 ? "kurt" : "kurty"}
                   {hra.typ === "mexicano" && hra.settings?.minut_na_kolo ? ` · ${hra.settings.minut_na_kolo} min/kolo` : ""}
-                  {hra.typ !== "mexicano" ? ` · ${hra.body_na_zapas} bodu` : ""}
+                  {hra.typ === "americano" ? ` · ${hra.body_na_zapas} bodu` : ""}
+                  {hra.typ === "turnaj" && hra.settings?.scoring_typ
+                    ? ` · ${hra.settings.scoring_typ === "gamy" ? `do ${hra.settings.scoring_limit} gamu` : hra.settings.scoring_typ === "cas" ? `${hra.settings.scoring_limit} min/kolo` : `${hra.settings.scoring_limit} bodu`}`
+                    : ""}
                 </p>
               </div>
               <span className="text-xs font-medium px-3 py-1.5 rounded-full shrink-0"

@@ -16,6 +16,7 @@ Uživatel: Roman Vlk, začátečník bez zkušeností s kódem. Vše vysvětlova
 
 Vždy si přečti před prací:
 - `C:\Users\VlkR\Documents\grand-padel\instrukce\stav-projektu.md` — co je hotové, co chybí, aktuální verze
+- `C:\Users\VlkR\Documents\grand-padel\instrukce\turnaj-koncept.md` — **DŮLEŽITÉ** pravidla turnajů, výpočty, edge cases (aktualizuj při změnách logiky turnajů)
 - `C:\Users\VlkR\Documents\grand-padel\README.md` — přehled projektu
 
 ## Stack

@@ -100,6 +100,7 @@ export default function NovaHraPage() {
   const [playoff,            setPlayoff]            = useState(true);
   const [typPlayoff,         setTypPlayoff]         = useState<"krizovy" | "primy">("krizovy");
   const [multiTier,          setMultiTier]          = useState(true);
+  const [rezimKurtu,         setRezimKurtu]         = useState<"auto" | "1-1" | "2-1">("auto");
   const [pary,               setPary]               = useState<ParEntry[]>(Array.from({ length: 8 }, (_, i) => ({ id: i, nazevTymu: "", jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" })));
   const [singlesHraci,       setSinglesHraci]       = useState<SingEntry[]>(Array.from({ length: 8 }, (_, i) => ({ id: i, jmeno: "", pohlavi: "" })));
   const [losovanoSingles,    setLosovanoSingles]    = useState<ParEntry[]>([]);
@@ -157,18 +158,60 @@ export default function NovaHraPage() {
   const pocetSkupin = useMemo(() => vypocitejPocetSkupin(efektivniTymy.length), [efektivniTymy.length]);
   const skupiny     = useMemo(() => rozdelDoSkupin(efektivniTymy, pocetSkupin), [efektivniTymy, pocetSkupin]);
 
+  // Celkovy cas k dispozici v minutach
+  const celkemMinut = useMemo(() => {
+    const [hOd, mOd] = casOd.split(":").map(Number);
+    const [hDo, mDo] = casDo.split(":").map(Number);
+    return (hDo * 60 + mDo) - (hOd * 60 + mOd);
+  }, [casOd, casDo]);
+
+  // Pocet zapasu — skupiny + playoff
+  const pocetZapasu = useMemo(() => {
+    const n = efektivniTymy.length;
+    if (n < 2) return 0;
+    const skupinaZapasy = skupiny.reduce((acc, s) => acc + (s.length * (s.length - 1)) / 2, 0);
+    const playoffZapasy = playoff ? (multiTier ? n - skupiny.length : Math.ceil(n / 2)) : 0;
+    return skupinaZapasy + playoffZapasy;
+  }, [efektivniTymy, skupiny, playoff, multiTier]);
+
+  // Auto-vypocet kola pro CAS format
+  const autoKolo = useMemo(() => {
+    if (scoringTyp !== "cas" || pocetZapasu === 0 || celkemMinut <= 0) return null;
+    const kurty = typeof pocetKurtu === "number" ? pocetKurtu : 2;
+    const poctyKol = Math.ceil(pocetZapasu / kurty);
+    const rezervaNaPrechod = 3;
+    const delkaKola = Math.floor((celkemMinut - (poctyKol - 1) * rezervaNaPrechod) / poctyKol);
+    return { poctyKol, delkaKola, validni: delkaKola >= 10 };
+  }, [scoringTyp, pocetZapasu, pocetKurtu, celkemMinut]);
+
+  // Sync scoringLimit pro cas format
+  useEffect(() => {
+    if (scoringTyp === "cas" && autoKolo && autoKolo.validni) {
+      const cap = Math.min(autoKolo.delkaKola, 60);
+      if (scoringLimit !== cap) setScoringLimit(cap);
+    }
+  }, [scoringTyp, autoKolo, scoringLimit]);
+
   const odhadTurnaje = useMemo(() => {
     const n = efektivniTymy.length;
     if (n < 2) return null;
     const kurty = typeof pocetKurtu === "number" ? pocetKurtu : 2;
-    const minNaZapas = scoringTyp === "gamy" ? scoringLimit * 3 + 5 : odhadMinut(scoringLimit) + 5;
-    const skupinaZapasy = skupiny.reduce((acc, s) => acc + (s.length * (s.length - 1)) / 2, 0);
-    const playoffZapasy = playoff ? (multiTier ? n - skupiny.length : Math.ceil(n / 2)) : 0;
-    const total = skupinaZapasy + playoffZapasy;
-    const totalMin = Math.ceil(total / kurty) * (minNaZapas + 3);
+    const minNaZapas = scoringTyp === "gamy"
+      ? scoringLimit * 3 + 5
+      : scoringTyp === "cas"
+      ? scoringLimit + 3
+      : odhadMinut(scoringLimit) + 5;
+    const totalMin = Math.ceil(pocetZapasu / kurty) * (minNaZapas + 3);
     const h = Math.floor(totalMin / 60), m = totalMin % 60;
-    return { total, text: h > 0 ? `${h}h ${m > 0 ? m + "min" : ""}` : `${m} minut` };
-  }, [efektivniTymy, pocetKurtu, scoringTyp, scoringLimit, skupiny, playoff, multiTier]);
+    return { total: pocetZapasu, totalMin, text: h > 0 ? `${h}h ${m > 0 ? m + "min" : ""}` : `${m} minut` };
+  }, [efektivniTymy.length, pocetKurtu, scoringTyp, scoringLimit, pocetZapasu]);
+
+  // Varovani: turnaj se nevejde do casu (gamy/body)
+  const turnajSeNevejde = useMemo(() => {
+    if (scoringTyp === "cas") return false;
+    if (!odhadTurnaje || celkemMinut <= 0) return false;
+    return odhadTurnaje.totalMin > celkemMinut;
+  }, [scoringTyp, odhadTurnaje, celkemMinut]);
 
   // === Vytvoreni hry ===
   async function vytvorHru() {
@@ -235,6 +278,7 @@ export default function NovaHraPage() {
         scoring_limit_playoff: odlisnyScoring ? scoringLimitPlayoff : scoringLimit,
         playoff, typ_playoff: typPlayoff, multi_tier: multiTier,
         typ_parovani: typParovani,
+        rezim_kurtu: rezimKurtu,
       },
     }).select().single();
 
@@ -503,26 +547,59 @@ export default function NovaHraPage() {
                             </button>
                           ))}
                         </div>
-                        <div className="flex items-center gap-3 mt-1">
-                          <input type="number" min={1} max={99} value={scoringLimit} onChange={e => setScoringLimit(Number(e.target.value))}
-                            className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
-                          <span className="text-sm" style={{ color: "#6b7280" }}>
-                            {scoringTyp === "gamy" ? "gamy na zapas" : scoringTyp === "body" ? "bodu na zapas" : "minut na zapas"}
-                          </span>
-                        </div>
-                        <label className="flex items-center gap-2 text-xs cursor-pointer mt-1" style={{ color: "#6b7280" }}>
-                          <input type="checkbox" checked={odlisnyScoring} onChange={e => setOdlisnyScoring(e.target.checked)} className="rounded" />
-                          Jiny format pro playoff
-                        </label>
-                        {odlisnyScoring && (
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs shrink-0" style={{ color: "#6b7280" }}>Playoff:</span>
-                            <input type="number" min={1} max={99} value={scoringLimitPlayoff} onChange={e => setScoringLimitPlayoff(Number(e.target.value))}
-                              className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
-                            <span className="text-sm" style={{ color: "#6b7280" }}>
-                              {scoringTyp === "gamy" ? "gamy" : scoringTyp === "body" ? "bodu" : "minut"}
-                            </span>
+                        {scoringTyp === "cas" ? (
+                          <div className="rounded-xl p-3 mt-1" style={{ backgroundColor: "#F2EDE4" }}>
+                            {!autoKolo ? (
+                              <p className="text-xs" style={{ color: "#6b7280" }}>Cas kola se spocita automaticky podle poctu kurtu, casu a poctu zapasu.</p>
+                            ) : !autoKolo.validni ? (
+                              <p className="text-xs" style={{ color: "#801A28" }}>
+                                <strong>Turnaj se nevejde do casu.</strong> Potreba kolo {autoKolo.delkaKola} min (minimum 10).
+                                Prodluz cas, sniz pocet tymu, nebo pridej kurt.
+                              </p>
+                            ) : (
+                              <div className="text-xs flex flex-col gap-0.5" style={{ color: "#374151" }}>
+                                <p><strong>Kolo: {autoKolo.delkaKola} minut</strong> · {autoKolo.poctyKol} kol synchronne na vsech kurtech</p>
+                                <p style={{ color: "#9ca3af" }}>Spocteno z {pocetZapasu} zapasu, {typeof pocetKurtu === "number" ? pocetKurtu : 2} kurtu a {celkemMinut} minut casu.</p>
+                              </div>
+                            )}
                           </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-3 mt-1">
+                              <input type="number" min={1} max={99} value={scoringLimit} onChange={e => setScoringLimit(Number(e.target.value))}
+                                className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                              <span className="text-sm" style={{ color: "#6b7280" }}>
+                                {scoringTyp === "gamy" ? "gamy na zapas" : "bodu na zapas"}
+                              </span>
+                            </div>
+                            <label className="flex items-center gap-2 text-xs cursor-pointer mt-1" style={{ color: "#6b7280" }}>
+                              <input type="checkbox" checked={odlisnyScoring} onChange={e => setOdlisnyScoring(e.target.checked)} className="rounded" />
+                              Jiny format pro playoff
+                            </label>
+                            {odlisnyScoring && (
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs shrink-0" style={{ color: "#6b7280" }}>Playoff:</span>
+                                <input type="number" min={1} max={99} value={scoringLimitPlayoff} onChange={e => setScoringLimitPlayoff(Number(e.target.value))}
+                                  className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                                <span className="text-sm" style={{ color: "#6b7280" }}>
+                                  {scoringTyp === "gamy" ? "gamy" : "bodu"}
+                                </span>
+                              </div>
+                            )}
+                            {turnajSeNevejde && (
+                              <div className="rounded-xl p-3 mt-1" style={{ backgroundColor: "#fef2f2", borderLeft: "3px solid #801A28" }}>
+                                <p className="text-xs font-semibold mb-1" style={{ color: "#801A28" }}>Turnaj se nemusi vejit do casu</p>
+                                <p className="text-xs" style={{ color: "#7f1d1d" }}>
+                                  Odhad: {odhadTurnaje?.text}, k dispozici jen {celkemMinut} min.
+                                  Doporucujeme prepnout na format <strong>Cas</strong> — kolo se prizpusobi automaticky.
+                                </p>
+                                <button onClick={() => { setScoringTyp("cas"); setScoringLimit(12); setScoringLimitPlayoff(12); }}
+                                  className="text-xs underline mt-1.5" style={{ color: "#801A28" }}>
+                                  Prepnout na Cas
+                                </button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
 
@@ -541,12 +618,30 @@ export default function NovaHraPage() {
                         </div>
                         {playoff && <p className="text-xs" style={{ color: "#9ca3af" }}>Typ playoff a pavouk se nastavi az pri zahajeni playoff.</p>}
                       </div>
+
+                      {/* Rezim kurtu */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Rezim kurtu</label>
+                        <div className="flex flex-col gap-2">
+                          {([
+                            { v: "auto", l: "Automaticky (doporuceno)", p: "System prirazuje kurt podle dostupnosti — optimalni vyuziti." },
+                            { v: "1-1",  l: "1 kurt = 1 skupina",       p: "Kazda skupina hraje na svem kurtu po sobe. Skupina muze cekat na dohrani jine." },
+                            { v: "2-1",  l: "2 kurty = 1 skupina",      p: "Dvojice kurtu hraje jednu skupinu paralelne." },
+                          ] as const).map(r => (
+                            <button key={r.v} onClick={() => setRezimKurtu(r.v)}
+                              className={`text-left rounded-xl py-2.5 px-3 border-2 transition-all ${rezimKurtu === r.v ? "border-[#801A28] bg-red-50" : "border-zinc-200 hover:border-zinc-300"}`}>
+                              <p className="text-sm font-semibold" style={{ color: rezimKurtu === r.v ? "#801A28" : "#374151" }}>{r.l}</p>
+                              <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>{r.p}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>
               )}
 
-              <button onClick={() => setKrok(2)} disabled={!typ}
+              <button onClick={() => setKrok(2)} disabled={!typ || (typ === "turnaj" && scoringTyp === "cas" && autoKolo !== null && !autoKolo.validni)}
                 className="w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-40"
                 style={{ backgroundColor: "#801A28" }}>
                 Pokracovat
