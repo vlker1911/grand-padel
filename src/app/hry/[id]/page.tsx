@@ -50,9 +50,10 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
 }) {
   const supabase = createClient();
   const [aktivniKolo, setAktivniKolo] = useState(1);
-  const [editZapas, setEditZapas] = useState<string | null>(null);
-  const [skore, setSkore] = useState({ s1: "", s2: "" });
-  const [ukladam, setUkladam] = useState(false);
+  // scoreMap: vstupy pro kazdý zapas (nezadany i upravovany)
+  const [scoreMap, setScoreMap] = useState<Record<string, { s1: string; s2: string }>>({});
+  const [upravitId, setUpravitId] = useState<string | null>(null);
+  const [ukladam, setUkladam] = useState<string | null>(null);
   const [zobrazFinal, setZobrazFinal] = useState(false);
 
   const limit = hra.body_na_zapas;
@@ -72,34 +73,27 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
 
   function jmeno(id: string) { return ucastnici.find(u => u.id === id)?.jmeno ?? "?"; }
 
-  function handleS1Change(val: string) {
+  function getScore(id: string) { return scoreMap[id] ?? { s1: "", s2: "" }; }
+
+  function updateScore(id: string, field: "s1" | "s2", val: string) {
     const n = parseInt(val);
     if (!isNaN(n) && n >= 0 && n <= limit) {
-      setSkore({ s1: val, s2: String(limit - n) });
+      const other = String(limit - n);
+      setScoreMap(prev => ({ ...prev, [id]: field === "s1" ? { s1: val, s2: other } : { s1: other, s2: val } }));
     } else {
-      setSkore({ s1: val, s2: skore.s2 });
+      setScoreMap(prev => ({ ...prev, [id]: { ...getScore(id), [field]: val } }));
     }
   }
 
-  function handleS2Change(val: string) {
-    const n = parseInt(val);
-    if (!isNaN(n) && n >= 0 && n <= limit) {
-      setSkore({ s1: String(limit - n), s2: val });
-    } else {
-      setSkore({ s1: skore.s1, s2: val });
-    }
-  }
-
-  async function ulozSkore() {
-    if (!editZapas) return;
-    setUkladam(true);
-    const s1 = parseInt(skore.s1), s2 = parseInt(skore.s2);
-    if (!isNaN(s1) && !isNaN(s2)) {
-      await supabase.from("hra_zapasy").update({ skore_tym1: s1, skore_tym2: s2, stav: "ukonceno" }).eq("id", editZapas);
-      nactiData();
-    }
-    setEditZapas(null);
-    setUkladam(false);
+  async function ulozSkore(zapasId: string) {
+    const sc = getScore(zapasId);
+    const s1 = parseInt(sc.s1), s2 = parseInt(sc.s2);
+    if (isNaN(s1) || isNaN(s2)) return;
+    setUkladam(zapasId);
+    await supabase.from("hra_zapasy").update({ skore_tym1: s1, skore_tym2: s2, stav: "ukonceno" }).eq("id", zapasId);
+    setUpravitId(null);
+    nactiData();
+    setUkladam(null);
   }
 
   // Finalni obrazovka
@@ -120,7 +114,10 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
                   {i + 1}.
                 </span>
                 <span className="flex-1 font-semibold text-base" style={{ color: "#0A0A0A" }}>{h.jmeno}</span>
-                <span className="font-bold text-lg" style={{ color: i === 0 ? "#801A28" : "#374151" }}>{h.body} b</span>
+                <div className="flex items-center gap-4 text-sm">
+                  <span style={{ color: "#6b7280" }}>{h.vyhry}V / {h.prohry}P</span>
+                  <span className="font-bold" style={{ color: i === 0 ? "#801A28" : "#374151" }}>{h.body} b</span>
+                </div>
               </div>
             ))}
           </div>
@@ -155,24 +152,38 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
         <div className="px-5 py-4 border-b border-zinc-100">
           <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Prubezna tabulka</h2>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ backgroundColor: "#fafafa" }}>
-              <th className="text-left px-5 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>#</th>
-              <th className="text-left px-5 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>Hrac</th>
-              <th className="text-right px-5 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>Body</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tabulka.map((h, i) => (
-              <tr key={h.id} className="border-t border-zinc-50">
-                <td className="px-5 py-3 font-bold text-sm w-8" style={{ color: i === 0 ? "#801A28" : "#9ca3af" }}>{i + 1}</td>
-                <td className="px-5 py-3 font-medium" style={{ color: "#0A0A0A" }}>{h.jmeno}</td>
-                <td className="px-5 py-3 text-right font-bold" style={{ color: i === 0 ? "#801A28" : "#374151" }}>{h.body}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[480px]">
+            <thead>
+              <tr style={{ backgroundColor: "#fafafa" }}>
+                <th className="text-left pl-5 pr-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>#</th>
+                <th className="text-left px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>Hrac</th>
+                <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>V</th>
+                <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>R</th>
+                <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>P</th>
+                <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>P+</th>
+                <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>P-</th>
+                <th className="text-center px-2 pr-5 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>+/-</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {tabulka.map((h, i) => (
+                <tr key={h.id} className="border-t border-zinc-50">
+                  <td className="pl-5 pr-2 py-3 font-bold text-xs" style={{ color: i === 0 ? "#801A28" : "#9ca3af" }}>{i + 1}</td>
+                  <td className="px-2 py-3 font-semibold" style={{ color: "#0A0A0A" }}>{h.jmeno}</td>
+                  <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#16a34a" }}>{h.vyhry}</td>
+                  <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#6b7280" }}>{h.remisy}</td>
+                  <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#dc2626" }}>{h.prohry}</td>
+                  <td className="px-2 py-3 text-center text-xs font-bold" style={{ color: "#801A28" }}>{h.body}</td>
+                  <td className="px-2 py-3 text-center text-xs" style={{ color: "#6b7280" }}>{h.obdrzeno}</td>
+                  <td className="px-2 pr-5 py-3 text-center text-xs font-semibold" style={{ color: h.rozdil >= 0 ? "#16a34a" : "#dc2626" }}>
+                    {h.rozdil >= 0 ? "+" : ""}{h.rozdil}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {/* Zapasy */}
@@ -190,63 +201,74 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
           </div>
         </div>
         <div className="divide-y divide-zinc-50">
-          {zapasyKola.map(z => (
-            <div key={z.id} className="px-5 py-4">
-              <div className="flex items-center gap-4">
-                <p className="text-xs font-medium shrink-0 w-14" style={{ color: "#9ca3af" }}>Kurt {z.kurt}</p>
-                <div className="flex-1 flex items-center gap-3">
-                  <div className="flex-1 text-right">
-                    <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>{jmeno(z.tym1_hrac1_id)}</p>
-                    <p className="text-xs" style={{ color: "#6b7280" }}>{jmeno(z.tym1_hrac2_id)}</p>
+          {zapasyKola.map(z => {
+            const sc = getScore(z.id);
+            const jeUpravovany = upravitId === z.id;
+            const jeNezadany = z.skore_tym1 == null;
+            const zobrazInputy = jeEditor && (jeNezadany || jeUpravovany);
+
+            return (
+              <div key={z.id} className="px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <p className="text-xs font-medium shrink-0 w-12" style={{ color: "#9ca3af" }}>Kurt {z.kurt}</p>
+                  <div className="flex-1 flex items-center gap-2">
+                    <div className="flex-1 text-right">
+                      <p className="text-sm font-semibold leading-tight" style={{ color: "#0A0A0A" }}>{jmeno(z.tym1_hrac1_id)}</p>
+                      <p className="text-xs leading-tight" style={{ color: "#6b7280" }}>{jmeno(z.tym1_hrac2_id)}</p>
+                    </div>
+                    {zobrazInputy ? (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <input type="number" min={0} max={limit} value={sc.s1}
+                          onChange={e => updateScore(z.id, "s1", e.target.value)}
+                          placeholder="—"
+                          className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
+                        <span className="font-bold text-sm" style={{ color: "#9ca3af" }}>:</span>
+                        <input type="number" min={0} max={limit} value={sc.s2}
+                          onChange={e => updateScore(z.id, "s2", e.target.value)}
+                          placeholder="—"
+                          className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
+                      </div>
+                    ) : (
+                      <div className="shrink-0 text-center w-16">
+                        {z.skore_tym1 != null
+                          ? <span className="text-base font-bold" style={{ color: "#0A0A0A" }}>{z.skore_tym1} : {z.skore_tym2}</span>
+                          : <span className="text-sm" style={{ color: "#9ca3af" }}>vs</span>}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold leading-tight" style={{ color: "#0A0A0A" }}>{jmeno(z.tym2_hrac1_id)}</p>
+                      <p className="text-xs leading-tight" style={{ color: "#6b7280" }}>{jmeno(z.tym2_hrac2_id)}</p>
+                    </div>
                   </div>
-                  <div className="shrink-0 text-center w-16">
-                    {z.skore_tym1 != null
-                      ? <span className="text-base font-bold" style={{ color: "#0A0A0A" }}>{z.skore_tym1} : {z.skore_tym2}</span>
-                      : <span className="text-sm" style={{ color: "#9ca3af" }}>vs</span>}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>{jmeno(z.tym2_hrac1_id)}</p>
-                    <p className="text-xs" style={{ color: "#6b7280" }}>{jmeno(z.tym2_hrac2_id)}</p>
-                  </div>
+                  {jeEditor && z.skore_tym1 != null && !jeUpravovany && (
+                    <button onClick={() => {
+                      setUpravitId(z.id);
+                      setScoreMap(prev => ({ ...prev, [z.id]: { s1: String(z.skore_tym1), s2: String(z.skore_tym2) } }));
+                    }}
+                      className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium hover:bg-zinc-50"
+                      style={{ color: "#801A28" }}>
+                      Upravit
+                    </button>
+                  )}
                 </div>
-                {jeEditor && (
-                  <button onClick={() => { setEditZapas(z.id); setSkore({ s1: z.skore_tym1?.toString() ?? "", s2: z.skore_tym2?.toString() ?? "" }); }}
-                    className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium hover:bg-zinc-50"
-                    style={{ color: "#801A28" }}>
-                    {z.skore_tym1 != null ? "Upravit" : "Zadat"}
-                  </button>
+                {zobrazInputy && (
+                  <div className="mt-3 flex gap-2 justify-end">
+                    <button onClick={() => ulozSkore(z.id)} disabled={ukladam === z.id}
+                      className="rounded-lg px-4 py-2 text-xs font-semibold text-white"
+                      style={{ backgroundColor: "#801A28" }}>
+                      {ukladam === z.id ? "..." : "Ulozit"}
+                    </button>
+                    {jeUpravovany && (
+                      <button onClick={() => setUpravitId(null)}
+                        className="rounded-lg px-3 py-2 text-xs font-medium border border-zinc-200 hover:bg-zinc-50">
+                        Zrusit
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-              {editZapas === z.id && (
-                <div className="mt-3 flex items-center gap-2 justify-end flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-xs" style={{ color: "#9ca3af" }}>{jmeno(z.tym1_hrac1_id).split(" ")[0]}</span>
-                      <input type="number" min={0} max={limit} value={skore.s1}
-                        onChange={e => handleS1Change(e.target.value)}
-                        className="w-14 rounded-lg border-2 border-[#801A28] px-2 py-2 text-center text-sm font-bold focus:outline-none" />
-                    </div>
-                    <span className="font-bold text-sm mt-4" style={{ color: "#9ca3af" }}>:</span>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-xs" style={{ color: "#9ca3af" }}>{jmeno(z.tym2_hrac1_id).split(" ")[0]}</span>
-                      <input type="number" min={0} max={limit} value={skore.s2}
-                        onChange={e => handleS2Change(e.target.value)}
-                        className="w-14 rounded-lg border-2 border-[#801A28] px-2 py-2 text-center text-sm font-bold focus:outline-none" />
-                    </div>
-                  </div>
-                  <button onClick={ulozSkore} disabled={ukladam}
-                    className="rounded-lg px-4 py-2 text-xs font-semibold text-white"
-                    style={{ backgroundColor: "#801A28" }}>
-                    {ukladam ? "..." : "Ulozit"}
-                  </button>
-                  <button onClick={() => setEditZapas(null)}
-                    className="rounded-lg px-3 py-2 text-xs font-medium border border-zinc-200 hover:bg-zinc-50">
-                    Zrusit
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -346,6 +368,7 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
   const [pohybInfo, setPohybInfo] = useState<{ kurt: number; vitezPar: string[] | null; porazenyPar: string[] | null; vitezKurt: number; porazKurt: number }[]>([]);
   const [aktivniSuggestion, setAktivniSuggestion] = useState<string | null>(null);
   const [navrhyPerKurt, setNavrhyPerKurt] = useState<Record<number, string[]>>({});
+  const [upravitKolo, setUpravitKolo] = useState<number | null>(null);
 
   function otevriNoveKolo() {
     const predchoziKolo = kola[kola.length - 1];
@@ -476,9 +499,9 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
         <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between flex-wrap gap-2">
             <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Kurty — kolo {aktivniKolo}</h2>
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap">
               {kola.map(k => (
-                <button key={k.cislo} onClick={() => setAktivniKolo(k.cislo)}
+                <button key={k.cislo} onClick={() => { setAktivniKolo(k.cislo); setUpravitKolo(null); }}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
                   style={{ backgroundColor: aktivniKolo === k.cislo ? "#801A28" : "transparent", color: aktivniKolo === k.cislo ? "white" : "#6b7280" }}>
                   {k.cislo}.
@@ -505,8 +528,8 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
                     </div>
                   </div>
 
-                  {/* Zapis vysledku */}
-                  {jeEditor && aktivniKolo === kola.length && (
+                  {/* Zapis / oprava vysledku */}
+                  {jeEditor && (aktivniKolo === kola.length || upravitKolo === aktivniKolo) && (
                     <div className="mt-3 flex gap-2">
                       <button onClick={() => zapisVysledek(k.kurt, "tym1")}
                         className={`flex-1 rounded-lg py-2 text-xs font-semibold border-2 transition-all ${vysledek?.vitez === "tym1" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
@@ -523,6 +546,25 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
             })}
           </div>
         </section>
+      )}
+
+      {/* Tlacitko upravit minule kolo */}
+      {jeEditor && aktivniKoloData && aktivniKolo < kola.length && (
+        <div className="flex justify-end">
+          {upravitKolo === aktivniKolo ? (
+            <button onClick={() => setUpravitKolo(null)}
+              className="rounded-lg border border-zinc-200 px-4 py-2 text-xs font-medium hover:bg-zinc-50"
+              style={{ color: "#374151" }}>
+              Hotovo
+            </button>
+          ) : (
+            <button onClick={() => setUpravitKolo(aktivniKolo)}
+              className="rounded-lg border border-zinc-200 px-4 py-2 text-xs font-medium hover:bg-zinc-50"
+              style={{ color: "#801A28" }}>
+              Upravit kolo {aktivniKolo}
+            </button>
+          )}
+        </div>
       )}
 
       {/* Pohyb + nove kolo */}
