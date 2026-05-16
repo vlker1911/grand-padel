@@ -276,7 +276,10 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
   const supabase = createClient();
   const settings = hra.settings;
   const minutNaKolo = settings?.minut_na_kolo ?? 12;
-  const cislaKurtu = (settings?.cisla_kurtu ?? Array.from({ length: hra.pocet_kurtu }, (_, i) => i + 1)).sort((a, b) => a - b);
+  const maxKurtu = Math.floor(ucastnici.length / 4);
+  const cislaKurtu = (settings?.cisla_kurtu ?? Array.from({ length: hra.pocet_kurtu }, (_, i) => i + 1))
+    .sort((a, b) => a - b)
+    .slice(0, maxKurtu);
 
   // Odpocet
   const [sekundy, setSekundy] = useState(minutNaKolo * 60);

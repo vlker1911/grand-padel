@@ -33,7 +33,7 @@ export default function NovaHraPage() {
   // Parametry
   const [pocetHracu, setPocetHracu] = useState<number | "">(8);
   const [pocetKurtu, setPocetKurtu] = useState<number | "">(2);
-  const [cislaMexicano, setCislaMexicano] = useState("1, 2, 3, 4");
+  const [cislaMexicano, setCislaMexicano] = useState("1, 2");
   const [casOd, setCasOd] = useState("16:00");
   const [casDo, setCasDo] = useState("18:00");
 
@@ -226,8 +226,12 @@ export default function NovaHraPage() {
                       value={pocetKurtu}
                       onChange={(e) => {
                         const n = parseInt(e.target.value);
-                        if (!isNaN(n)) setPocetKurtu(n);
-                        else setPocetKurtu("");
+                        if (!isNaN(n)) {
+                          setPocetKurtu(n);
+                          if (typ === "mexicano") {
+                            setCislaMexicano(Array.from({ length: n }, (_, i) => i + 1).join(", "));
+                          }
+                        } else setPocetKurtu("");
                       }}
                       placeholder="napr. 4"
                       className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]"
@@ -274,7 +278,7 @@ export default function NovaHraPage() {
                       <input type="text" value={cislaMexicano} onChange={(e) => {
                         setCislaMexicano(e.target.value);
                         const cisla = e.target.value.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-                        setPocetKurtu(cisla.length || 1);
+                        if (cisla.length > 0) setPocetKurtu(cisla.length);
                       }}
                         placeholder="napr. 3, 4, 5, 6"
                         className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
