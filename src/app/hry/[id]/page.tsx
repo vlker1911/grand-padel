@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
@@ -39,6 +39,84 @@ type Zapas = {
   faze: string;
 };
 
+// ---------- OHNOSTROJ ----------
+
+function OhnostrojOverlay({ vitez, onDone }: { vitez: string; onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 7000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  const particles = useMemo(() => {
+    const bursts = [
+      [12, 18], [50, 8], [82, 22], [8, 60], [72, 50],
+      [35, 78], [88, 15], [28, 42], [60, 30], [45, 65],
+    ];
+    const colors = ["#f59e0b", "#fbbf24", "#ef4444", "#801A28", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#f97316", "#ffffff"];
+    return bursts.flatMap(([bx, by], bi) =>
+      Array.from({ length: 14 }, (_, pi) => ({
+        id: `${bi}-${pi}`,
+        bx, by,
+        angle: (pi / 14) * 360,
+        color: colors[(bi * 4 + pi) % colors.length],
+        delay: bi * 0.55 + (pi % 3) * 0.05,
+        size: 5 + (pi % 4) * 2,
+      }))
+    );
+  }, []);
+
+  return (
+    <>
+      <style>{`
+        @keyframes oh-burst {
+          0%   { transform: rotate(var(--a)) translateX(0px) scale(0.2); opacity: 0; }
+          8%   { transform: rotate(var(--a)) translateX(0px) scale(1);   opacity: 1; }
+          70%  { opacity: 0.7; }
+          85%  { transform: rotate(var(--a)) translateX(150px) scale(0.1); opacity: 0; }
+          100% { transform: rotate(var(--a)) translateX(0px) scale(0);   opacity: 0; }
+        }
+        @keyframes oh-fadein {
+          from { opacity: 0; transform: scale(0.85) translateY(16px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes oh-pulse {
+          0%, 100% { text-shadow: 0 0 30px #f59e0b88; }
+          50%       { text-shadow: 0 0 80px #f59e0bcc; }
+        }
+      `}</style>
+      <div
+        onClick={onDone}
+        style={{ position: "fixed", inset: 0, zIndex: 100, backgroundColor: "rgba(0,0,0,0.88)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+      >
+        {particles.map(p => (
+          <div key={p.id} style={{
+            position: "absolute",
+            left: `calc(${p.bx}% - ${p.size / 2}px)`,
+            top: `calc(${p.by}% - ${p.size / 2}px)`,
+            width: p.size,
+            height: p.size,
+            borderRadius: "50%",
+            backgroundColor: p.color,
+            ["--a" as string]: `${p.angle}deg`,
+            animation: `oh-burst 2.8s ${p.delay}s ease-out infinite`,
+          }} />
+        ))}
+        <div style={{ textAlign: "center", color: "white", position: "relative", zIndex: 1, animation: "oh-fadein 0.7s 0.2s ease-out both" }}>
+          <p style={{ fontSize: "1rem", opacity: 0.7, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.75rem" }}>
+            Gratulejeme k vitezstvi
+          </p>
+          <p style={{ fontSize: "3rem", fontWeight: 900, color: "#f59e0b", animation: "oh-pulse 2s ease-in-out infinite", lineHeight: 1.1 }}>
+            {vitez}
+          </p>
+          <p style={{ fontSize: "0.7rem", marginTop: "3rem", opacity: 0.35, letterSpacing: "0.08em" }}>
+            klepni pro pokracovani
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ---------- AMERICANO ----------
 
 function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
@@ -50,16 +128,23 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
 }) {
   const supabase = createClient();
   const [aktivniKolo, setAktivniKolo] = useState(1);
-  // scoreMap: vstupy pro kazdý zapas (nezadany i upravovany)
   const [scoreMap, setScoreMap] = useState<Record<string, { s1: string; s2: string }>>({});
   const [upravitId, setUpravitId] = useState<string | null>(null);
   const [ukladam, setUkladam] = useState<string | null>(null);
-  const [zobrazFinal, setZobrazFinal] = useState(false);
+  const [zobrazOhnostroj, setZobrazOhnostroj] = useState(false);
+  const ohnostrojUkazan = useRef(false);
 
   const limit = hra.body_na_zapas;
   const kola = [...new Set(zapasy.map(z => z.kolo))].sort((a, b) => a - b);
   const zapasyKola = zapasy.filter(z => z.kolo === aktivniKolo);
   const vsechnyOdehrany = zapasy.length > 0 && zapasy.every(z => z.skore_tym1 != null);
+
+  useEffect(() => {
+    if (vsechnyOdehrany && !ohnostrojUkazan.current) {
+      ohnostrojUkazan.current = true;
+      setZobrazOhnostroj(true);
+    }
+  }, [vsechnyOdehrany]);
 
   const tabulka = spocitejTabulku(
     ucastnici.map(u => ({ id: u.id, jmeno: u.jmeno })),
@@ -96,55 +181,11 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
     setUkladam(null);
   }
 
-  // Finalni obrazovka
-  if (zobrazFinal || (vsechnyOdehrany && hra.stav === "ukonceno")) {
-    return (
-      <div className="flex flex-col gap-4">
-        <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
-          <div className="px-5 py-6 border-b border-zinc-100 text-center">
-            <h2 className="text-xl font-bold" style={{ color: "#801A28" }}>Vysledky — konecne poradi</h2>
-            <p className="text-sm mt-1" style={{ color: "#6b7280" }}>{hra.nazev}</p>
-          </div>
-          <div className="divide-y divide-zinc-50">
-            {tabulka.map((h, i) => (
-              <div key={h.id} className="px-5 py-4 flex items-center gap-4">
-                <span className="text-2xl font-black w-8 text-center" style={{
-                  color: i === 0 ? "#f59e0b" : i === 1 ? "#9ca3af" : i === 2 ? "#cd7c32" : "#d1d5db"
-                }}>
-                  {i + 1}.
-                </span>
-                <span className="flex-1 font-semibold text-base" style={{ color: "#0A0A0A" }}>{h.jmeno}</span>
-                <div className="flex items-center gap-4 text-sm">
-                  <span style={{ color: "#6b7280" }}>{h.vyhry}V / {h.prohry}P</span>
-                  <span className="font-bold" style={{ color: i === 0 ? "#801A28" : "#374151" }}>{h.body} b</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-        <button onClick={() => setZobrazFinal(false)}
-          className="w-full rounded-full py-3 text-sm font-semibold border border-zinc-200 bg-white"
-          style={{ color: "#374151" }}>
-          Zpet na zapasy
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Banner — vsechny zapasy odehrany */}
-      {vsechnyOdehrany && (
-        <div className="rounded-2xl p-4 flex items-center justify-between gap-4"
-          style={{ backgroundColor: "#801A28" }}>
-          <p className="text-sm font-semibold text-white">Vsechny zapasy jsou odehrany!</p>
-          <button onClick={() => setZobrazFinal(true)}
-            className="rounded-full px-5 py-2 text-sm font-semibold bg-white shrink-0"
-            style={{ color: "#801A28" }}>
-            Zobrazit vysledky
-          </button>
-        </div>
+      {zobrazOhnostroj && (
+        <OhnostrojOverlay vitez={tabulka[0]?.jmeno ?? ""} onDone={() => setZobrazOhnostroj(false)} />
       )}
 
       {/* Tabulka */}
@@ -253,11 +294,17 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
                 </div>
                 {zobrazInputy && (
                   <div className="mt-3 flex gap-2 justify-end">
-                    <button onClick={() => ulozSkore(z.id)} disabled={ukladam === z.id}
-                      className="rounded-lg px-4 py-2 text-xs font-semibold text-white"
-                      style={{ backgroundColor: "#801A28" }}>
-                      {ukladam === z.id ? "..." : "Ulozit"}
-                    </button>
+                    {(() => {
+                      const sc2 = getScore(z.id);
+                      const platne = !isNaN(parseInt(sc2.s1)) && !isNaN(parseInt(sc2.s2)) && sc2.s1 !== "" && sc2.s2 !== "";
+                      return (
+                        <button onClick={() => ulozSkore(z.id)} disabled={ukladam === z.id || !platne}
+                          className="rounded-lg px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+                          style={{ backgroundColor: "#801A28" }}>
+                          {ukladam === z.id ? "..." : "Ulozit"}
+                        </button>
+                      );
+                    })()}
                     {jeUpravovany && (
                       <button onClick={() => setUpravitId(null)}
                         className="rounded-lg px-3 py-2 text-xs font-medium border border-zinc-200 hover:bg-zinc-50">
@@ -272,13 +319,6 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
         </div>
       </section>
 
-      {jeEditor && vsechnyOdehrany && (
-        <button onClick={() => setZobrazFinal(true)}
-          className="w-full rounded-full py-3 text-sm font-semibold text-white"
-          style={{ backgroundColor: "#801A28" }}>
-          Zobrazit konecne vysledky
-        </button>
-      )}
     </div>
   );
 }
