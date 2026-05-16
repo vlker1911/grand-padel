@@ -176,11 +176,12 @@ export default function NovaHraPage() {
   }, [typ, typParovani, pocetTymu, pocetSinglesHracu]);
 
   // Pocet zapasu — skupiny + playoff (podle predikovaneho poctu tymu)
+  // Musi sedet s tim co generujPlayoff fakticky vytvori v [id]/page.tsx
   const pocetZapasu = useMemo(() => {
     const n = pocetTymuPredikovany;
     if (n < 2) return 0;
     const pocetSkupinPred = vypocitejPocetSkupin(n);
-    // Distribuce na skupiny — pokud n je delitelne pocetSkupinPred, tak je to rovne
+    // Skupinove zapasy: vsechny kombinace v ramci skupiny
     const baseSize = Math.floor(n / pocetSkupinPred);
     const extra = n % pocetSkupinPred;
     let skupinaZapasy = 0;
@@ -188,7 +189,16 @@ export default function NovaHraPage() {
       const size = baseSize + (i < extra ? 1 : 0);
       skupinaZapasy += (size * (size - 1)) / 2;
     }
-    const playoffZapasy = playoff ? (multiTier ? n - pocetSkupinPred : Math.ceil(n / 2)) : 0;
+    // Playoff zapasy — odpovida tomu co generujPlayoff vytvori:
+    //  - multi-tier: kazde pasmo (4 tymy) → 2 zapasy v prvnim kole. Pocet pasem = ceil(n/4)
+    //  - non-multi-tier: postupuji top 2 z kazde skupiny → 2*pocetSkupin tymu → pocetSkupin zapasu
+    // TODO: jakmile generujPlayoff bude umet kompletni bracket (semifinale, finale, 3. misto),
+    //       upravit odhad: multi-tier kazde pasmo = 4 zapasy, non-multi-tier = 2*pocetSkupin - 1
+    const playoffZapasy = playoff
+      ? (multiTier
+          ? Math.ceil(n / 4) * 2
+          : pocetSkupinPred)
+      : 0;
     return skupinaZapasy + playoffZapasy;
   }, [pocetTymuPredikovany, playoff, multiTier]);
 
