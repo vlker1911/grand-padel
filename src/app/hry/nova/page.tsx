@@ -84,7 +84,7 @@ export default function NovaHraPage() {
   const [typParovani,        setTypParovani]        = useState<"pary" | "singles" | "mix">("pary");
   const [pocetTymu,          setPocetTymu]          = useState<number | "">(8);
   const [pocetSinglesHracu,  setPocetSinglesHracu]  = useState<number | "">(8);
-  const [scoringTyp,         setScoringTyp]         = useState<"gamy" | "body">("gamy");
+  const [scoringTyp,         setScoringTyp]         = useState<"gamy" | "body" | "cas">("gamy");
   const [scoringLimit,       setScoringLimit]       = useState(4);
   const [scoringLimitPlayoff,setScoringLimitPlayoff]= useState(6);
   const [odlisnyScoring,     setOdlisnyScoring]     = useState(false);
@@ -427,105 +427,105 @@ export default function NovaHraPage() {
                             </button>
                           ))}
                         </div>
-                        <p className="text-xs" style={{ color: "#9ca3af" }}>
-                          {typParovani === "pary"    ? "Zadavas rovnou hotove pary (2 hraci = 1 tym)." :
-                           typParovani === "singles" ? "Zadavas jednotlivce — system vytvorí pary losem (gender-aware: prednostne M+Z)." :
-                           "Cast hraci uz maji para, zbytek se dolosuje gender-aware losem."}
-                        </p>
                       </div>
 
-                      {/* Pocet tymu / hracu */}
-                      {(typParovani === "pary" || typParovani === "mix") && (
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-sm font-medium" style={{ color: "#374151" }}>
-                            {typParovani === "mix" ? "Pocet hotovych paru" : "Pocet paru"}
-                          </label>
-                          <div className="flex gap-2 items-center">
-                            {[4, 8, 16].map(n => (
-                              <button key={n} onClick={() => nastavPocetTymu(n)}
-                                className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${pocetTymu === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                                {n}
-                              </button>
-                            ))}
-                            <input type="number" min={2} max={128} value={pocetTymu}
+                      {/* Pocet */}
+                      {typParovani === "mix" ? (
+                        <div className="flex gap-3">
+                          <div className="flex flex-col gap-1.5 flex-1">
+                            <label className="text-sm font-medium" style={{ color: "#374151" }}>Pocet hotovych paru</label>
+                            <input type="number" min={0} max={128} value={pocetTymu}
                               onChange={e => { const n = parseInt(e.target.value); if (!isNaN(n)) nastavPocetTymu(n); else setPocetTymu(""); }}
-                              className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none" />
+                              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
                           </div>
-                          <p className="text-xs" style={{ color: "#9ca3af" }}>Max 128 paru · {vypocitejPocetSkupin(typeof pocetTymu === "number" ? pocetTymu : 0)} {(() => { const n = typeof pocetTymu === "number" ? vypocitejPocetSkupin(pocetTymu) : 0; return n === 1 ? "skupina" : n < 5 ? "skupiny" : "skupin"; })()}</p>
+                          <div className="flex flex-col gap-1.5 flex-1">
+                            <label className="text-sm font-medium" style={{ color: "#374151" }}>Pocet jednotlivcu</label>
+                            <input type="number" min={0} max={256} value={pocetSinglesHracu}
+                              onChange={e => { const n = parseInt(e.target.value); if (!isNaN(n)) nastavPocetSingles(n); else setPocetSinglesHracu(""); }}
+                              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                          </div>
                         </div>
-                      )}
-                      {(typParovani === "singles" || typParovani === "mix") && (
+                      ) : (
                         <div className="flex flex-col gap-1.5">
                           <label className="text-sm font-medium" style={{ color: "#374151" }}>
-                            {typParovani === "mix" ? "Pocet jednotlivcu (dolosovani)" : "Pocet hracu"}
+                            {typParovani === "pary" ? "Pocet paru" : "Pocet hracu"}
                           </label>
-                          <div className="flex gap-2 items-center">
-                            {[4, 8, 16].map(n => (
-                              <button key={n} onClick={() => nastavPocetSingles(n)}
-                                className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${pocetSinglesHracu === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                                {n}
-                              </button>
-                            ))}
-                            <input type="number" min={2} max={256} value={pocetSinglesHracu}
-                              onChange={e => { const n = parseInt(e.target.value); if (!isNaN(n)) nastavPocetSingles(n); else setPocetSinglesHracu(""); }}
-                              className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none" />
+                          <div className="flex items-center gap-3">
+                            <input type="number" min={2} max={typParovani === "pary" ? 128 : 256} value={typParovani === "pary" ? pocetTymu : pocetSinglesHracu}
+                              onChange={e => {
+                                const n = parseInt(e.target.value);
+                                if (!isNaN(n)) typParovani === "pary" ? nastavPocetTymu(n) : nastavPocetSingles(n);
+                                else typParovani === "pary" ? setPocetTymu("") : setPocetSinglesHracu("");
+                              }}
+                              className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                            <p className="text-sm flex-1" style={{ color: "#6b7280" }}>
+                              {typParovani === "pary" && typeof pocetTymu === "number" && pocetTymu > 0
+                                ? `= ${pocetTymu * 2} hracu · ${vypocitejPocetSkupin(pocetTymu)} ${(() => { const n = vypocitejPocetSkupin(pocetTymu); return n === 1 ? "skupina" : n < 5 ? "skupiny" : "skupin"; })()}`
+                                : typParovani === "singles" && typeof pocetSinglesHracu === "number" && pocetSinglesHracu > 0
+                                ? `= ${Math.floor(pocetSinglesHracu / 2)} paru · ${vypocitejPocetSkupin(Math.floor(pocetSinglesHracu / 2))} ${(() => { const n = vypocitejPocetSkupin(Math.floor(pocetSinglesHracu / 2)); return n === 1 ? "skupina" : n < 5 ? "skupiny" : "skupin"; })()}${pocetSinglesHracu % 2 !== 0 ? " · 1 volno" : ""}`
+                                : ""}
+                            </p>
                           </div>
-                          {typParovani === "singles" && typeof pocetSinglesHracu === "number" && pocetSinglesHracu % 2 !== 0 && (
-                            <p className="text-xs" style={{ color: "#801A28" }}>Lichy pocet — jeden hrac dostane volno.</p>
-                          )}
-                          {typParovani === "mix" && typeof pocetSinglesHracu === "number" && pocetSinglesHracu % 2 !== 0 && (
-                            <p className="text-xs" style={{ color: "#9ca3af" }}>Lichy pocet jednotlivcu — jeden hrac dostane volno.</p>
-                          )}
                         </div>
                       )}
+                      {typParovani === "mix" && (() => {
+                        const celkem = (typeof pocetTymu === "number" ? pocetTymu : 0) + Math.floor((typeof pocetSinglesHracu === "number" ? pocetSinglesHracu : 0) / 2);
+                        return celkem > 0 ? (
+                          <p className="text-xs" style={{ color: "#9ca3af" }}>
+                            Celkem {celkem} paru = {celkem * 2} hracu · {vypocitejPocetSkupin(celkem)} {(() => { const n = vypocitejPocetSkupin(celkem); return n === 1 ? "skupina" : n < 5 ? "skupiny" : "skupin"; })()}
+                          </p>
+                        ) : null;
+                      })()}
 
-                      {/* Scoring */}
+                      {/* Format zapasu */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Scoring</label>
+                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Format zapasu</label>
                         <div className="flex gap-2">
-                          {(["gamy", "body"] as const).map(t => (
-                            <button key={t} onClick={() => setScoringTyp(t)}
+                          {(["gamy", "body", "cas"] as const).map(t => (
+                            <button key={t} onClick={() => { setScoringTyp(t); setScoringLimit(t === "gamy" ? 6 : t === "body" ? 24 : 12); }}
                               className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${scoringTyp === t ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                              {t === "gamy" ? "Gamy" : "Body"}
+                              {t === "gamy" ? "Gamy" : t === "body" ? "Body" : "Cas"}
                             </button>
                           ))}
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-xs" style={{ color: "#6b7280" }}>
-                            {odlisnyScoring ? "Limit skupiny:" : `Limit (${scoringTyp === "gamy" ? "gamy" : "body"} na zapas):`}
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs shrink-0" style={{ color: "#6b7280" }}>
+                            {scoringTyp === "gamy" ? "Gamy na zapas:" : scoringTyp === "body" ? "Body na zapas:" : "Minut na zapas:"}
                           </label>
-                          <div className="flex gap-2 items-center">
-                            {(scoringTyp === "gamy" ? [4, 6, 8] : [16, 24, 32]).map(n => (
+                          <div className="flex gap-1.5 flex-1">
+                            {(scoringTyp === "gamy" ? [4, 5, 6] : scoringTyp === "body" ? [16, 24, 32] : [10, 12, 15]).map(n => (
                               <button key={n} onClick={() => setScoringLimit(n)}
-                                className={`flex-1 rounded-xl py-2 text-sm font-semibold border-2 transition-all ${scoringLimit === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                className={`flex-1 rounded-lg py-2 text-sm font-semibold border-2 transition-all ${scoringLimit === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
                                 {n}
                               </button>
                             ))}
                             <input type="number" min={1} max={99} value={scoringLimit} onChange={e => setScoringLimit(Number(e.target.value))}
-                              className="w-14 rounded-xl border-2 border-zinc-200 px-2 py-2 text-sm text-center focus:outline-none" />
+                              className="w-14 rounded-lg border-2 border-zinc-200 px-2 py-2 text-sm text-center focus:outline-none" />
                           </div>
                         </div>
                         <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "#6b7280" }}>
                           <input type="checkbox" checked={odlisnyScoring} onChange={e => setOdlisnyScoring(e.target.checked)} className="rounded" />
-                          Jiny limit pro playoff
+                          Jiny format pro playoff
                         </label>
                         {odlisnyScoring && (
-                          <div className="flex gap-2 items-center">
+                          <div className="flex items-center gap-2">
                             <label className="text-xs shrink-0" style={{ color: "#6b7280" }}>Playoff:</label>
-                            {(scoringTyp === "gamy" ? [4, 6, 8] : [16, 24, 32]).map(n => (
-                              <button key={n} onClick={() => setScoringLimitPlayoff(n)}
-                                className={`flex-1 rounded-xl py-2 text-sm font-semibold border-2 transition-all ${scoringLimitPlayoff === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                                {n}
-                              </button>
-                            ))}
-                            <input type="number" min={1} max={99} value={scoringLimitPlayoff} onChange={e => setScoringLimitPlayoff(Number(e.target.value))}
-                              className="w-14 rounded-xl border-2 border-zinc-200 px-2 py-2 text-sm text-center focus:outline-none" />
+                            <div className="flex gap-1.5 flex-1">
+                              {(scoringTyp === "gamy" ? [4, 5, 6] : scoringTyp === "body" ? [16, 24, 32] : [10, 12, 15]).map(n => (
+                                <button key={n} onClick={() => setScoringLimitPlayoff(n)}
+                                  className={`flex-1 rounded-lg py-2 text-sm font-semibold border-2 transition-all ${scoringLimitPlayoff === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                  {n}
+                                </button>
+                              ))}
+                              <input type="number" min={1} max={99} value={scoringLimitPlayoff} onChange={e => setScoringLimitPlayoff(Number(e.target.value))}
+                                className="w-14 rounded-lg border-2 border-zinc-200 px-2 py-2 text-sm text-center focus:outline-none" />
+                            </div>
                           </div>
                         )}
                       </div>
 
                       {/* Playoff */}
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-medium" style={{ color: "#374151" }}>Playoff</label>
                         <div className="flex gap-2">
                           <button onClick={() => setPlayoff(true)}
@@ -537,24 +537,7 @@ export default function NovaHraPage() {
                             Ne — jen skupiny
                           </button>
                         </div>
-                        {playoff && (
-                          <>
-                            <div className="flex gap-2">
-                              <button onClick={() => setTypPlayoff("krizovy")}
-                                className={`flex-1 rounded-xl py-2 text-xs font-semibold border-2 transition-all ${typPlayoff === "krizovy" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                                Krizovy (1A vs 2B)
-                              </button>
-                              <button onClick={() => setTypPlayoff("primy")}
-                                className={`flex-1 rounded-xl py-2 text-xs font-semibold border-2 transition-all ${typPlayoff === "primy" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                                Primy (1 vs 4, 2 vs 3)
-                              </button>
-                            </div>
-                            <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "#6b7280" }}>
-                              <input type="checkbox" checked={multiTier} onChange={e => setMultiTier(e.target.checked)} className="rounded" />
-                              Vice pasem (1-4, 5-8, 9-12...) — kazdy tym hraje o sve konecne umisteni
-                            </label>
-                          </>
-                        )}
+                        {playoff && <p className="text-xs" style={{ color: "#9ca3af" }}>Typ playoff a pavouk se nastavi az pri zahajeni playoff.</p>}
                       </div>
                     </>
                   )}

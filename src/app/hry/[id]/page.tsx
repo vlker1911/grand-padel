@@ -749,7 +749,7 @@ type TurnajZapas = {
 };
 
 type TurnajSettings = {
-  scoring_typ?: "gamy" | "body";
+  scoring_typ?: "gamy" | "body" | "cas";
   scoring_limit?: number;
   scoring_limit_playoff?: number;
   playoff?: boolean;
@@ -774,7 +774,7 @@ function spocitejHarmonogram(
   zapasy: TurnajZapas[],
   pocetKurtu: number,
   casOdStr: string | undefined,
-  scoringTyp: "gamy" | "body",
+  scoringTyp: "gamy" | "body" | "cas",
   scoringLimit: number,
   scoringLimitPlayoff: number,
 ): HarmonogramZaznam[] {
@@ -785,7 +785,9 @@ function spocitejHarmonogram(
 
   function delkaZapasu(z: TurnajZapas) {
     const lim = z.faze === "skupina" ? scoringLimit : scoringLimitPlayoff;
-    return scoringTyp === "gamy" ? lim * 3 + 5 : Math.round(lim * 0.45) + 5;
+    if (scoringTyp === "gamy") return lim * 3 + 5;
+    if (scoringTyp === "cas")  return lim + 3;
+    return Math.round(lim * 0.45) + 5;
   }
 
   // Kurty 1..pocetKurtu, každý volný od startMin
