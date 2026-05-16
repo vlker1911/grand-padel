@@ -333,28 +333,53 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
 
   function pripravNoveKolo() {
     const predchoziKolo = kola[kola.length - 1];
-    // Doporuceni pohybu
+    const minKurt = cislaKurtu[0];
+    const maxKurt = cislaKurtu[cislaKurtu.length - 1];
+
     const pohyby = predchoziKolo.kurty.map((k) => {
       const vysledek = predchoziKolo.vysledky.find(v => v.kurt === k.kurt);
       const vitezPar = vysledek?.vitez === "tym1" ? k.tym1 : vysledek?.vitez === "tym2" ? k.tym2 : null;
       const porazenyPar = vitezPar ? (vysledek?.vitez === "tym1" ? k.tym2 : k.tym1) : null;
-      const minKurt = cislaKurtu[0];
-      const maxKurt = cislaKurtu[cislaKurtu.length - 1];
       const vitezKurt = k.kurt === minKurt ? k.kurt : k.kurt - 1;
       const porazKurt = k.kurt === maxKurt ? k.kurt : k.kurt + 1;
       return { kurt: k.kurt, vitezPar, porazenyPar, vitezKurt, porazKurt };
     });
+
+    // Predvyplnit pole hracu podle pohybu
+    const navrhHracu: Record<number, string[]> = {};
+    cislaKurtu.forEach(k => { navrhHracu[k] = []; });
+    pohyby.forEach(p => {
+      if (p.vitezPar) {
+        navrhHracu[p.vitezKurt] = [...(navrhHracu[p.vitezKurt] ?? []), ...p.vitezPar];
+      }
+      if (p.porazenyPar) {
+        navrhHracu[p.porazKurt] = [...(navrhHracu[p.porazKurt] ?? []), ...p.porazenyPar];
+      }
+    });
+
+    const predvyplnene = cislaKurtu.map(kurt => {
+      const hraci = navrhHracu[kurt] ?? [];
+      return {
+        kurt,
+        tym1: [hraci[0] ?? "", hraci[1] ?? ""],
+        tym2: [hraci[2] ?? "", hraci[3] ?? ""],
+      };
+    });
+
     setPridavamKolo(true);
-    setNovePary(cislaKurtu.map(kurt => ({ kurt, tym1: ["", ""], tym2: ["", ""] })));
+    setNovePary(predvyplnene);
     return pohyby;
   }
 
   const [pohybInfo, setPohybInfo] = useState<{ kurt: number; vitezPar: string[] | null; porazenyPar: string[] | null; vitezKurt: number; porazKurt: number }[]>([]);
+  const [aktivniSuggestion, setAktivniSuggestion] = useState<string | null>(null);
 
   function otevriNoveKolo() {
     const pohyby = pripravNoveKolo();
     setPohybInfo(pohyby);
   }
+
+  const vsichniHraci = ucastnici.map(u => u.jmeno);
 
   function updateNovyPar(kurtCislo: number, tym: "tym1" | "tym2", idx: number, hodnota: string) {
     setNovePary(prev => prev.map(p => {
@@ -506,20 +531,42 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
             <div key={p.kurt} className="flex flex-col gap-2">
               <p className="text-xs font-semibold" style={{ color: "#6b7280" }}>Kurt {p.kurt}</p>
               <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs" style={{ color: "#9ca3af" }}>Par A</p>
-                  <input placeholder="Hrac 1" value={p.tym1[0]} onChange={e => updateNovyPar(p.kurt, "tym1", 0, e.target.value)}
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
-                  <input placeholder="Hrac 2" value={p.tym1[1]} onChange={e => updateNovyPar(p.kurt, "tym1", 1, e.target.value)}
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs" style={{ color: "#9ca3af" }}>Par B</p>
-                  <input placeholder="Hrac 3" value={p.tym2[0]} onChange={e => updateNovyPar(p.kurt, "tym2", 0, e.target.value)}
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
-                  <input placeholder="Hrac 4" value={p.tym2[1]} onChange={e => updateNovyPar(p.kurt, "tym2", 1, e.target.value)}
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
-                </div>
+                {(["tym1", "tym2"] as const).map((tym, ti) => (
+                  <div key={tym} className="flex flex-col gap-1">
+                    <p className="text-xs" style={{ color: "#9ca3af" }}>Par {ti === 0 ? "A" : "B"}</p>
+                    {[0, 1].map(idx => {
+                      const fieldKey = `${p.kurt}-${tym}-${idx}`;
+                      const hodnota = p[tym][idx];
+                      const filtrovani = vsichniHraci.filter(h =>
+                        h.toLowerCase().includes(hodnota.toLowerCase()) && hodnota.length > 0 && h !== hodnota
+                      );
+                      return (
+                        <div key={idx} className="relative">
+                          <input
+                            placeholder={`Hrac ${ti * 2 + idx + 1}`}
+                            value={hodnota}
+                            onChange={e => { updateNovyPar(p.kurt, tym, idx, e.target.value); setAktivniSuggestion(fieldKey); }}
+                            onFocus={() => setAktivniSuggestion(fieldKey)}
+                            onBlur={() => setTimeout(() => setAktivniSuggestion(null), 150)}
+                            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]"
+                          />
+                          {aktivniSuggestion === fieldKey && (
+                            <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-zinc-200 rounded-lg shadow-md overflow-hidden">
+                              {(hodnota.length === 0 ? vsichniHraci : filtrovani).slice(0, 8).map(hrac => (
+                                <button key={hrac} type="button"
+                                  onMouseDown={() => { updateNovyPar(p.kurt, tym, idx, hrac); setAktivniSuggestion(null); }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-zinc-50 transition-colors border-b border-zinc-50 last:border-0"
+                                  style={{ color: "#374151" }}>
+                                  {hrac}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           ))}
