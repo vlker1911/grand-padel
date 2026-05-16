@@ -82,6 +82,8 @@ export default function NovaHraPage() {
 
   // Turnaj
   const [typParovani,        setTypParovani]        = useState<"pary" | "singles" | "mix">("pary");
+  const [pocetTymu,          setPocetTymu]          = useState<number | "">(8);
+  const [pocetSinglesHracu,  setPocetSinglesHracu]  = useState<number | "">(8);
   const [scoringTyp,         setScoringTyp]         = useState<"gamy" | "body">("gamy");
   const [scoringLimit,       setScoringLimit]       = useState(4);
   const [scoringLimitPlayoff,setScoringLimitPlayoff]= useState(6);
@@ -89,8 +91,8 @@ export default function NovaHraPage() {
   const [playoff,            setPlayoff]            = useState(true);
   const [typPlayoff,         setTypPlayoff]         = useState<"krizovy" | "primy">("krizovy");
   const [multiTier,          setMultiTier]          = useState(true);
-  const [pary,               setPary]               = useState<ParEntry[]>(Array.from({ length: 4 }, (_, i) => ({ id: i, jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" })));
-  const [singlesHraci,       setSinglesHraci]       = useState<SingEntry[]>(Array.from({ length: 4 }, (_, i) => ({ id: i, jmeno: "", pohlavi: "" })));
+  const [pary,               setPary]               = useState<ParEntry[]>(Array.from({ length: 8 }, (_, i) => ({ id: i, jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" })));
+  const [singlesHraci,       setSinglesHraci]       = useState<SingEntry[]>(Array.from({ length: 8 }, (_, i) => ({ id: i, jmeno: "", pohlavi: "" })));
   const [losovanoSingles,    setLosovanoSingles]    = useState<ParEntry[]>([]);
   const [losovano,           setLosovano]           = useState(false);
 
@@ -111,12 +113,27 @@ export default function NovaHraPage() {
   function updateHrac(i: number, pole: keyof HracEntry, hodnota: string) { const n = [...hraci]; n[i] = { ...n[i], [pole]: hodnota }; setHraci(n); }
 
   // === Turnaj helpers ===
+  function nastavPocetTymu(n: number) {
+    const v = Math.min(128, Math.max(2, n));
+    setPocetTymu(v);
+    setPary(prev => v > prev.length
+      ? [...prev, ...Array.from({ length: v - prev.length }, (_, i) => ({ id: prev.length + i, jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" }))]
+      : prev.slice(0, v));
+  }
+  function nastavPocetSingles(n: number) {
+    const v = Math.min(256, Math.max(2, n));
+    setPocetSinglesHracu(v);
+    setSinglesHraci(prev => v > prev.length
+      ? [...prev, ...Array.from({ length: v - prev.length }, (_, i) => ({ id: prev.length + i, jmeno: "", pohlavi: "" }))]
+      : prev.slice(0, v));
+    setLosovano(false);
+  }
   function updatePar(id: number, pole: keyof ParEntry, hodnota: string) { setPary(prev => prev.map(p => p.id === id ? { ...p, [pole]: hodnota } : p)); }
-  function pridejPar() { if (pary.length >= 128) return; const newId = Math.max(0, ...pary.map(p => p.id)) + 1; setPary([...pary, { id: newId, jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" }]); }
-  function odeberPar(id: number) { if (pary.length <= 2) return; setPary(prev => prev.filter(p => p.id !== id)); }
+  function pridejPar() { if (pary.length >= 128) return; const newId = Math.max(0, ...pary.map(p => p.id)) + 1; setPary([...pary, { id: newId, jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" }]); setPocetTymu(pary.length + 1); }
+  function odeberPar(id: number) { if (pary.length <= 2) return; setPary(prev => prev.filter(p => p.id !== id)); setPocetTymu(prev => typeof prev === "number" ? prev - 1 : prev); }
   function updateSingle(id: number, pole: keyof SingEntry, hodnota: string) { setSinglesHraci(prev => prev.map(s => s.id === id ? { ...s, [pole]: hodnota } : s)); }
-  function pridejSingle() { const newId = Math.max(0, ...singlesHraci.map(s => s.id)) + 1; setSinglesHraci([...singlesHraci, { id: newId, jmeno: "", pohlavi: "" }]); }
-  function odeberSingle(id: number) { if (singlesHraci.length <= 2) return; setSinglesHraci(prev => prev.filter(s => s.id !== id)); }
+  function pridejSingle() { const newId = Math.max(0, ...singlesHraci.map(s => s.id)) + 1; setSinglesHraci([...singlesHraci, { id: newId, jmeno: "", pohlavi: "" }]); setPocetSinglesHracu(singlesHraci.length + 1); setLosovano(false); }
+  function odeberSingle(id: number) { if (singlesHraci.length <= 2) return; setSinglesHraci(prev => prev.filter(s => s.id !== id)); setPocetSinglesHracu(prev => typeof prev === "number" ? prev - 1 : prev); setLosovano(false); }
   function losuj() { setLosovanoSingles(sparujSingles(singlesHraci)); setLosovano(true); }
 
   const efektivniTymy = useMemo((): ParEntry[] => {
@@ -416,6 +433,51 @@ export default function NovaHraPage() {
                            "Cast hraci uz maji para, zbytek se dolosuje gender-aware losem."}
                         </p>
                       </div>
+
+                      {/* Pocet tymu / hracu */}
+                      {(typParovani === "pary" || typParovani === "mix") && (
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-sm font-medium" style={{ color: "#374151" }}>
+                            {typParovani === "mix" ? "Pocet hotovych paru" : "Pocet paru"}
+                          </label>
+                          <div className="flex gap-2 items-center">
+                            {[4, 8, 16].map(n => (
+                              <button key={n} onClick={() => nastavPocetTymu(n)}
+                                className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${pocetTymu === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                {n}
+                              </button>
+                            ))}
+                            <input type="number" min={2} max={128} value={pocetTymu}
+                              onChange={e => { const n = parseInt(e.target.value); if (!isNaN(n)) nastavPocetTymu(n); else setPocetTymu(""); }}
+                              className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none" />
+                          </div>
+                          <p className="text-xs" style={{ color: "#9ca3af" }}>Max 128 paru · {vypocitejPocetSkupin(typeof pocetTymu === "number" ? pocetTymu : 0)} {(() => { const n = typeof pocetTymu === "number" ? vypocitejPocetSkupin(pocetTymu) : 0; return n === 1 ? "skupina" : n < 5 ? "skupiny" : "skupin"; })()}</p>
+                        </div>
+                      )}
+                      {(typParovani === "singles" || typParovani === "mix") && (
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-sm font-medium" style={{ color: "#374151" }}>
+                            {typParovani === "mix" ? "Pocet jednotlivcu (dolosovani)" : "Pocet hracu"}
+                          </label>
+                          <div className="flex gap-2 items-center">
+                            {[4, 8, 16].map(n => (
+                              <button key={n} onClick={() => nastavPocetSingles(n)}
+                                className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${pocetSinglesHracu === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                {n}
+                              </button>
+                            ))}
+                            <input type="number" min={2} max={256} value={pocetSinglesHracu}
+                              onChange={e => { const n = parseInt(e.target.value); if (!isNaN(n)) nastavPocetSingles(n); else setPocetSinglesHracu(""); }}
+                              className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none" />
+                          </div>
+                          {typParovani === "singles" && typeof pocetSinglesHracu === "number" && pocetSinglesHracu % 2 !== 0 && (
+                            <p className="text-xs" style={{ color: "#801A28" }}>Lichy pocet — jeden hrac dostane volno.</p>
+                          )}
+                          {typParovani === "mix" && typeof pocetSinglesHracu === "number" && pocetSinglesHracu % 2 !== 0 && (
+                            <p className="text-xs" style={{ color: "#9ca3af" }}>Lichy pocet jednotlivcu — jeden hrac dostane volno.</p>
+                          )}
+                        </div>
+                      )}
 
                       {/* Scoring */}
                       <div className="flex flex-col gap-2">
