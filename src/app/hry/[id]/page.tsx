@@ -757,6 +757,65 @@ type TurnajSettings = {
   multi_tier?: boolean;
 };
 
+type HarmonogramZaznam = {
+  zapasId: string;
+  kurt: number;
+  casStartMin: number;
+  casEndMin: number;
+};
+
+function casMinToStr(min: number): string {
+  const h = Math.floor(min / 60) % 24;
+  const m = min % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function spocitejHarmonogram(
+  zapasy: TurnajZapas[],
+  pocetKurtu: number,
+  casOdStr: string | undefined,
+  scoringTyp: "gamy" | "body",
+  scoringLimit: number,
+  scoringLimitPlayoff: number,
+): HarmonogramZaznam[] {
+  const startMin = casOdStr
+    ? (() => { const [h, m] = casOdStr.split(":").map(Number); return h * 60 + m; })()
+    : 9 * 60;
+  const prechod = 3;
+
+  function delkaZapasu(z: TurnajZapas) {
+    const lim = z.faze === "skupina" ? scoringLimit : scoringLimitPlayoff;
+    return scoringTyp === "gamy" ? lim * 3 + 5 : Math.round(lim * 0.45) + 5;
+  }
+
+  // Kurty 1..pocetKurtu, každý volný od startMin
+  const kurtyVolne: number[] = Array.from({ length: pocetKurtu }, () => startMin);
+  const kurtyIndexy: number[] = Array.from({ length: pocetKurtu }, (_, i) => i + 1);
+
+  const result: HarmonogramZaznam[] = [];
+
+  // Skupiny nejdřív, pak playoff
+  const serazene = [
+    ...zapasy.filter(z => z.faze === "skupina"),
+    ...zapasy.filter(z => z.faze !== "skupina"),
+  ];
+
+  for (const z of serazene) {
+    // Nejdříve volný kurt
+    let nejdrivIdx = 0;
+    for (let i = 1; i < pocetKurtu; i++) {
+      if (kurtyVolne[i] < kurtyVolne[nejdrivIdx]) nejdrivIdx = i;
+    }
+    const kurt = kurtyIndexy[nejdrivIdx];
+    const start = kurtyVolne[nejdrivIdx];
+    const delka = delkaZapasu(z);
+    kurtyVolne[nejdrivIdx] = start + delka + prechod;
+    result.push({ zapasId: z.id, kurt, casStartMin: start, casEndMin: start + delka });
+  }
+
+  return result;
+}
+
 function skupinaTabulka(tymy: TurnajTym[], zapasy: TurnajZapas[]) {
   const stats: Record<string, { vyhry: number; remisy: number; prohry: number; skore: number; obdrzeno: number }> = {};
   tymy.forEach(t => { stats[t.id] = { vyhry: 0, remisy: 0, prohry: 0, skore: 0, obdrzeno: 0 }; });
@@ -849,7 +908,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   const [ukladam, setUkladam] = useState<string | null>(null);
   const [upravitId, setUpravitId] = useState<string | null>(null);
   const [generujiPlayoff, setGenerujiPlayoff] = useState(false);
-  const [aktivniFaze, setAktivniFaze] = useState<"skupiny" | "playoff">("skupiny");
+  const [aktivniFaze, setAktivniFaze] = useState<"skupiny" | "playoff" | "harmonogram">("skupiny");
 
   const nactiTurnaj = useCallback(async () => {
     const [{ data: tymyData }, { data: zapasyData }] = await Promise.all([
@@ -881,6 +940,67 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   );
 
   const playoffExistuje = zapasyPlayoff.length > 0;
+
+  const vsechnyPlayoffHotove = useMemo(
+    () => playoffExistuje && zapasyPlayoff.every(z => z.skore_tym1 != null),
+    [playoffExistuje, zapasyPlayoff]
+  );
+
+  const vsechnoHotove = useMemo(
+    () => (!playoff && vsechnySkupinyHotove) || (playoff && vsechnyPlayoffHotove),
+    [playoff, vsechnySkupinyHotove, vsechnyPlayoffHotove]
+  );
+
+  // Finalni poradi: vitezove pasem playoff (nebo skupin pokud bez playoff)
+  const finalniPoradi = useMemo((): { nazev: string; skore: number }[] => {
+    if (!vsechnoHotove) return [];
+    if (playoff && playoffExistuje) {
+      // Poradi: vitez kazdeho zapasu = vyssi umisteni; remiza = tim1 vyhrál
+      const fazePoradi = [...new Set(zapasyPlayoff.map(z => z.faze))].sort();
+      const poradi: { nazev: string; skore: number }[] = [];
+      fazePoradi.forEach(faze => {
+        const zapasyFaze = zapasyPlayoff.filter(z => z.faze === faze);
+        zapasyFaze.forEach(z => {
+          const vitezId = (z.skore_tym1 ?? 0) >= (z.skore_tym2 ?? 0) ? z.tym1_id : z.tym2_id;
+          const porazenyId = vitezId === z.tym1_id ? z.tym2_id : z.tym1_id;
+          if (!poradi.find(p => p.nazev === jmenoTymu(vitezId)))
+            poradi.unshift({ nazev: jmenoTymu(vitezId), skore: Math.max(z.skore_tym1 ?? 0, z.skore_tym2 ?? 0) });
+          if (!poradi.find(p => p.nazev === jmenoTymu(porazenyId)))
+            poradi.push({ nazev: jmenoTymu(porazenyId), skore: Math.min(z.skore_tym1 ?? 0, z.skore_tym2 ?? 0) });
+        });
+      });
+      return poradi;
+    }
+    // Bez playoff — skupinova tabulka sloučená
+    const vsichni = skupinyNazvy.flatMap(s => skupinaTabulka(skupinyMap[s] ?? [], zapasySkupin.filter(z => z.skupina === s)));
+    return vsichni.map(t => ({ nazev: t.nazev, skore: t.skore }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vsechnoHotove, playoff, playoffExistuje, zapasyPlayoff, zapasySkupin, skupinyMap, skupinyNazvy, tymy]);
+
+  const [zobrazOhnostroj, setZobrazOhnostroj] = useState(false);
+  const ohnostrojUkazanRef = useRef(false);
+
+  useEffect(() => {
+    if (vsechnoHotove && !ohnostrojUkazanRef.current) {
+      ohnostrojUkazanRef.current = true;
+      setZobrazOhnostroj(true);
+    }
+  }, [vsechnoHotove]);
+
+  const harmonogram = useMemo(() => spocitejHarmonogram(
+    zapasy,
+    hra.pocet_kurtu,
+    hra.settings?.cas_od,
+    scoringTyp,
+    scoringLimit,
+    scoringLimitPlayoff,
+  ), [zapasy, hra.pocet_kurtu, hra.settings?.cas_od, scoringTyp, scoringLimit, scoringLimitPlayoff]);
+
+  const harmonogramMap = useMemo(() => {
+    const m: Record<string, HarmonogramZaznam> = {};
+    harmonogram.forEach(h => { m[h.zapasId] = h; });
+    return m;
+  }, [harmonogram]);
 
   function jmenoTymu(id: string) {
     return tymy.find(t => t.id === id)?.nazev ?? "?";
@@ -993,6 +1113,14 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   return (
     <div className="flex flex-col gap-6">
 
+      {zobrazOhnostroj && finalniPoradi.length > 0 && (
+        <OhnostrojOverlay
+          vitez={finalniPoradi[0]?.nazev ?? ""}
+          poradi={finalniPoradi.map(t => ({ jmeno: t.nazev, body: t.skore }))}
+          onDone={() => setZobrazOhnostroj(false)}
+        />
+      )}
+
       {/* Info bar */}
       <section className="bg-white rounded-2xl border border-zinc-100 px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" style={{ color: "#374151" }}>
@@ -1009,17 +1137,19 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
       </section>
 
       {/* Faze prepinac */}
-      {playoffExistuje && (
-        <div className="flex gap-2">
-          {(["skupiny", "playoff"] as const).map(f => (
-            <button key={f} onClick={() => setAktivniFaze(f)}
-              className="flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all"
-              style={{ borderColor: aktivniFaze === f ? "#801A28" : "#e5e7eb", color: aktivniFaze === f ? "#801A28" : "#6b7280", backgroundColor: aktivniFaze === f ? "#fff5f5" : "white" }}>
-              {f === "skupiny" ? "Skupiny" : "Playoff"}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="flex gap-2">
+        {([
+          { k: "skupiny", l: "Skupiny" },
+          ...(playoffExistuje ? [{ k: "playoff", l: "Playoff" }] : []),
+          { k: "harmonogram", l: "Harmonogram" },
+        ] as { k: typeof aktivniFaze; l: string }[]).map(f => (
+          <button key={f.k} onClick={() => setAktivniFaze(f.k)}
+            className="flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all"
+            style={{ borderColor: aktivniFaze === f.k ? "#801A28" : "#e5e7eb", color: aktivniFaze === f.k ? "#801A28" : "#6b7280", backgroundColor: aktivniFaze === f.k ? "#fff5f5" : "white" }}>
+            {f.l}
+          </button>
+        ))}
+      </div>
 
       {/* ===== SKUPINY ===== */}
       {aktivniFaze === "skupiny" && skupinyNazvy.map(sName => {
@@ -1088,6 +1218,33 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
         </button>
       )}
 
+      {/* Vyhodnotit — kdyz je vse hotovo */}
+      {vsechnoHotove && (
+        <>
+          <button onClick={() => setZobrazOhnostroj(true)}
+            className="w-full rounded-full py-3 text-sm font-semibold text-white"
+            style={{ backgroundColor: "#801A28" }}>
+            Vyhodnotit — zobrazit viteze
+          </button>
+          {finalniPoradi.length > 0 && (
+            <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-100">
+                <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Konecne poradi</h2>
+              </div>
+              <div className="divide-y divide-zinc-50">
+                {finalniPoradi.map((t, i) => (
+                  <div key={t.nazev} className="px-5 py-3 flex items-center gap-3">
+                    <span className="text-sm font-bold w-6 text-right shrink-0" style={{ color: i === 0 ? "#f59e0b" : i === 1 ? "#9ca3af" : i === 2 ? "#cd7c32" : "#d1d5db" }}>{i + 1}.</span>
+                    <span className="flex-1 font-semibold text-sm" style={{ color: "#0A0A0A" }}>{t.nazev}</span>
+                    <span className="text-sm font-bold shrink-0" style={{ color: i === 0 ? "#801A28" : "#6b7280" }}>{t.skore} b</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
+
       {/* ===== PLAYOFF ===== */}
       {aktivniFaze === "playoff" && (
         <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
@@ -1117,6 +1274,63 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
           })()}
         </section>
       )}
+
+      {/* ===== HARMONOGRAM ===== */}
+      {aktivniFaze === "harmonogram" && (() => {
+        // Kurty — unique sorted
+        const kurty = [...new Set(harmonogram.map(h => h.kurt))].sort((a, b) => a - b);
+        // Seskupeni po kurtech
+        return (
+          <div className="flex flex-col gap-4">
+            <p className="text-xs" style={{ color: "#9ca3af" }}>
+              Odhadovany rozpis — casy jsou vypocitane automaticky na zaklade poctu kurtu a delky zapasu.
+            </p>
+            {kurty.map(kurt => {
+              const zapasyKurtu = harmonogram
+                .filter(h => h.kurt === kurt)
+                .sort((a, b) => a.casStartMin - b.casStartMin);
+              return (
+                <section key={kurt} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                  <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
+                    <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Kurt {kurt}</p>
+                  </div>
+                  <div className="divide-y divide-zinc-50">
+                    {zapasyKurtu.map(h => {
+                      const z = zapasy.find(zz => zz.id === h.zapasId);
+                      if (!z) return null;
+                      const hotovo = z.skore_tym1 != null;
+                      const skupinaLabel = z.skupina ? `Skupina ${z.skupina}` : z.faze === "playoff" ? "Finale" : z.faze.replace("playoff_pas_", "Pas ");
+                      return (
+                        <div key={h.zapasId} className="px-5 py-3 flex items-center gap-3">
+                          <div className="shrink-0 text-right w-12">
+                            <p className="text-xs font-bold tabular-nums" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>
+                              {casMinToStr(h.casStartMin)}
+                            </p>
+                            <p className="text-xs" style={{ color: "#d1d5db" }}>{casMinToStr(h.casEndMin)}</p>
+                          </div>
+                          <div className="w-px self-stretch" style={{ backgroundColor: hotovo ? "#e5e7eb" : "#801A28", opacity: 0.4 }} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs mb-0.5" style={{ color: "#9ca3af" }}>{skupinaLabel}</p>
+                            <p className="text-sm font-semibold truncate" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>
+                              {jmenoTymu(z.tym1_id)} <span style={{ color: "#d1d5db" }}>vs</span> {jmenoTymu(z.tym2_id)}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            {hotovo
+                              ? <span className="text-sm font-bold" style={{ color: "#6b7280" }}>{z.skore_tym1} : {z.skore_tym2}</span>
+                              : <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
+                            }
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        );
+      })()}
 
     </div>
   );
