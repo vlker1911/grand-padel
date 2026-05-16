@@ -15,6 +15,7 @@
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.7.7 | 16. 5. 2026 | Turnaj: kompletní bracket — semifinále (kolo=1) + auto-generované finále & o 3. místo (kolo=2) po dohrání obou semis. Pro 8 týmů multi-tier teď 20 zápasů (12 sk + 8 pl). Konečné pořadí podle finále/o3 |
 | v0.7.6 | 16. 5. 2026 | Turnaj: opraven odhad počtu zápasů pro playoff (sedí s tím co generujPlayoff vytvoří, ne 18 ale 16 pro 8 týmů multi-tier) → reálné kolo 12 min místo 10 |
 | v0.7.5 | 16. 5. 2026 | Turnaj: validace času bere počet týmů z formuláře (nečeká na vyplnění), Pořadí zápasů bez matoucích auto-kurtů, Spustit zápas tlačítko v Pořadí i Rozlosování |
 | v0.7.4 | 16. 5. 2026 | Turnaj: bug fix — Smazat tiše selhalo (chybělo RLS DELETE), přidány policies pro hry/hra_ucastnici/hra_zapasy, error handling v smazatTurnaj, /hry list rozlišuje "Zrušeno" |

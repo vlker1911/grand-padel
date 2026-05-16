@@ -189,15 +189,14 @@ export default function NovaHraPage() {
       const size = baseSize + (i < extra ? 1 : 0);
       skupinaZapasy += (size * (size - 1)) / 2;
     }
-    // Playoff zapasy — odpovida tomu co generujPlayoff vytvori:
-    //  - multi-tier: kazde pasmo (4 tymy) → 2 zapasy v prvnim kole. Pocet pasem = ceil(n/4)
-    //  - non-multi-tier: postupuji top 2 z kazde skupiny → 2*pocetSkupin tymu → pocetSkupin zapasu
-    // TODO: jakmile generujPlayoff bude umet kompletni bracket (semifinale, finale, 3. misto),
-    //       upravit odhad: multi-tier kazde pasmo = 4 zapasy, non-multi-tier = 2*pocetSkupin - 1
+    // Playoff zapasy — kompletni bracket:
+    //  - multi-tier: kazde pasmo (4 tymy) = 2 semi + 1 final + 1 o 3. misto = 4 zapasy
+    //  - non-multi-tier (4 tymy, 2 skupiny): 2 semi + 1 final + 1 o 3. misto = 4 zapasy
+    //  - non-multi-tier vetsi (6-8 tymu): zatim nepodporujeme cele brackets, jen prvni kolo
     const playoffZapasy = playoff
       ? (multiTier
-          ? Math.ceil(n / 4) * 2
-          : pocetSkupinPred)
+          ? Math.ceil(n / 4) * 4
+          : pocetSkupinPred * 2)  // 2 semi + 2 (final + o3) = 2*pocetSkupin pro 4-team bracket
       : 0;
     return skupinaZapasy + playoffZapasy;
   }, [pocetTymuPredikovany, playoff, multiTier]);

@@ -873,12 +873,12 @@ function generujPlayoff(
   }
 
   if (!multiTier) {
-    // Jen finalni playoff (top tymy)
+    // Jen finalni playoff (top tymy) — kolo=1 = semifinale, kolo=2 (finale + o 3. misto) se vygeneruje az po dohrani semis
     const postupuji = skupNames.flatMap(s => poradi[s].slice(0, 2));
     return pairPlayoffMatches(postupuji, typPlayoff, skupNames, hraId, "playoff", 1);
   }
 
-  // Multi-tier: vsichni hraji o sve umisteni
+  // Multi-tier: kazde pasmo (4 tymy) hraje semifinale (kolo=1), pak finale + o 3. misto (kolo=2)
   const zapasy: Omit<TurnajZapas, "id">[] = [];
   const n = vsichniVPoradi.length;
   const pocetPasem = Math.ceil(n / 4);
@@ -886,7 +886,7 @@ function generujPlayoff(
     const tymy = vsichniVPoradi.slice(pas * 4, (pas + 1) * 4);
     if (tymy.length >= 2) {
       const faze = pas === 0 ? "playoff" : `playoff_pas_${pas + 1}`;
-      zapasy.push(...pairPlayoffMatches(tymy, typPlayoff, skupNames, hraId, faze, pas + 1));
+      zapasy.push(...pairPlayoffMatches(tymy, typPlayoff, skupNames, hraId, faze, 1));
     }
   }
   return zapasy;
@@ -998,24 +998,31 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   );
 
   // Finalni poradi: vitezove pasem playoff (nebo skupin pokud bez playoff)
+  // Pro kazde pasmo (faze): finale -> 1. a 2. misto, o3misto -> 3. a 4. misto
   const finalniPoradi = useMemo((): { nazev: string; skore: number }[] => {
     if (!vsechnoHotove) return [];
     if (playoff && playoffExistuje) {
-      // Poradi: vitez kazdeho zapasu = vyssi umisteni; remiza = tim1 vyhrál
+      const result: { nazev: string; skore: number }[] = [];
       const fazePoradi = [...new Set(zapasyPlayoff.map(z => z.faze))].sort();
-      const poradi: { nazev: string; skore: number }[] = [];
       fazePoradi.forEach(faze => {
-        const zapasyFaze = zapasyPlayoff.filter(z => z.faze === faze);
-        zapasyFaze.forEach(z => {
-          const vitezId = (z.skore_tym1 ?? 0) >= (z.skore_tym2 ?? 0) ? z.tym1_id : z.tym2_id;
-          const porazenyId = vitezId === z.tym1_id ? z.tym2_id : z.tym1_id;
-          if (!poradi.find(p => p.nazev === jmenoTymu(vitezId)))
-            poradi.unshift({ nazev: jmenoTymu(vitezId), skore: Math.max(z.skore_tym1 ?? 0, z.skore_tym2 ?? 0) });
-          if (!poradi.find(p => p.nazev === jmenoTymu(porazenyId)))
-            poradi.push({ nazev: jmenoTymu(porazenyId), skore: Math.min(z.skore_tym1 ?? 0, z.skore_tym2 ?? 0) });
-        });
+        const finale = zapasyPlayoff.find(z => z.faze === faze && z.kolo === 2 && z.umisteni === "final");
+        const o3 = zapasyPlayoff.find(z => z.faze === faze && z.kolo === 2 && z.umisteni === "o3misto");
+        if (finale && finale.skore_tym1 != null && finale.skore_tym2 != null) {
+          const s1 = finale.skore_tym1, s2 = finale.skore_tym2;
+          const winnerId = s1 > s2 ? finale.tym1_id : finale.tym2_id;
+          const loserId = s1 > s2 ? finale.tym2_id : finale.tym1_id;
+          result.push({ nazev: jmenoTymu(winnerId), skore: Math.max(s1, s2) });
+          result.push({ nazev: jmenoTymu(loserId),  skore: Math.min(s1, s2) });
+        }
+        if (o3 && o3.skore_tym1 != null && o3.skore_tym2 != null) {
+          const s1 = o3.skore_tym1, s2 = o3.skore_tym2;
+          const winnerId = s1 > s2 ? o3.tym1_id : o3.tym2_id;
+          const loserId = s1 > s2 ? o3.tym2_id : o3.tym1_id;
+          result.push({ nazev: jmenoTymu(winnerId), skore: Math.max(s1, s2) });
+          result.push({ nazev: jmenoTymu(loserId),  skore: Math.min(s1, s2) });
+        }
       });
-      return poradi;
+      return result;
     }
     // Bez playoff — skupinova tabulka sloučená
     const vsichni = skupinyNazvy.flatMap(s => skupinaTabulka(skupinyMap[s] ?? [], zapasySkupin.filter(z => z.skupina === s)));
@@ -1090,7 +1097,8 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
     const nyni = new Date();
     const hh = String(nyni.getHours()).padStart(2, "0");
     const mm = String(nyni.getMinutes()).padStart(2, "0");
-    const vitez = s1 > s2 ? zapasy.find(z => z.id === zapasId)?.tym1_id : s2 > s1 ? zapasy.find(z => z.id === zapasId)?.tym2_id : null;
+    const zapas = zapasy.find(z => z.id === zapasId);
+    const vitez = s1 > s2 ? zapas?.tym1_id : s2 > s1 ? zapas?.tym2_id : null;
     await supabase.from("turnaj_zapasy").update({
       skore_tym1: s1,
       skore_tym2: s2,
@@ -1098,6 +1106,33 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
       cas_konec: `${hh}:${mm}`,
       vitez_id: vitez ?? null,
     }).eq("id", zapasId);
+
+    // Auto-generuj kolo 2 (final + o 3. misto) kdyz jsou obe semifinale daneho pasma hotove
+    if (zapas && zapas.faze.startsWith("playoff") && zapas.kolo === 1) {
+      const pasmoSemis = zapasy
+        .filter(z => z.faze === zapas.faze && z.kolo === 1 && z.id !== zapasId)
+        .filter(z => z.skore_tym1 != null);
+      // Jeste musime zahrnout prave ukladany zapas — bude hotovy
+      const vsechnyHotove = pasmoSemis.length + 1 === zapasy.filter(z => z.faze === zapas.faze && z.kolo === 1).length;
+      if (vsechnyHotove) {
+        // Sestav semi list vcetne tohoto zapasu (s novym skore)
+        const m1 = pasmoSemis[0];
+        const m2Updated = { ...zapas, skore_tym1: s1, skore_tym2: s2, vitez_id: vitez ?? null };
+        const semis = [m1, m2Updated];
+        if (semis.length === 2 && semis[0].vitez_id && m2Updated.vitez_id) {
+          const winner1 = m1.vitez_id!;
+          const loser1 = (m1.skore_tym1! > m1.skore_tym2! ? m1.tym2_id : m1.tym1_id);
+          const winner2 = m2Updated.vitez_id!;
+          const loser2 = (m2Updated.skore_tym1! > m2Updated.skore_tym2! ? m2Updated.tym2_id : m2Updated.tym1_id);
+          const noveZapasy = [
+            { hra_id: hra.id, faze: zapas.faze, skupina: null, kolo: 2, tym1_id: winner1, tym2_id: winner2, skore_tym1: null, skore_tym2: null, vitez_id: null, kurt: null, poradi_fronta: null, cas_zacatek: null, cas_konec: null, umisteni: "final", stav: "ceka" },
+            { hra_id: hra.id, faze: zapas.faze, skupina: null, kolo: 2, tym1_id: loser1,  tym2_id: loser2,  skore_tym1: null, skore_tym2: null, vitez_id: null, kurt: null, poradi_fronta: null, cas_zacatek: null, cas_konec: null, umisteni: "o3misto", stav: "ceka" },
+          ];
+          await supabase.from("turnaj_zapasy").insert(noveZapasy);
+        }
+      }
+    }
+
     setUpravitId(null);
     nactiTurnaj();
     setUkladam(null);
@@ -1848,20 +1883,49 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
               </div>
               {(() => {
                 const faze = [...new Set(zapasyPlayoff.map(z => z.faze))].sort();
-                return faze.map(f => (
-                  <div key={f}>
-                    {faze.length > 1 && (
+                return faze.map(f => {
+                  const semifinale = zapasyPlayoff.filter(z => z.faze === f && z.kolo === 1);
+                  const final_o3 = zapasyPlayoff.filter(z => z.faze === f && z.kolo === 2);
+                  const pasmoLabel = f === "playoff" ? (multiTier ? "Pasmo 1 (1.–4.)" : "Finale") : `Pasmo ${parseInt(f.replace("playoff_pas_", ""))} (${(parseInt(f.replace("playoff_pas_", "")) - 1) * 4 + 1}.–${parseInt(f.replace("playoff_pas_", "")) * 4}.)`;
+                  return (
+                    <div key={f}>
                       <div className="px-5 py-2 border-b border-zinc-50" style={{ backgroundColor: "#fafafa" }}>
-                        <p className="text-xs font-semibold" style={{ color: "#6b7280" }}>
-                          {f === "playoff" ? "Finale" : f.replace("playoff_pas_", "Pas ")}
-                        </p>
+                        <p className="text-xs font-semibold" style={{ color: "#6b7280" }}>{pasmoLabel}</p>
                       </div>
-                    )}
-                    <div className="divide-y divide-zinc-50">
-                      {zapasyPlayoff.filter(z => z.faze === f).map(z => renderZapas(z, scoringLimitPlayoff))}
+                      {semifinale.length > 0 && (
+                        <>
+                          <div className="px-5 py-1.5 border-b border-zinc-50">
+                            <p className="text-xs" style={{ color: "#9ca3af" }}>Semifinále</p>
+                          </div>
+                          <div className="divide-y divide-zinc-50">
+                            {semifinale.map(z => renderZapas(z, scoringLimitPlayoff))}
+                          </div>
+                        </>
+                      )}
+                      {final_o3.length > 0 ? (
+                        <>
+                          <div className="px-5 py-1.5 border-b border-zinc-50 border-t">
+                            <p className="text-xs" style={{ color: "#9ca3af" }}>Finále &amp; o 3. místo</p>
+                          </div>
+                          <div className="divide-y divide-zinc-50">
+                            {final_o3.sort((a, b) => (a.umisteni === "final" ? -1 : 1)).map(z => (
+                              <div key={z.id}>
+                                <div className="px-5 py-1 text-xs" style={{ color: z.umisteni === "final" ? "#801A28" : "#9ca3af", backgroundColor: z.umisteni === "final" ? "#fff5f5" : "transparent" }}>
+                                  {z.umisteni === "final" ? "Finále (1. místo)" : "O 3. místo"}
+                                </div>
+                                {renderZapas(z, scoringLimitPlayoff)}
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : semifinale.every(z => z.skore_tym1 == null) ? null : (
+                        <div className="px-5 py-3 text-xs italic border-t border-zinc-50" style={{ color: "#9ca3af" }}>
+                          Finále &amp; o 3. místo se vygeneruje po dohrání obou semifinále.
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ));
+                  );
+                });
               })()}
             </section>
           )}

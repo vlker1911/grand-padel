@@ -181,11 +181,13 @@ Body s auto-dopočtem: pokud uživatel napíše s1, doplníme s2 = limit - s1.
 
 ## 11. Roadmapa změn (v0.7.x a dál)
 
-### Známé nedostatky playoff (TODO)
-- `generujPlayoff` vytvoří jen **první kolo každého pásma** (např. pro 8 týmů multi-tier: 2 pásma × 2 zápasy = 4 zápasy)
-- **Chybí**: finále vítězů, finále poražených (o 3. místo) — kompletní bracket
-- Odhad `pocetZapasu` v nova/page.tsx je nasynchronizovaný s tímto stavem (vrací stejný počet jako se vygeneruje)
-- Až bude bracket kompletní: multi-tier = `pocetPasem * 4`, non-multi-tier = `2 * pocetSkupin - 1`
+### Kompletní bracket (v0.7.7+)
+- `generujPlayoff` vytvoří **semifinále (kolo=1)** ihned po zahájení playoff
+- **Finále + o 3. místo (kolo=2)** se **auto-vygeneruje** ve `ulozSkore`, jakmile jsou obě semifinále daného pásma dohraná
+- Pro 4-team pásmo (multi-tier nebo non-multi-tier s 2 skupinami): 2 semi + finále + o 3. místo = **4 zápasy**
+- Pro non-multi-tier s 6+ týmy v playoff: zatím jen první kolo (TODO: full bracket s BYE)
+- `umisteni` v `turnaj_zapasy`: `"final"` = finále vítězů, `"o3misto"` = o 3. místo
+- `finalniPoradi`: čte `umisteni="final"` (1.-2.) a `"o3misto"` (3.-4.) pro každé pásmo, takže multi-tier dává správně 1.-4., 5.-8., 9.-12.
 
 - [x] v0.7.0 — 6-tabová struktura
 - [ ] v0.7.1 — Smazat turnaj, auto-výpočet kola pro Čas, validace času pro gamy/body, dokument turnaj-koncept
