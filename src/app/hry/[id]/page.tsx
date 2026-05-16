@@ -384,10 +384,12 @@ type MexKolo = {
   vysledky: { kurt: number; vitez: "tym1" | "tym2" | null; skore?: string }[];
 };
 
-function MexicanoView({ hra, ucastnici, jeEditor }: {
+function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
   hra: Hra;
   ucastnici: Ucastnik[];
+  zapasy: Zapas[];
   jeEditor: boolean;
+  nactiData: () => void;
 }) {
   const supabase = createClient();
   const settings = hra.settings;
@@ -435,26 +437,79 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
 
   function resetujCas() { setBezi(false); setSekundy(minutNaKolo * 60); }
 
-  // Kola
-  const [kola, setKola] = useState<MexKolo[]>([]);
+  // Kola — odvozeno ze zapasu (persistovane v DB)
+  const supabaseMex = createClient();
   const [aktivniKolo, setAktivniKolo] = useState(1);
 
-  // Inicializace kola 1 — nahodne rozlosovani
-  useEffect(() => {
-    if (ucastnici.length === 0 || kola.length > 0) return;
-    const zamichani = [...ucastnici].sort(() => Math.random() - 0.5);
-    const kurtyKola1 = cislaKurtu.map((kurt, i) => {
-      const base = i * 4;
+  function jmenoUcastnika(id: string | null | undefined): string {
+    if (!id) return "?";
+    return ucastnici.find(u => u.id === id)?.jmeno ?? "?";
+  }
+
+  function idUcastnika(jmeno: string): string | null {
+    return ucastnici.find(u => u.jmeno === jmeno)?.id ?? null;
+  }
+
+  const kola = useMemo<MexKolo[]>(() => {
+    // Mexicano zapasy nemaji "faze" konvenci — pouzivame default "skupiny"
+    // Identifikujeme je tak, ze patri k mexicano hre (hra.typ === "mexicano")
+    const mexZapasy = zapasy.filter(z => z.kolo > 0);
+    const grouped: Record<number, Zapas[]> = {};
+    for (const z of mexZapasy) {
+      if (!grouped[z.kolo]) grouped[z.kolo] = [];
+      grouped[z.kolo].push(z);
+    }
+    return Object.keys(grouped).map(Number).sort((a, b) => a - b).map(cislo => {
+      const zs = grouped[cislo].slice().sort((a, b) => a.kurt - b.kurt);
       return {
-        kurt,
-        tym1: [zamichani[base]?.jmeno ?? "?", zamichani[base + 1]?.jmeno ?? "?"],
-        tym2: [zamichani[base + 2]?.jmeno ?? "?", zamichani[base + 3]?.jmeno ?? "?"],
+        cislo,
+        kurty: zs.map(z => ({
+          kurt: z.kurt,
+          tym1: [jmenoUcastnika(z.tym1_hrac1_id), jmenoUcastnika(z.tym1_hrac2_id)],
+          tym2: [jmenoUcastnika(z.tym2_hrac1_id), jmenoUcastnika(z.tym2_hrac2_id)],
+        })),
+        vysledky: zs.map(z => ({
+          kurt: z.kurt,
+          vitez: z.skore_tym1 != null && z.skore_tym2 != null
+            ? (z.skore_tym1 > z.skore_tym2 ? "tym1" : z.skore_tym2 > z.skore_tym1 ? "tym2" : null)
+            : null,
+        })),
       };
     });
-    setKola([{ cislo: 1, kurty: kurtyKola1, vysledky: cislaKurtu.map(k => ({ kurt: k, vitez: null })) }]);
-  }, [ucastnici]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zapasy, ucastnici]);
 
-  // Nove kolo
+  // Inicializace kola 1 — pokud zatim neexistuji zadne zapasy, vygeneruj a uloz do DB
+  const initRef = useRef(false);
+  useEffect(() => {
+    if (initRef.current) return;
+    if (ucastnici.length === 0) return;
+    if (zapasy.some(z => z.kolo > 0)) { initRef.current = true; return; }
+    if (!jeEditor) return;  // jen editor inicializuje
+    initRef.current = true;
+    (async () => {
+      const zamichani = [...ucastnici].sort(() => Math.random() - 0.5);
+      const rows = cislaKurtu.map((kurt, i) => {
+        const base = i * 4;
+        return {
+          hra_id: hra.id,
+          kolo: 1,
+          kurt,
+          tym1_hrac1_id: zamichani[base]?.id ?? null,
+          tym1_hrac2_id: zamichani[base + 1]?.id ?? null,
+          tym2_hrac1_id: zamichani[base + 2]?.id ?? null,
+          tym2_hrac2_id: zamichani[base + 3]?.id ?? null,
+          stav: "ceka",
+          faze: "skupiny",
+        };
+      });
+      await supabaseMex.from("hra_zapasy").insert(rows);
+      nactiData();
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ucastnici, zapasy]);
+
+  // Nove kolo — formular state (NE persistovany, jen v UI)
   const [novePary, setNovePary] = useState<{ kurt: number; tym1: string[]; tym2: string[] }[]>([]);
   const [pridavamKolo, setPridavamKolo] = useState(false);
 
@@ -504,26 +559,36 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
     }));
   }
 
-  function ulozNoveKolo() {
+  async function ulozNoveKolo() {
     const noveCislo = kola.length + 1;
-    setKola(prev => [...prev, {
-      cislo: noveCislo,
-      kurty: novePary,
-      vysledky: cislaKurtu.map(k => ({ kurt: k, vitez: null })),
-    }]);
+    const rows = novePary.map(p => ({
+      hra_id: hra.id,
+      kolo: noveCislo,
+      kurt: p.kurt,
+      tym1_hrac1_id: idUcastnika(p.tym1[0]),
+      tym1_hrac2_id: idUcastnika(p.tym1[1]),
+      tym2_hrac1_id: idUcastnika(p.tym2[0]),
+      tym2_hrac2_id: idUcastnika(p.tym2[1]),
+      stav: "ceka",
+      faze: "skupiny",
+    }));
+    await supabaseMex.from("hra_zapasy").insert(rows);
     setAktivniKolo(noveCislo);
     setPridavamKolo(false);
     setPohybInfo([]);
+    nactiData();
   }
 
-  function zapisVysledek(kurtCislo: number, vitez: "tym1" | "tym2") {
-    setKola(prev => prev.map((k, i) => {
-      if (i !== aktivniKolo - 1) return k;
-      return {
-        ...k,
-        vysledky: k.vysledky.map(v => v.kurt === kurtCislo ? { ...v, vitez } : v),
-      };
-    }));
+  async function zapisVysledek(kurtCislo: number, vitez: "tym1" | "tym2") {
+    // Najdi zapas v DB pro toto kolo + kurt
+    const z = zapasy.find(zz => zz.kolo === aktivniKolo && zz.kurt === kurtCislo);
+    if (!z) return;
+    const skore_tym1 = vitez === "tym1" ? 1 : 0;
+    const skore_tym2 = vitez === "tym2" ? 1 : 0;
+    await supabaseMex.from("hra_zapasy").update({
+      skore_tym1, skore_tym2, stav: "ukonceno",
+    }).eq("id", z.id);
+    nactiData();
   }
 
   const aktivniKoloData = kola[aktivniKolo - 1];
@@ -2566,7 +2631,7 @@ export default function HraDetailPage() {
             <AmericanoView hra={hra} ucastnici={ucastnici} zapasy={zapasy} jeEditor={jeEditor} nactiData={nactiData} />
           )}
           {hra.typ === "mexicano" && (
-            <MexicanoView hra={hra} ucastnici={ucastnici} jeEditor={jeEditor} />
+            <MexicanoView hra={hra} ucastnici={ucastnici} zapasy={zapasy} jeEditor={jeEditor} nactiData={nactiData} />
           )}
           {hra.typ === "turnaj" && (
             <TurnajView hra={hra} jeEditor={jeEditor} />

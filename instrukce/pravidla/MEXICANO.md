@@ -50,6 +50,20 @@ Aktuálně app Mexicano nemá detailní tabulku — jen historii kol s vítězi.
 
 > **TODO:** doplnit Mexicano tabulku s body za vítězství, případně bonus za umístění na vyšším kurtu
 
+## Persistence v DB (v0.7.16+)
+
+Mexicano se ukládá do tabulky `hra_zapasy`:
+- `hra_id` — ID Mexicano hry
+- `kolo` — pořadové číslo kola (1, 2, 3, ...)
+- `kurt` — číslo kurtu
+- `tym1_hrac1_id`, `tym1_hrac2_id` — UUID hráčů z `hra_ucastnici`
+- `tym2_hrac1_id`, `tym2_hrac2_id` — UUID hráčů soupeře
+- `skore_tym1`, `skore_tym2` — 1 nebo 0 (kdo vyhrál — Mexicano je win/lose)
+- `stav` — `ceka` | `ukonceno`
+- `faze` — `"skupiny"` (sdílí CHECK constraint s ostatními formáty)
+
+Při načtení detail stránky se `kola` odvozují z `hra_zapasy` přes `useMemo` v `MexicanoView`.
+
 ## Časové plánování
 
 ```
