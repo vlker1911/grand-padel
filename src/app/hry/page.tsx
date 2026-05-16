@@ -75,7 +75,6 @@ export default function HryPage() {
 
           {!loading && hry.length === 0 && (
             <div className="text-center py-20">
-              <div className="text-5xl mb-4">🎾</div>
               <p className="text-lg font-semibold mb-2" style={{ color: "#0A0A0A" }}>Zatím žádné hry</p>
               <p className="text-sm mb-6" style={{ color: "#6b7280" }}>Vytvoř první hru a pozvi kamarády!</p>
               <Link href="/hry/nova"

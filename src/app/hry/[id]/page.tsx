@@ -150,7 +150,7 @@ export default function HraDetailPage() {
               <span className={`text-xs font-medium px-3 py-1.5 rounded-full shrink-0 ${
                 hra.stav === "probiha" ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-500"
               }`}>
-                {hra.stav === "probiha" ? "🟢 Probíhá" : "Ukončeno"}
+                {hra.stav === "probiha" ? "Probíhá" : "Ukončeno"}
               </span>
             </div>
           </div>

@@ -8,6 +8,10 @@ Web aplikace pro síť indoor padel center Grand Padel.
 Pre-launch teaser — haly se otevírají od září/října 2026.  
 Uživatel: Roman Vlk, začátečník bez zkušeností s kódem. Vše vysvětlovat jednoduše.
 
+## Zásady UI
+
+- **Žádné emoji v UI** — nikde v aplikaci nepoužívat emoji (ani v navigaci, tlačítkách, kartách, nadpisech). Výjimka pouze pokud uživatel explicitně požádá.
+
 ## Živé instrukce a stav projektu
 
 Vždy si přečti před prací:
