@@ -169,6 +169,7 @@ Body s auto-dopočtem: pokud uživatel napíše s1, doplníme s2 = limit - s1.
 ### RLS policies (manuálně vytvořené 16.5.2026)
 - `turnaj_tymy`: SELECT public, INSERT/UPDATE/DELETE jen pro vlastníka nebo editora
 - `turnaj_zapasy`: stejně
+- `hry`, `hra_ucastnici`, `hra_zapasy`: DELETE policy přidána ve v0.7.4 (předtím chyběla → smazat tiše selhalo)
 
 ---
 

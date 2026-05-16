@@ -13,6 +13,7 @@ type Hra = {
   pocet_kurtu: number;
   body_na_zapas: number | null;
   created_at: string;
+  settings: { zruseno?: boolean } | null;
 };
 
 const TYP_LABEL: Record<string, string> = {
@@ -104,11 +105,12 @@ export default function HryPage() {
                     </div>
                   </div>
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                    hra.settings?.zruseno ? "bg-red-50 text-red-700" :
                     hra.stav === "probiha" ? "bg-green-100 text-green-700" :
                     hra.stav === "ukonceno" ? "bg-zinc-100 text-zinc-500" :
                     "bg-yellow-100 text-yellow-700"
                   }`}>
-                    {STAV_LABEL[hra.stav]}
+                    {hra.settings?.zruseno ? "Zrušeno" : STAV_LABEL[hra.stav]}
                   </span>
                 </Link>
               ))}

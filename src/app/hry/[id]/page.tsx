@@ -1166,11 +1166,15 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
 
   async function smazatTurnaj() {
     setMazem(true);
-    // Smazat zavisle zaznamy (RLS by mela kaskadovat, ale jistota)
-    await supabase.from("turnaj_zapasy").delete().eq("hra_id", hra.id);
-    await supabase.from("turnaj_tymy").delete().eq("hra_id", hra.id);
-    await supabase.from("hra_ucastnici").delete().eq("hra_id", hra.id);
-    await supabase.from("hry").delete().eq("id", hra.id);
+    // Smazat zavisle zaznamy v poradi dle FK constraints
+    const e1 = await supabase.from("turnaj_zapasy").delete().eq("hra_id", hra.id);
+    if (e1.error) { alert("Chyba pri mazani zapasu: " + e1.error.message); setMazem(false); return; }
+    const e2 = await supabase.from("turnaj_tymy").delete().eq("hra_id", hra.id);
+    if (e2.error) { alert("Chyba pri mazani tymu: " + e2.error.message); setMazem(false); return; }
+    const e3 = await supabase.from("hra_ucastnici").delete().eq("hra_id", hra.id);
+    if (e3.error) { alert("Chyba pri mazani ucastniku: " + e3.error.message); setMazem(false); return; }
+    const e4 = await supabase.from("hry").delete().eq("id", hra.id);
+    if (e4.error) { alert("Chyba pri mazani hry: " + e4.error.message); setMazem(false); return; }
     setMazem(false);
     router.push("/hry");
   }
