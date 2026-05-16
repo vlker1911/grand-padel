@@ -34,6 +34,7 @@ type Hra = {
     pravidla?: string;
     rezim_kurtu?: "auto" | "1-1" | "2-1";
     playoff_mode?: "bez" | "medaile" | "vitez" | "umisteni";
+    vitez_bracket?: "auto" | "top4" | "top8" | "top16";
   } | null;
 };
 
@@ -193,19 +194,26 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
   function getScore(id: string) { return scoreMap[id] ?? { s1: "", s2: "" }; }
 
   function updateScore(id: string, field: "s1" | "s2", val: string) {
-    const n = parseInt(val);
-    if (!isNaN(n) && n >= 0 && n <= limit) {
-      const other = String(limit - n);
-      setScoreMap(prev => ({ ...prev, [id]: field === "s1" ? { s1: val, s2: other } : { s1: other, s2: val } }));
-    } else {
-      setScoreMap(prev => ({ ...prev, [id]: { ...getScore(id), [field]: val } }));
+    if (val === "") {
+      setScoreMap(prev => ({ ...prev, [id]: { ...getScore(id), [field]: "" } }));
+      return;
     }
+    const n = parseInt(val);
+    if (isNaN(n) || n < 0) return;  // ignoruj neplatne
+    const capped = Math.min(n, limit);  // cap na limit
+    const other = String(limit - capped);
+    setScoreMap(prev => ({
+      ...prev,
+      [id]: field === "s1" ? { s1: String(capped), s2: other } : { s1: other, s2: String(capped) }
+    }));
   }
 
   async function ulozSkore(zapasId: string) {
     const sc = getScore(zapasId);
     const s1 = parseInt(sc.s1), s2 = parseInt(sc.s2);
     if (isNaN(s1) || isNaN(s2)) return;
+    if (s1 + s2 !== limit) return;  // validace: soucet musi byt limit
+    if (s1 < 0 || s2 < 0 || s1 > limit || s2 > limit) return;
     setUkladam(zapasId);
     await supabase.from("hra_zapasy").update({ skore_tym1: s1, skore_tym2: s2, stav: "ukonceno" }).eq("id", zapasId);
     setUpravitId(null);
@@ -800,6 +808,56 @@ function casMinToStr(min: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+// Round-robin reorder: vrati zapasy v poradi takovem, aby v ramci skupiny se
+// stridaly tymy v jednotlivych "kolech round-robinu" (circle method). To
+// pomahacky greedy schedulleru naplnit kurty bez prostoju.
+function reorderRoundRobin(zapasy: TurnajZapas[]): TurnajZapas[] {
+  // Extrahuj unique tymy v poradi vyskytu
+  const tymyIds: string[] = [];
+  for (const z of zapasy) {
+    if (!tymyIds.includes(z.tym1_id)) tymyIds.push(z.tym1_id);
+    if (!tymyIds.includes(z.tym2_id)) tymyIds.push(z.tym2_id);
+  }
+  const n = tymyIds.length;
+  if (n < 2) return zapasy;
+  // Circle method: pridej BYE pokud lichy
+  const teams = [...tymyIds];
+  if (n % 2 === 1) teams.push("__BYE__");
+  const m = teams.length;
+  const orderedPairs: [string, string][] = [];
+  const rotace = [...teams];
+  for (let r = 0; r < m - 1; r++) {
+    for (let i = 0; i < m / 2; i++) {
+      const t1 = rotace[i];
+      const t2 = rotace[m - 1 - i];
+      if (t1 !== "__BYE__" && t2 !== "__BYE__") {
+        orderedPairs.push([t1, t2]);
+      }
+    }
+    // Rotace: zachovaj rotace[0], ostatni rotuj
+    const last = rotace.pop()!;
+    rotace.splice(1, 0, last);
+  }
+  // Pro kazdy pair najdi zapas
+  const result: TurnajZapas[] = [];
+  const used = new Set<string>();
+  for (const [a, b] of orderedPairs) {
+    const z = zapasy.find(zz =>
+      !used.has(zz.id) &&
+      ((zz.tym1_id === a && zz.tym2_id === b) || (zz.tym1_id === b && zz.tym2_id === a))
+    );
+    if (z) {
+      result.push(z);
+      used.add(z.id);
+    }
+  }
+  // Pridej zbyle (kdyby nejaky zustal mimo schema)
+  for (const z of zapasy) {
+    if (!used.has(z.id)) result.push(z);
+  }
+  return result;
+}
+
 function spocitejHarmonogram(
   zapasy: TurnajZapas[],
   pocetKurtu: number,
@@ -820,9 +878,33 @@ function spocitejHarmonogram(
     return Math.round(lim * 0.45) + 5;
   }
 
-  // Skupiny nejdřív, pak playoff
+  // Skupiny — reorder per skupina dle round-robin (circle method) a interleave
+  const skupinaZapasy = zapasy.filter(z => z.faze === "skupina");
+  const skupinyMap: Record<string, TurnajZapas[]> = {};
+  for (const z of skupinaZapasy) {
+    const s = z.skupina ?? "_";
+    if (!skupinyMap[s]) skupinyMap[s] = [];
+    skupinyMap[s].push(z);
+  }
+  const skupinyNazvy = Object.keys(skupinyMap).sort();
+  // Reorder per skupina
+  const reordered: TurnajZapas[][] = skupinyNazvy.map(s => reorderRoundRobin(skupinyMap[s]));
+  // Interleave: vezmi 1 zapas z kazde skupiny, pak dalsi, atd.
+  const interleaved: TurnajZapas[] = [];
+  const indexes = skupinyNazvy.map(() => 0);
+  let progressed = true;
+  while (progressed) {
+    progressed = false;
+    for (let s = 0; s < skupinyNazvy.length; s++) {
+      if (indexes[s] < reordered[s].length) {
+        interleaved.push(reordered[s][indexes[s]]);
+        indexes[s]++;
+        progressed = true;
+      }
+    }
+  }
   const serazene = [
-    ...zapasy.filter(z => z.faze === "skupina"),
+    ...interleaved,
     ...zapasy.filter(z => z.faze !== "skupina"),
   ];
 
@@ -918,7 +1000,8 @@ function generujPlayoff(
   skupiny: Record<string, TurnajTym[]>,
   zapasySkupin: TurnajZapas[],
   playoffMode: PlayoffMode,
-  hraId: string
+  hraId: string,
+  vitezBracket: "auto" | "top4" | "top8" | "top16" = "auto",
 ): Omit<TurnajZapas, "id">[] {
   if (playoffMode === "bez") return [];
 
@@ -944,11 +1027,17 @@ function generujPlayoff(
   }
 
   if (playoffMode === "vitez") {
-    // Single elimination: nejvetsi mocnina 2 <= n, max 16
-    let bracketSize = 2;
-    while (bracketSize * 2 <= n && bracketSize < 16) bracketSize *= 2;
+    // Single elimination: bracketSize podle volby
+    let bracketSize: number;
+    if (vitezBracket === "top4") bracketSize = 4;
+    else if (vitezBracket === "top8") bracketSize = 8;
+    else if (vitezBracket === "top16") bracketSize = 16;
+    else {
+      bracketSize = 2;
+      while (bracketSize * 2 <= n && bracketSize < 16) bracketSize *= 2;
+    }
+    while (bracketSize > n && bracketSize > 2) bracketSize /= 2;
     const top = vsichni.slice(0, bracketSize);
-    // Krizovy seeding: 1 vs bracketSize, 2 vs bracketSize-1, ...
     const zapasy: Omit<TurnajZapas, "id">[] = [];
     for (let i = 0; i < bracketSize / 2; i++) {
       zapasy.push(emptyZapas(hraId, "playoff", 1, top[i].id, top[bracketSize - 1 - i].id));
@@ -1356,7 +1445,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
 
   async function vytvorPlayoff() {
     setGenerujiPlayoff(true);
-    const noveZapasy = generujPlayoff(skupinyMap, zapasySkupin, playoffMode, hra.id);
+    const noveZapasy = generujPlayoff(skupinyMap, zapasySkupin, playoffMode, hra.id, hra.settings?.vitez_bracket ?? "auto");
     await supabase.from("turnaj_zapasy").insert(noveZapasy);
     nactiTurnaj();
     setAktivniTab("tabulky");

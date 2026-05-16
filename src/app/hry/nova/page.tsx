@@ -110,6 +110,7 @@ export default function NovaHraPage() {
   const [odlisnyScoring,     setOdlisnyScoring]     = useState(false);
   // playoffMode nahrazuje: playoff (bool), multiTier (bool), typPlayoff (krizovy/primy)
   const [playoffMode,        setPlayoffMode]        = useState<"bez" | "medaile" | "vitez" | "umisteni">("umisteni");
+  const [vitezBracket,       setVitezBracket]       = useState<"auto" | "top4" | "top8" | "top16">("auto");
   const [rezimKurtu,         setRezimKurtu]         = useState<"auto" | "1-1" | "2-1">("auto");
   // Backwards compat — pro vytvoreniHru
   const playoff = playoffMode !== "bez";
@@ -215,9 +216,17 @@ export default function NovaHraPage() {
         else if (tymyPasma === 2) playoffZapasy += 1;
       }
     } else if (playoffMode === "vitez") {
-      // Single elimination: nejvetsi mocnina 2 <= n, max 16
-      let bracketSize = 2;
-      while (bracketSize * 2 <= n && bracketSize < 16) bracketSize *= 2;
+      // Single elimination: bracketSize podle volby (auto = nejvetsi 2^k <= n, max 16)
+      let bracketSize: number;
+      if (vitezBracket === "top4") bracketSize = 4;
+      else if (vitezBracket === "top8") bracketSize = 8;
+      else if (vitezBracket === "top16") bracketSize = 16;
+      else { // auto
+        bracketSize = 2;
+        while (bracketSize * 2 <= n && bracketSize < 16) bracketSize *= 2;
+      }
+      // Pokud n < bracketSize, sniz na nejvetsi mocninu 2 ≤ n
+      while (bracketSize > n && bracketSize > 2) bracketSize /= 2;
       playoffZapasy = bracketSize - 1;  // single elim, no 3rd place
     } else if (playoffMode === "medaile") {
       // Final Four: 2 semi + finale + o 3. misto = 4 zapasy
@@ -225,7 +234,7 @@ export default function NovaHraPage() {
     }
     // "bez" → 0
     return { skupiny: skupinaZapasy, playoff: playoffZapasy, celkem: skupinaZapasy + playoffZapasy };
-  }, [pocetTymuPredikovany, playoffMode]);
+  }, [pocetTymuPredikovany, playoffMode, vitezBracket]);
 
   const pocetZapasu = pocetZapasuDetail.celkem;
 
@@ -360,6 +369,7 @@ export default function NovaHraPage() {
         scoring_limit_playoff: odlisnyScoring ? scoringLimitPlayoff : scoringLimit,
         playoff, typ_playoff: typPlayoff, multi_tier: multiTier,
         playoff_mode: playoffMode,
+        vitez_bracket: vitezBracket,
         typ_parovani: typParovani,
         rezim_kurtu: rezimKurtu,
       },
@@ -712,7 +722,7 @@ export default function NovaHraPage() {
                         <div className="flex flex-col gap-2">
                           {([
                             { v: "umisteni", l: "Dohravat o umisteni (Multi-tier)", p: "Vsechny tymy hraji dal o sve umisteni (1.-4., 5.-8., ...). Nejvice zapasu." },
-                            { v: "vitez",    l: "Hrat o viteze (Single elim)",     p: "Top 8 tymu vyrazovaci pavouk — po prvni prohre konec. Bez 3. mista (7 zapasu)." },
+                            { v: "vitez",    l: "Hrat o viteze (Single elim)",     p: "Top X tymu vyrazovaci pavouk — po prvni prohre konec. Bez 3. mista." },
                             { v: "medaile",  l: "Jen o medaile (Final Four)",      p: "Top 4 tymy → semifinale + finale + o 3. misto (4 zapasy)." },
                             { v: "bez",      l: "Bez playoff",                     p: "Konecne poradi podle skupin." },
                           ] as const).map(m => (
@@ -723,6 +733,25 @@ export default function NovaHraPage() {
                             </button>
                           ))}
                         </div>
+                        {playoffMode === "vitez" && (
+                          <div className="mt-2 flex flex-col gap-1.5">
+                            <p className="text-xs font-medium" style={{ color: "#374151" }}>Velikost pavouka:</p>
+                            <div className="flex gap-2">
+                              {([
+                                { v: "auto",  l: "Auto",       d: "podle poctu" },
+                                { v: "top4",  l: "Top 4 (SF)", d: "3 zapasy" },
+                                { v: "top8",  l: "Top 8 (QF)", d: "7 zapasu" },
+                                { v: "top16", l: "Top 16 (R16)", d: "15 zapasu" },
+                              ] as const).map(b => (
+                                <button key={b.v} onClick={() => setVitezBracket(b.v)}
+                                  className={`flex-1 rounded-lg py-2 px-2 text-xs font-semibold border-2 transition-all ${vitezBracket === b.v ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                  <div>{b.l}</div>
+                                  <div className="text-xs font-normal opacity-70 mt-0.5">{b.d}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Rezim kurtu */}

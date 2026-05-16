@@ -67,7 +67,13 @@ if celkemMinut > (casDo - casOd) → HARD BLOCK:
 ### Konflikt týmů v synchronizovaných kolech (v0.7.8)
 - `spocitejHarmonogram` musí v každém kole zajistit, že **žádný tým nehraje 2×**.
 - Algoritmus: greedy per round — pro každý kurt vyber první zápas, jehož oba týmy nejsou v `teamsThisRound`. Pokud žádný nevyhovuje, kurt je idle v daném kole.
-- Není optimální (může vytvořit více kol než nutné), ale je correct.
+
+### Round-robin reorder (v0.7.12)
+- Před greedy schedulingem: pro každou skupinu přepořádej zápasy do **round-robin (circle method)**:
+  - Pro 4 týmy [T1,T2,T3,T4]: 3 kola po 2 zápasech — (T1,T4)(T2,T3) | (T1,T3)(T4,T2) | (T1,T2)(T3,T4)
+- Pak **interleave** mezi skupinami (1 z každé skupiny po kole).
+- Pro lichý počet týmů ve skupině: BYE → skip zápasy s BYE.
+- Výsledek: dramaticky méně kol, kurty se nepřevažují idle (např. 4 kola místo 6 pro 8 týmů, 2 skupiny, 3 kurty).
 
 ### Random losování do skupin (v0.7.8)
 - `rozdelDoSkupin` distribuuje snake-style (`i % numSkupin`) — pro POŘADÍ vstupu dělá alternaci 1A,1B,2A,2B,...
