@@ -948,6 +948,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   const [zrusujem, setZrusujem]   = useState(false);
   const [smazatModal, setSmazatModal] = useState(false);
   const [mazem, setMazem] = useState(false);
+  const [kurtModal, setKurtModal] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -1086,15 +1087,51 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
     const s1 = parseInt(sc.s1), s2 = parseInt(sc.s2);
     if (isNaN(s1) || isNaN(s2)) return;
     setUkladam(zapasId);
-    await supabase.from("turnaj_zapasy").update({ skore_tym1: s1, skore_tym2: s2, stav: "ukonceno" }).eq("id", zapasId);
+    const nyni = new Date();
+    const hh = String(nyni.getHours()).padStart(2, "0");
+    const mm = String(nyni.getMinutes()).padStart(2, "0");
+    const vitez = s1 > s2 ? zapasy.find(z => z.id === zapasId)?.tym1_id : s2 > s1 ? zapasy.find(z => z.id === zapasId)?.tym2_id : null;
+    await supabase.from("turnaj_zapasy").update({
+      skore_tym1: s1,
+      skore_tym2: s2,
+      stav: "ukonceno",
+      cas_konec: `${hh}:${mm}`,
+      vitez_id: vitez ?? null,
+    }).eq("id", zapasId);
     setUpravitId(null);
     nactiTurnaj();
     setUkladam(null);
   }
 
-  async function spustitZapas(zapasId: string) {
-    await supabase.from("turnaj_zapasy").update({ stav: "probiha" }).eq("id", zapasId);
+  // Pro Cas format: kurt uz je v harmonogramu, spust se primo
+  // Pro Gamy/Body: otevre modal pro vyber kurtu
+  async function spustitZapasNaKurtu(zapasId: string, kurt: number) {
+    const nyni = new Date();
+    const hh = String(nyni.getHours()).padStart(2, "0");
+    const mm = String(nyni.getMinutes()).padStart(2, "0");
+    await supabase.from("turnaj_zapasy").update({
+      stav: "probiha",
+      kurt,
+      cas_zacatek: `${hh}:${mm}`,
+    }).eq("id", zapasId);
+    setKurtModal(null);
     nactiTurnaj();
+  }
+
+  function spustitZapas(zapasId: string) {
+    if (scoringTyp === "cas") {
+      // Cas format: pouzij kurt z harmonogramu
+      const h = harmonogramMap[zapasId];
+      if (h) {
+        spustitZapasNaKurtu(zapasId, h.kurt);
+      } else {
+        // Fallback — otevri modal
+        setKurtModal(zapasId);
+      }
+    } else {
+      // Gamy / Body: vyber kurt rucne
+      setKurtModal(zapasId);
+    }
   }
 
   async function ulozInfo() {
@@ -1139,7 +1176,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   }
 
   async function zrusitSpusteni(zapasId: string) {
-    await supabase.from("turnaj_zapasy").update({ stav: "ceka" }).eq("id", zapasId);
+    await supabase.from("turnaj_zapasy").update({ stav: "ceka", kurt: null, cas_zacatek: null }).eq("id", zapasId);
     nactiTurnaj();
   }
 
@@ -1280,6 +1317,47 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
           </div>
         </div>
       )}
+
+      {/* Vyber kurtu modal — pro gamy/body */}
+      {kurtModal && (() => {
+        const zapasModal = zapasy.find(z => z.id === kurtModal);
+        if (!zapasModal) return null;
+        const obsazeneKurty = new Set(zapasy.filter(z => z.stav === "probiha" && z.id !== kurtModal && z.kurt != null).map(z => z.kurt));
+        const vsechnyKurty = Array.from({ length: hra.pocet_kurtu }, (_, i) => i + 1);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => setKurtModal(null)}>
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+              <h3 className="text-lg font-bold mb-2" style={{ color: "#0A0A0A" }}>Na kterem kurtu se hraje?</h3>
+              <p className="text-sm mb-4" style={{ color: "#6b7280" }}>
+                {jmenoTymu(zapasModal.tym1_id)} <span style={{ color: "#9ca3af" }}>vs</span> {jmenoTymu(zapasModal.tym2_id)}
+              </p>
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {vsechnyKurty.map(k => {
+                  const obsazeny = obsazeneKurty.has(k);
+                  return (
+                    <button key={k} onClick={() => !obsazeny && spustitZapasNaKurtu(zapasModal.id, k)} disabled={obsazeny}
+                      className="rounded-xl py-3 text-sm font-semibold border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{
+                        borderColor: obsazeny ? "#e5e7eb" : "#801A28",
+                        color: obsazeny ? "#9ca3af" : "#801A28",
+                        backgroundColor: obsazeny ? "#f9fafb" : "#fff5f5",
+                      }}>
+                      Kurt {k}
+                      {obsazeny && <span className="block text-xs font-normal mt-0.5">obsazeny</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex justify-end">
+                <button onClick={() => setKurtModal(null)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200" style={{ color: "#374151" }}>
+                  Zrusit
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Smazat modal */}
       {smazatModal && (

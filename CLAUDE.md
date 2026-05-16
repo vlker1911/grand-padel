@@ -15,9 +15,9 @@ Uživatel: Roman Vlk, začátečník bez zkušeností s kódem. Vše vysvětlova
 ## Živé instrukce a stav projektu
 
 Vždy si přečti před prací:
-- `C:\Users\VlkR\Documents\grand-padel\instrukce\stav-projektu.md` — co je hotové, co chybí, aktuální verze
-- `C:\Users\VlkR\Documents\grand-padel\instrukce\turnaj-koncept.md` — **DŮLEŽITÉ** pravidla turnajů, výpočty, edge cases (aktualizuj při změnách logiky turnajů)
-- `C:\Users\VlkR\Documents\grand-padel\README.md` — přehled projektu
+- `web-app/instrukce/stav-projektu.md` — co je hotové, co chybí, aktuální verze
+- `web-app/instrukce/turnaj-koncept.md` — **DŮLEŽITÉ** pravidla turnajů, výpočty, edge cases (aktualizuj při změnách logiky turnajů)
+- `README.md` v root — přehled projektu
 
 ## Stack
 
