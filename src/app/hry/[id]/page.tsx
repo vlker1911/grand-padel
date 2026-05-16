@@ -331,7 +331,11 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
   const [novePary, setNovePary] = useState<{ kurt: number; tym1: string[]; tym2: string[] }[]>([]);
   const [pridavamKolo, setPridavamKolo] = useState(false);
 
-  function pripravNoveKolo() {
+  const [pohybInfo, setPohybInfo] = useState<{ kurt: number; vitezPar: string[] | null; porazenyPar: string[] | null; vitezKurt: number; porazKurt: number }[]>([]);
+  const [aktivniSuggestion, setAktivniSuggestion] = useState<string | null>(null);
+  const [navrhyPerKurt, setNavrhyPerKurt] = useState<Record<number, string[]>>({});
+
+  function otevriNoveKolo() {
     const predchoziKolo = kola[kola.length - 1];
     const minKurt = cislaKurtu[0];
     const maxKurt = cislaKurtu[cislaKurtu.length - 1];
@@ -345,41 +349,23 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
       return { kurt: k.kurt, vitezPar, porazenyPar, vitezKurt, porazKurt };
     });
 
-    // Predvyplnit pole hracu podle pohybu
-    const navrhHracu: Record<number, string[]> = {};
-    cislaKurtu.forEach(k => { navrhHracu[k] = []; });
+    // Uloz navrzene hrace per kurt pro autocomplete
+    const navrhy: Record<number, string[]> = {};
+    cislaKurtu.forEach(k => { navrhy[k] = []; });
     pohyby.forEach(p => {
-      if (p.vitezPar) {
-        navrhHracu[p.vitezKurt] = [...(navrhHracu[p.vitezKurt] ?? []), ...p.vitezPar];
-      }
-      if (p.porazenyPar) {
-        navrhHracu[p.porazKurt] = [...(navrhHracu[p.porazKurt] ?? []), ...p.porazenyPar];
-      }
+      if (p.vitezPar) navrhy[p.vitezKurt] = [...(navrhy[p.vitezKurt] ?? []), ...p.vitezPar];
+      if (p.porazenyPar) navrhy[p.porazKurt] = [...(navrhy[p.porazKurt] ?? []), ...p.porazenyPar];
     });
+    setNavrhyPerKurt(navrhy);
 
     const predvyplnene = cislaKurtu.map(kurt => {
-      const hraci = navrhHracu[kurt] ?? [];
-      return {
-        kurt,
-        tym1: [hraci[0] ?? "", hraci[1] ?? ""],
-        tym2: [hraci[2] ?? "", hraci[3] ?? ""],
-      };
+      const hraci = navrhy[kurt] ?? [];
+      return { kurt, tym1: [hraci[0] ?? "", hraci[1] ?? ""], tym2: [hraci[2] ?? "", hraci[3] ?? ""] };
     });
-
     setPridavamKolo(true);
     setNovePary(predvyplnene);
-    return pohyby;
-  }
-
-  const [pohybInfo, setPohybInfo] = useState<{ kurt: number; vitezPar: string[] | null; porazenyPar: string[] | null; vitezKurt: number; porazKurt: number }[]>([]);
-  const [aktivniSuggestion, setAktivniSuggestion] = useState<string | null>(null);
-
-  function otevriNoveKolo() {
-    const pohyby = pripravNoveKolo();
     setPohybInfo(pohyby);
   }
-
-  const vsichniHraci = ucastnici.map(u => u.jmeno);
 
   function updateNovyPar(kurtCislo: number, tym: "tym1" | "tym2", idx: number, hodnota: string) {
     setNovePary(prev => prev.map(p => {
@@ -537,9 +523,11 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
                     {[0, 1].map(idx => {
                       const fieldKey = `${p.kurt}-${tym}-${idx}`;
                       const hodnota = p[tym][idx];
-                      const filtrovani = vsichniHraci.filter(h =>
-                        h.toLowerCase().includes(hodnota.toLowerCase()) && hodnota.length > 0 && h !== hodnota
+                      const kurtoviHraci = navrhyPerKurt[p.kurt] ?? vsichniHraci;
+                      const filtrovani = kurtoviHraci.filter(h =>
+                        h.toLowerCase().includes(hodnota.toLowerCase()) && h !== hodnota
                       );
+                      const seznam = hodnota.length === 0 ? kurtoviHraci : filtrovani;
                       return (
                         <div key={idx} className="relative">
                           <input
@@ -550,9 +538,9 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
                             onBlur={() => setTimeout(() => setAktivniSuggestion(null), 150)}
                             className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]"
                           />
-                          {aktivniSuggestion === fieldKey && (
+                          {aktivniSuggestion === fieldKey && seznam.length > 0 && (
                             <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-zinc-200 rounded-lg shadow-md overflow-hidden">
-                              {(hodnota.length === 0 ? vsichniHraci : filtrovani).slice(0, 8).map(hrac => (
+                              {seznam.map(hrac => (
                                 <button key={hrac} type="button"
                                   onMouseDown={() => { updateNovyPar(p.kurt, tym, idx, hrac); setAktivniSuggestion(null); }}
                                   className="w-full text-left px-3 py-2 text-sm hover:bg-zinc-50 transition-colors border-b border-zinc-50 last:border-0"
