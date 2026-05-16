@@ -200,12 +200,27 @@ export default function NovaHraPage() {
       const size = baseSize + (i < extra ? 1 : 0);
       skupinaZapasy += (size * (size - 1)) / 2;
     }
-    // Playoff: multi-tier = pocetPasem × 4, non-multi-tier (4 tymy do playoff) = 4
-    const playoffZapasy = playoff
-      ? (multiTier
-          ? Math.ceil(n / 4) * 4
-          : pocetSkupinPred * 2)
-      : 0;
+    // Playoff: realne podle generujPlayoff + auto-gen finals (jen pri 2 semis v pasmu)
+    let playoffZapasy = 0;
+    if (playoff) {
+      if (multiTier) {
+        const pocetPasem = Math.ceil(n / 4);
+        for (let p = 0; p < pocetPasem; p++) {
+          const tymyPasma = Math.min(4, n - p * 4);
+          if (tymyPasma === 4) playoffZapasy += 4;       // 2 semi + final + o3
+          else if (tymyPasma === 3) playoffZapasy += 1;  // 1 semi, no auto-gen
+          else if (tymyPasma === 2) playoffZapasy += 1;  // 1 zapas
+          // 1 tym → 0
+        }
+      } else {
+        // Non-multi-tier: top 2 z kazde skupiny do playoff
+        const tymyVPlayoff = pocetSkupinPred * 2;
+        // Pro pocetSkupin=2 (4 tymy): 2 semi → auto-gen final+o3 = 4
+        // Pro pocetSkupin>=3: jen first round (no auto-gen — vyzaduje presne 2 semis na faze)
+        if (pocetSkupinPred === 2) playoffZapasy = 4;
+        else playoffZapasy = Math.floor(tymyVPlayoff / 2);
+      }
+    }
     return { skupiny: skupinaZapasy, playoff: playoffZapasy, celkem: skupinaZapasy + playoffZapasy };
   }, [pocetTymuPredikovany, playoff, multiTier]);
 

@@ -15,6 +15,7 @@
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.7.10 | 16. 5. 2026 | Turnaj odhad: oprava pro lichý počet týmů + n%4≠0 v multi-tier (poslední pásmo nemá vždy 4 týmy → ne 4 zápasů). Non-multi-tier s pocetSkupin≥3 jen first round. Testováno 20 scénářů |
 | v0.7.9 | 16. 5. 2026 | Turnaj validace: detailní rozpis časů ve varovném banneru — kolik na skupiny, kolik na playoff, přesný počet kol, chybějící čas. Testováno 6 scénářů ručně |
 | v0.7.8 | 16. 5. 2026 | Turnaj: 4 opravy — (1) KRITICKÉ: harmonogram nedělal kontrolu konfliktu týmů (tým hrál 2× v jeden čas), (2) Rozlosovat tlačítko v krok 4 (random Fisher-Yates), (3) Editor jmen hráčů v Hráči tabu, (4) Playoff placeholdery v Pořadí zápasů ("1A vs 4B") |
 | v0.7.7 | 16. 5. 2026 | Turnaj: kompletní bracket — semifinále (kolo=1) + auto-generované finále & o 3. místo (kolo=2) po dohrání obou semis. Pro 8 týmů multi-tier teď 20 zápasů (12 sk + 8 pl). Konečné pořadí podle finále/o3 |
