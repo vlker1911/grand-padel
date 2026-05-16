@@ -20,6 +20,16 @@ type Hra = {
     minut_na_kolo?: number;
     minut_presunu?: number;
     cisla_kurtu?: number[];
+    zruseno?: boolean;
+    duvod_zruseni?: string;
+    zruseno_at?: string;
+    scoring_typ?: "gamy" | "body" | "cas";
+    scoring_limit?: number;
+    scoring_limit_playoff?: number;
+    playoff?: boolean;
+    typ_playoff?: "krizovy" | "primy";
+    multi_tier?: boolean;
+    typ_parovani?: "pary" | "singles" | "mix";
   } | null;
 };
 
@@ -911,6 +921,11 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   const [upravitId, setUpravitId] = useState<string | null>(null);
   const [generujiPlayoff, setGenerujiPlayoff] = useState(false);
   const [aktivniFaze, setAktivniFaze] = useState<"skupiny" | "playoff" | "harmonogram">("skupiny");
+  const [zrusitModal, setZrusitModal] = useState(false);
+  const [zrusitDuvod, setZrusitDuvod] = useState("");
+  const [zrusujem, setZrusujem]   = useState(false);
+
+  const jeZruseno = hra.settings?.zruseno === true;
 
   const nactiTurnaj = useCallback(async () => {
     const [{ data: tymyData }, { data: zapasyData }] = await Promise.all([
@@ -1010,13 +1025,32 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
 
   function getScore(id: string) { return scoreMap[id] ?? { s1: "", s2: "" }; }
 
-  function updateScore(id: string, field: "s1" | "s2", val: string) {
-    const n = parseInt(val);
-    if (!isNaN(n) && n >= 0) {
-      setScoreMap(prev => ({ ...prev, [id]: { ...getScore(id), [field]: String(n) } }));
-    } else if (val === "") {
+  function updateScore(id: string, field: "s1" | "s2", val: string, zapasFaze: string) {
+    const lim = zapasFaze === "skupina" ? scoringLimit : scoringLimitPlayoff;
+    if (val === "") {
       setScoreMap(prev => ({ ...prev, [id]: { ...getScore(id), [field]: "" } }));
+      return;
     }
+    const n = parseInt(val);
+    if (isNaN(n) || n < 0) return;
+    if (scoringTyp === "body") {
+      // Auto-dopocet druhe strany — soucet = limit
+      const capped = Math.min(n, lim);
+      const other = String(lim - capped);
+      setScoreMap(prev => ({
+        ...prev,
+        [id]: field === "s1" ? { s1: String(capped), s2: other } : { s1: other, s2: String(capped) },
+      }));
+      return;
+    }
+    if (scoringTyp === "gamy") {
+      // Limit na max = lim, oba musi byt <= lim
+      const capped = Math.min(n, lim);
+      setScoreMap(prev => ({ ...prev, [id]: { ...getScore(id), [field]: String(capped) } }));
+      return;
+    }
+    // cas — jakekoliv kladne cislo
+    setScoreMap(prev => ({ ...prev, [id]: { ...getScore(id), [field]: String(n) } }));
   }
 
   async function ulozSkore(zapasId: string) {
@@ -1028,6 +1062,27 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
     setUpravitId(null);
     nactiTurnaj();
     setUkladam(null);
+  }
+
+  async function spustitZapas(zapasId: string) {
+    await supabase.from("turnaj_zapasy").update({ stav: "probiha" }).eq("id", zapasId);
+    nactiTurnaj();
+  }
+
+  async function provedZruseniTurnaje() {
+    if (!zrusitDuvod.trim()) return;
+    setZrusujem(true);
+    const noveSettings = { ...(hra.settings ?? {}), zruseno: true, duvod_zruseni: zrusitDuvod.trim(), zruseno_at: new Date().toISOString() };
+    await supabase.from("hry").update({ stav: "ukonceno", settings: noveSettings }).eq("id", hra.id);
+    setZrusitModal(false);
+    setZrusitDuvod("");
+    setZrusujem(false);
+    window.location.reload();
+  }
+
+  async function zrusitSpusteni(zapasId: string) {
+    await supabase.from("turnaj_zapasy").update({ stav: "ceka" }).eq("id", zapasId);
+    nactiTurnaj();
   }
 
   async function vytvorPlayoff() {
@@ -1047,19 +1102,33 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
 
     return (
       <div key={z.id} className="px-5 py-4">
+        {jeNezadany && (
+          <div className="flex items-center justify-between mb-2">
+            {z.stav === "probiha" ? (
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
+            ) : (
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Planovany</span>
+            )}
+            {jeEditor && (
+              z.stav === "probiha"
+                ? <button onClick={() => zrusitSpusteni(z.id)} className="text-xs underline" style={{ color: "#9ca3af" }}>zrusit start</button>
+                : <button onClick={() => spustitZapas(z.id)} className="text-xs underline" style={{ color: "#801A28" }}>Spustit zapas</button>
+            )}
+          </div>
+        )}
         <div className="flex items-center gap-3">
           <div className="flex-1 text-right">
             <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>{jmenoTymu(z.tym1_id)}</p>
           </div>
           {zobrazInputy ? (
             <div className="flex items-center gap-1.5 shrink-0">
-              <input type="number" min={0} value={sc.s1}
-                onChange={e => updateScore(z.id, "s1", e.target.value)}
+              <input type="number" min={0} max={scoringTyp === "cas" ? undefined : limit} value={sc.s1}
+                onChange={e => updateScore(z.id, "s1", e.target.value, z.faze)}
                 placeholder="—"
                 className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
               <span className="font-bold text-sm" style={{ color: "#9ca3af" }}>:</span>
-              <input type="number" min={0} value={sc.s2}
-                onChange={e => updateScore(z.id, "s2", e.target.value)}
+              <input type="number" min={0} max={scoringTyp === "cas" ? undefined : limit} value={sc.s2}
+                onChange={e => updateScore(z.id, "s2", e.target.value, z.faze)}
                 placeholder="—"
                 className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
             </div>
@@ -1081,26 +1150,33 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
             </button>
           )}
         </div>
-        {zobrazInputy && (
-          <div className="mt-3 flex gap-2 justify-end">
-            {(() => {
-              const platne = !isNaN(parseInt(sc.s1)) && !isNaN(parseInt(sc.s2)) && sc.s1 !== "" && sc.s2 !== "";
-              return (
+        {zobrazInputy && (() => {
+          const n1 = parseInt(sc.s1), n2 = parseInt(sc.s2);
+          let platne = !isNaN(n1) && !isNaN(n2) && sc.s1 !== "" && sc.s2 !== "";
+          let hint = "";
+          if (platne && scoringTyp === "body" && n1 + n2 !== limit) { platne = false; hint = `Soucet musi byt ${limit}`; }
+          if (platne && scoringTyp === "gamy" && Math.max(n1, n2) !== limit) { platne = false; hint = `Vitez musi mit ${limit} gamu`; }
+          if (platne && scoringTyp === "gamy" && n1 === n2) { platne = false; hint = "Remiza v gamy neni mozna"; }
+          if (platne && scoringTyp === "cas" && z.faze !== "skupina" && n1 === n2) { platne = false; hint = "V playoff musi byt vitez"; }
+          return (
+            <div className="mt-3 flex items-center justify-between gap-2">
+              {hint && <span className="text-xs" style={{ color: "#801A28" }}>{hint}</span>}
+              <div className="flex gap-2 ml-auto">
+                {jeUpravovany && (
+                  <button onClick={() => setUpravitId(null)}
+                    className="rounded-lg px-3 py-2 text-xs font-medium border border-zinc-200 hover:bg-zinc-50">
+                    Zrusit
+                  </button>
+                )}
                 <button onClick={() => ulozSkore(z.id)} disabled={ukladam === z.id || !platne}
                   className="rounded-lg px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
                   style={{ backgroundColor: "#801A28" }}>
                   {ukladam === z.id ? "..." : "Ulozit"}
                 </button>
-              );
-            })()}
-            {jeUpravovany && (
-              <button onClick={() => setUpravitId(null)}
-                className="rounded-lg px-3 py-2 text-xs font-medium border border-zinc-200 hover:bg-zinc-50">
-                Zrusit
-              </button>
-            )}
-          </div>
-        )}
+              </div>
+            </div>
+          );
+        })()}
         {!zobrazInputy && (
           <p className="text-xs mt-1 text-right" style={{ color: "#9ca3af" }}>
             {scoringTyp === "gamy" ? `do ${limit} gamu` : scoringTyp === "cas" ? `${limit} minut` : `${limit} bodu`}
@@ -1121,6 +1197,51 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
           poradi={finalniPoradi.map(t => ({ jmeno: t.nazev, body: t.skore }))}
           onDone={() => setZobrazOhnostroj(false)}
         />
+      )}
+
+      {/* Zruseny banner */}
+      {jeZruseno && (
+        <div className="rounded-2xl px-5 py-4 border" style={{ backgroundColor: "#fef2f2", borderColor: "#fecaca" }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: "#801A28" }}>Turnaj byl zrusen</p>
+          <p className="text-xs" style={{ color: "#7f1d1d" }}>Duvod: {hra.settings?.duvod_zruseni}</p>
+          {hra.settings?.zruseno_at && (
+            <p className="text-xs mt-1" style={{ color: "#9ca3af" }}>
+              {new Date(hra.settings.zruseno_at).toLocaleString("cs-CZ")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Zruseni modal */}
+      {zrusitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => !zrusujem && setZrusitModal(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-2" style={{ color: "#0A0A0A" }}>Opravdu zrusit turnaj?</h3>
+            <p className="text-sm mb-4" style={{ color: "#6b7280" }}>
+              Vsechny zapasy zustanou v DB pro pripadne historicke ucely. Akce je nevratna — pokracovani nebude mozne.
+            </p>
+            <label className="text-sm font-medium block mb-1.5" style={{ color: "#374151" }}>Duvod zruseni *</label>
+            <textarea
+              value={zrusitDuvod}
+              onChange={e => setZrusitDuvod(e.target.value)}
+              placeholder="Napr. nedostatek hracu, zraneni, technicka zavada..."
+              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28] resize-none"
+              rows={3}
+            />
+            <div className="flex gap-2 mt-4 justify-end">
+              <button onClick={() => setZrusitModal(false)} disabled={zrusujem}
+                className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 hover:bg-zinc-50"
+                style={{ color: "#374151" }}>
+                Zachovat turnaj
+              </button>
+              <button onClick={provedZruseniTurnaje} disabled={zrusujem || !zrusitDuvod.trim()}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                style={{ backgroundColor: "#801A28" }}>
+                {zrusujem ? "Rusim..." : "Ano, zrusit turnaj"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Info bar */}
@@ -1320,7 +1441,9 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
                           <div className="shrink-0 text-right">
                             {hotovo
                               ? <span className="text-sm font-bold" style={{ color: "#6b7280" }}>{z.skore_tym1} : {z.skore_tym2}</span>
-                              : <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
+                              : z.stav === "probiha"
+                              ? <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
+                              : <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Planovany</span>
                             }
                           </div>
                         </div>
@@ -1333,6 +1456,17 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
           </div>
         );
       })()}
+
+      {/* Zrusit turnaj — pouze pro editora a pokud neni jiz zruseny */}
+      {jeEditor && !jeZruseno && (
+        <div className="pt-4 border-t border-zinc-200">
+          <button onClick={() => setZrusitModal(true)}
+            className="text-xs underline hover:no-underline"
+            style={{ color: "#9ca3af" }}>
+            Zrusit turnaj
+          </button>
+        </div>
+      )}
 
     </div>
   );
