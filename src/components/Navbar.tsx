@@ -5,6 +5,7 @@ import NavbarAuth from "./NavbarAuth";
 
 const NAV_LINKS = [
   { href: "/rezervace", label: "Rezervace" },
+  { href: "/hry", label: "Hry 🎾" },
   { href: "/turnaje", label: "Turnaje" },
   { href: "/akademie", label: "Akademie" },
   { href: "/o-nas", label: "O nás" },
