@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
@@ -63,6 +63,14 @@ function rozdelDoSkupin(tymy: ParEntry[], numSkupin: number): ParEntry[][] {
 export default function NovaHraPage() {
   const router   = useRouter();
   const supabase = createClient();
+
+  const [authStav, setAuthStav] = useState<"checking" | "auth" | "noauth">("checking");
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setAuthStav(user ? "auth" : "noauth");
+      if (!user) router.replace("/prihlaseni");
+    });
+  }, [supabase, router]);
 
   const [krok, setKrok] = useState(1);
   const [typ,  setTyp]  = useState<Typ | null>(null);
@@ -288,6 +296,19 @@ export default function NovaHraPage() {
   }
 
   const maxKrok = typ === "turnaj" ? 4 : 3;
+
+  if (authStav !== "auth") {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#F2EDE4" }}>
+          <p className="text-sm" style={{ color: "#9ca3af" }}>
+            {authStav === "checking" ? "Nacitam..." : "Presmerovavam na prihlaseni..."}
+          </p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">

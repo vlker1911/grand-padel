@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MapPin, Phone, Mail, AtSign } from "lucide-react";
+import { MapPin, Phone, Mail, AtSign, CheckCircle2 } from "lucide-react";
 import Navbar, { NAV_LINKS } from "@/components/Navbar";
 import PageHero from "@/components/PageHero";
 
@@ -84,8 +84,8 @@ export default function Kontakt() {
 
                   <div className="flex items-center gap-2.5">
                     <AtSign size={16} className="shrink-0" style={{ color: "#801A28" }} />
-                    <a href="https://instagram.com/grand_padel_cz" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: "#374151" }}>
-                      @grand_padel_cz
+                    <a href="https://www.instagram.com/grandpadelcz" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: "#374151" }}>
+                      @grandpadelcz
                     </a>
                   </div>
                 </div>
@@ -138,7 +138,7 @@ export default function Kontakt() {
 
               {stav === "ok" ? (
                 <div className="mt-5 rounded-2xl p-8 text-center" style={{ backgroundColor: "#F2EDE4" }}>
-                  <p className="text-2xl mb-3">✓</p>
+                  <div className="flex justify-center mb-3" style={{ color: "#16a34a" }}><CheckCircle2 size={40} strokeWidth={1.8} /></div>
                   <p className="font-semibold mb-1" style={{ color: "#0A0A0A" }}>Zpráva odeslána</p>
                   <p className="text-sm" style={{ color: "#6b7280" }}>Ozveme se vám zpravidla do 24 hodin.</p>
                 </div>

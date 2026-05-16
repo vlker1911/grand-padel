@@ -128,6 +128,9 @@ export default function Prihlaseni() {
           </p>
         </div>
       </main>
+      <footer className="py-4 px-4 text-center text-xs" style={{ backgroundColor: "#F2EDE4", color: "#9ca3af" }}>
+        v{process.env.NEXT_PUBLIC_APP_VERSION}
+      </footer>
     </div>
   );
 }

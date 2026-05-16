@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Trophy, CalendarDays, Users, Star, Building2 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Navbar, { NAV_LINKS } from "@/components/Navbar";
 import PageHero from "@/components/PageHero";
 
@@ -8,11 +10,11 @@ export const metadata: Metadata = {
   description: "Turnaje a ligy Grand Padel – přihlaste se k odběru novinek.",
 };
 
-const FORMATY = [
-  { icon: "🏆", nadpis: "Grand Padel Open",    popis: "Otevřené turnaje pro všechny úrovně. Přihlásit se můžete i jako jednotlivec — dáme vás do páru." },
-  { icon: "📅", nadpis: "Ligy",                  popis: "Pravidelná ligová soutěž. Hrajete každý týden se stejnými soupeři, sbíráte body, postoupíte nebo sestoupíte." },
-  { icon: "🎉", nadpis: "Firemní turnaje",       popis: "Turnaje na míru pro firmy a týmy. Ideální teambuilding — padel vtáhne každého." },
-  { icon: "⭐", nadpis: "Exhibice na center kurtu", popis: "Každá naše hala má center kurt s tribunami. Sledujte nejlepší hráče zblízka." },
+const FORMATY: { Icon: LucideIcon; nadpis: string; popis: string }[] = [
+  { Icon: Trophy,       nadpis: "Grand Padel Open",         popis: "Otevřené turnaje pro všechny úrovně. Přihlásit se můžete i jako jednotlivec — dáme vás do páru." },
+  { Icon: CalendarDays, nadpis: "Ligy",                     popis: "Pravidelná ligová soutěž. Hrajete každý týden se stejnými soupeři, sbíráte body, postoupíte nebo sestoupíte." },
+  { Icon: Users,        nadpis: "Firemní turnaje",          popis: "Turnaje na míru pro firmy a týmy. Ideální teambuilding — padel vtáhne každého." },
+  { Icon: Star,         nadpis: "Exhibice na center kurtu", popis: "Každá naše hala má center kurt s tribunami. Sledujte nejlepší hráče zblízka." },
 ];
 
 export default function Turnaje() {
@@ -36,7 +38,7 @@ export default function Turnaje() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {FORMATY.map((f) => (
                 <div key={f.nadpis} className="rounded-2xl border border-zinc-100 p-6 hover:shadow-md transition-shadow">
-                  <div className="text-4xl mb-4">{f.icon}</div>
+                  <div className="mb-4" style={{ color: "#801A28" }}><f.Icon size={36} strokeWidth={1.5} /></div>
                   <h3 className="text-lg font-semibold mb-2" style={{ color: "#0A0A0A" }}>{f.nadpis}</h3>
                   <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>{f.popis}</p>
                 </div>
@@ -48,7 +50,7 @@ export default function Turnaje() {
         {/* Center kurt callout */}
         <section className="py-16 px-4" style={{ backgroundColor: "#801A28" }}>
           <div className="max-w-4xl mx-auto text-center text-white">
-            <div className="text-5xl mb-6">🏟️</div>
+            <div className="flex justify-center mb-6"><Building2 size={64} strokeWidth={1.2} /></div>
             <h2 className="text-3xl font-extrabold mb-4 text-white">Center kurt v každé hale</h2>
             <p className="text-lg max-w-xl mx-auto" style={{ color: "#f3c6ce" }}>
               Každý areál Grand Padel má center kurt s tribunami — zázemí pro turnaje a exhibice, které v Česku zatím jinde nenajdete.

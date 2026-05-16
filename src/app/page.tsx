@@ -1,12 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Building2, CalendarDays, Trophy, GraduationCap, CircleDot } from "lucide-react";
 import Navbar, { NAV_LINKS } from "@/components/Navbar";
 
 const FEATURES = [
-  { icon: "🏟️", title: "Center kurt", description: "Každá hala má vlastní center kurt s tribunami – unikát, který jinde nenajdete." },
-  { icon: "📅", title: "Online rezervace", description: "Zarezervujte kurt jednoduše online 24/7 – bez čekání a volání." },
-  { icon: "🏆", title: "Turnaje & ligy", description: "Pravidelné turnaje pro všechny úrovně. Přidejte se k ligové soutěži." },
-  { icon: "🎓", title: "Akademie", description: "Tréninky s certifikovanými trenéry pro začátečníky i pokročilé." },
+  { Icon: Building2,     title: "Center kurt",        description: "Každá hala má vlastní center kurt s tribunami – unikát, který jinde nenajdete." },
+  { Icon: CalendarDays,  title: "Online rezervace",   description: "Zarezervujte kurt jednoduše online 24/7 – bez čekání a volání." },
+  { Icon: Trophy,        title: "Turnaje & ligy",     description: "Pravidelné turnaje pro všechny úrovně. Přidejte se k ligové soutěži." },
+  { Icon: GraduationCap, title: "Akademie",           description: "Tréninky s certifikovanými trenéry pro začátečníky i pokročilé." },
 ];
 
 const ARENAS = [
@@ -77,11 +78,11 @@ export default function Home() {
                 </div>
                 <div className="p-5 flex flex-col gap-3 flex-1">
                   <div className="flex flex-col gap-1.5 text-sm" style={{ color: "#6b7280" }}>
-                    <div className="flex items-center gap-2"><span>📅</span><span>{a.date}</span></div>
-                    <div className="flex items-center gap-2"><span>🎾</span><span>{a.courts} kurtů vč. center kurtu</span></div>
+                    <div className="flex items-center gap-2"><CalendarDays size={16} /><span>{a.date}</span></div>
+                    <div className="flex items-center gap-2"><CircleDot size={16} /><span>{a.courts} kurtů vč. center kurtu</span></div>
                   </div>
                   <div className="mt-auto pt-3 border-t border-zinc-100 flex items-center gap-2 text-sm font-medium" style={{ color: "#801A28" }}>
-                    <span>🏟️</span><span>Center kurt s tribunami</span>
+                    <Building2 size={16} /><span>Center kurt s tribunami</span>
                   </div>
                 </div>
               </div>
@@ -97,7 +98,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {FEATURES.map((f) => (
               <div key={f.title} className="rounded-2xl border border-zinc-200 bg-white p-6 hover:shadow-md transition-shadow">
-                <div className="text-4xl mb-4">{f.icon}</div>
+                <div className="mb-4" style={{ color: "#801A28" }}><f.Icon size={36} strokeWidth={1.5} /></div>
                 <h3 className="text-lg font-semibold mb-2" style={{ color: "#0A0A0A" }}>{f.title}</h3>
                 <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>{f.description}</p>
               </div>

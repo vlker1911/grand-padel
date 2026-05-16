@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Check, X } from "lucide-react";
 import Navbar, { NAV_LINKS } from "@/components/Navbar";
 import PageHero from "@/components/PageHero";
 
@@ -92,12 +93,12 @@ export default function Rezervace() {
             <h2 className="text-2xl font-bold text-center mb-8" style={{ color: "#801A28" }}>Storno podmínky</h2>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="rounded-2xl border border-zinc-100 p-6">
-                <div className="text-3xl mb-3">✅</div>
+                <div className="mb-3" style={{ color: "#16a34a" }}><Check size={32} strokeWidth={2} /></div>
                 <h3 className="font-semibold mb-2" style={{ color: "#0A0A0A" }}>Více než 24 hodin předem</h3>
                 <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>Rezervaci lze zrušit nebo přesunout. Zaplacená částka se vrátí do kreditu.</p>
               </div>
               <div className="rounded-2xl border border-zinc-100 p-6">
-                <div className="text-3xl mb-3">❌</div>
+                <div className="mb-3" style={{ color: "#801A28" }}><X size={32} strokeWidth={2} /></div>
                 <h3 className="font-semibold mb-2" style={{ color: "#0A0A0A" }}>Méně než 24 hodin předem</h3>
                 <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>Zrušení ani přesun není možný. Nevyužitá rezervace propadá.</p>
               </div>

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Sprout, TrendingUp, Trophy, Baby } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Navbar, { NAV_LINKS } from "@/components/Navbar";
 import PageHero from "@/components/PageHero";
 
@@ -8,11 +10,11 @@ export const metadata: Metadata = {
   description: "Padel akademie Grand Padel – tréninky pro všechny úrovně. Spouštíme v říjnu 2026.",
 };
 
-const UROVNE = [
-  { icon: "🌱", nadpis: "Začátečníci",       popis: "Nikdy jste nesáhli na padelovou raketu? Nevadí. Za 2–3 hodiny pochopíte pravidla a zahrajete si plnohodnotný zápas.", obsah: ["Základy drilu a pohybu", "Servis a return", "Pravidla hry", "První skupinový trénink"] },
-  { icon: "📈", nadpis: "Středně pokročilí", popis: "Hrajete, ale chcete posunout techniku a taktiku. Zaměříme se na slabá místa a přidáme závodní prvky.",              obsah: ["Technická analýza", "Taktika čtyřhry", "Smečování a obrana", "Tréninkové zápasy"] },
-  { icon: "🏆", nadpis: "Pokročilí",         popis: "Hrajete turnaje nebo o ně usilujete. Individuální přístup, videoanalýza, příprava na soutěže.",                      obsah: ["Individuální trénink", "Videoanalýza zápasů", "Turnajová příprava", "Kondiční trénink"] },
-  { icon: "👶", nadpis: "Děti & mládež",    popis: "Padel je ideální sport pro děti — rychle se naučí, bezpečné prostředí, skvělá parta.",                              obsah: ["Od 7 let", "Hrová forma tréninku", "Skupinky dle věku", "Mládežnické turnaje"] },
+const UROVNE: { Icon: LucideIcon; nadpis: string; popis: string; obsah: string[] }[] = [
+  { Icon: Sprout,     nadpis: "Začátečníci",       popis: "Nikdy jste nesáhli na padelovou raketu? Nevadí. Za 2–3 hodiny pochopíte pravidla a zahrajete si plnohodnotný zápas.", obsah: ["Základy drilu a pohybu", "Servis a return", "Pravidla hry", "První skupinový trénink"] },
+  { Icon: TrendingUp, nadpis: "Středně pokročilí", popis: "Hrajete, ale chcete posunout techniku a taktiku. Zaměříme se na slabá místa a přidáme závodní prvky.",              obsah: ["Technická analýza", "Taktika čtyřhry", "Smečování a obrana", "Tréninkové zápasy"] },
+  { Icon: Trophy,     nadpis: "Pokročilí",         popis: "Hrajete turnaje nebo o ně usilujete. Individuální přístup, videoanalýza, příprava na soutěže.",                      obsah: ["Individuální trénink", "Videoanalýza zápasů", "Turnajová příprava", "Kondiční trénink"] },
+  { Icon: Baby,       nadpis: "Děti & mládež",     popis: "Padel je ideální sport pro děti — rychle se naučí, bezpečné prostředí, skvělá parta.",                              obsah: ["Od 7 let", "Hrová forma tréninku", "Skupinky dle věku", "Mládežnické turnaje"] },
 ];
 
 export default function Akademie() {
@@ -37,7 +39,7 @@ export default function Akademie() {
               {UROVNE.map((u) => (
                 <div key={u.nadpis} className="rounded-2xl border border-zinc-100 p-6 hover:shadow-md transition-shadow flex flex-col gap-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">{u.icon}</span>
+                    <span style={{ color: "#801A28" }}><u.Icon size={32} strokeWidth={1.5} /></span>
                     <h3 className="text-lg font-semibold" style={{ color: "#0A0A0A" }}>{u.nadpis}</h3>
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>{u.popis}</p>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { Building2, CircleDot } from "lucide-react";
 import Navbar, { NAV_LINKS } from "@/components/Navbar";
 import PageHero from "@/components/PageHero";
 
@@ -63,7 +64,7 @@ export default function ONas() {
         {/* Center kurt USP */}
         <section className="py-16 px-4 text-white" style={{ backgroundColor: "#801A28" }}>
           <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-10 items-center">
-            <div className="text-7xl shrink-0">🏟️</div>
+            <Building2 size={96} strokeWidth={1.2} className="shrink-0" />
             <div>
               <span className="inline-block rounded-full px-3 py-1 text-xs font-semibold text-white mb-3" style={{ backgroundColor: "#5C121C" }}>
                 Unikát v České republice
@@ -98,8 +99,8 @@ export default function ONas() {
                     <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>{a.detail}</p>
                   </div>
                   <div className="p-6 flex flex-col gap-2 text-sm justify-center shrink-0" style={{ color: "#6b7280" }}>
-                    <div className="flex items-center gap-2"><span>🎾</span><span>{a.courts} kurtů</span></div>
-                    <div className="flex items-center gap-2 font-medium" style={{ color: "#801A28" }}><span>🏟️</span><span>center kurt</span></div>
+                    <div className="flex items-center gap-2"><CircleDot size={16} /><span>{a.courts} kurtů</span></div>
+                    <div className="flex items-center gap-2 font-medium" style={{ color: "#801A28" }}><Building2 size={16} /><span>center kurt</span></div>
                   </div>
                 </div>
               ))}
