@@ -33,6 +33,7 @@ export default function NovaHraPage() {
   // Parametry
   const [pocetHracu, setPocetHracu] = useState<number | "">(8);
   const [pocetKurtu, setPocetKurtu] = useState<number | "">(2);
+  const [cislaMexicano, setCislaMexicano] = useState("1, 2, 3, 4");
   const [casOd, setCasOd] = useState("16:00");
   const [casDo, setCasDo] = useState("18:00");
 
@@ -122,7 +123,14 @@ export default function NovaHraPage() {
         created_by: user.id,
         pocet_kurtu: k,
         body_na_zapas: typ === "mexicano" ? minutNaKolo : bodyNaZapas,
-        settings: { cas_od: casOd, cas_do: casDo, minut_na_kolo: minutNaKolo },
+        settings: {
+          cas_od: casOd,
+          cas_do: casDo,
+          minut_na_kolo: minutNaKolo,
+          cisla_kurtu: typ === "mexicano"
+            ? cislaMexicano.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n)).sort((a,b) => a-b)
+            : null,
+        },
       })
       .select()
       .single();
@@ -259,7 +267,22 @@ export default function NovaHraPage() {
                     </div>
                   )}
 
-                  {/* Minut na kolo — Mexicano */}
+                  {/* Cisla kurtu + minut na kolo — Mexicano */}
+                  {typ === "mexicano" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium" style={{ color: "#374151" }}>Cisla kurtu (oddelena carkou)</label>
+                      <input type="text" value={cislaMexicano} onChange={(e) => {
+                        setCislaMexicano(e.target.value);
+                        const cisla = e.target.value.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                        setPocetKurtu(cisla.length || 1);
+                      }}
+                        placeholder="napr. 3, 4, 5, 6"
+                        className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      <p className="text-xs" style={{ color: "#9ca3af" }}>
+                        Nejnizsi cislo = nejlepsi kurt. Zadej kurty ktere mas k dispozici.
+                      </p>
+                    </div>
+                  )}
                   {typ === "mexicano" && (
                     <div className="flex flex-col gap-1.5">
                       <label className="text-sm font-medium" style={{ color: "#374151" }}>Minut na kolo</label>
