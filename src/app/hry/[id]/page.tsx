@@ -18,6 +18,7 @@ type Hra = {
     cas_od?: string;
     cas_do?: string;
     minut_na_kolo?: number;
+    minut_presunu?: number;
     cisla_kurtu?: number[];
   } | null;
 };
@@ -276,10 +277,21 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
   const supabase = createClient();
   const settings = hra.settings;
   const minutNaKolo = settings?.minut_na_kolo ?? 12;
+  const minutPresunu = settings?.minut_presunu ?? 3;
+  const casOd = settings?.cas_od ?? null;
+  const casDo = settings?.cas_do ?? null;
   const maxKurtu = Math.floor(ucastnici.length / 4);
   const cislaKurtu = (settings?.cisla_kurtu ?? Array.from({ length: hra.pocet_kurtu }, (_, i) => i + 1))
     .sort((a, b) => a - b)
     .slice(0, maxKurtu);
+
+  const maxKol = (() => {
+    if (!casOd || !casDo) return null;
+    const [hOd, mOd] = casOd.split(":").map(Number);
+    const [hDo, mDo] = casDo.split(":").map(Number);
+    const celkem = (hDo * 60 + mDo) - (hOd * 60 + mOd);
+    return Math.floor(celkem / (minutNaKolo + minutPresunu));
+  })();
 
   // Odpocet
   const [sekundy, setSekundy] = useState(minutNaKolo * 60);
@@ -400,8 +412,37 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
 
   const aktivniKoloData = kola[aktivniKolo - 1];
 
+  const dosloNaMaxKol = maxKol !== null && kola.length >= maxKol;
+
   return (
     <div className="flex flex-col gap-6">
+
+      {/* Info bar — rezervace */}
+      <section className="bg-white rounded-2xl border border-zinc-100 px-5 py-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" style={{ color: "#374151" }}>
+          <span><strong>{cislaKurtu.length}</strong> {cislaKurtu.length === 1 ? "kurt" : "kurty"} ({cislaKurtu.join(", ")})</span>
+          <span style={{ color: "#d1d5db" }}>·</span>
+          <span><strong>{ucastnici.length}</strong> hracu</span>
+          {casOd && casDo && <><span style={{ color: "#d1d5db" }}>·</span><span>{casOd} – {casDo}</span></>}
+          <span style={{ color: "#d1d5db" }}>·</span>
+          <span>{minutNaKolo} min/kolo + {minutPresunu} min presun</span>
+          {maxKol !== null && (
+            <>
+              <span style={{ color: "#d1d5db" }}>·</span>
+              <span className="font-semibold" style={{ color: kola.length >= maxKol ? "#801A28" : "#16a34a" }}>
+                kolo {kola.length} / {maxKol}
+              </span>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* Upozorneni — konec casu */}
+      {dosloNaMaxKol && (
+        <div className="rounded-2xl px-5 py-4 text-sm font-semibold text-white text-center" style={{ backgroundColor: "#801A28" }}>
+          Dosahl jsi maximalniho poctu kol ({maxKol}) pro rezervaci {casOd}–{casDo}.
+        </div>
+      )}
 
       {/* Odpocet */}
       <section className="bg-white rounded-2xl border border-zinc-100 p-6">
@@ -486,10 +527,12 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
 
       {/* Pohyb + nove kolo */}
       {jeEditor && !pridavamKolo && (
-        <button onClick={otevriNoveKolo}
-          className="w-full rounded-full py-3 text-sm font-semibold text-white"
+        <button onClick={otevriNoveKolo} disabled={dosloNaMaxKol}
+          className="w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ backgroundColor: "#801A28" }}>
-          Zapsat dalsi kolo
+          {dosloNaMaxKol
+            ? `Max kol dosazeno (${maxKol})`
+            : "Zapsat dalsi kolo"}
         </button>
       )}
 

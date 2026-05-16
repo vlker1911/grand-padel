@@ -39,7 +39,8 @@ export default function NovaHraPage() {
 
   // Americano / Mexicano
   const [bodyNaZapas, setBodyNaZapas] = useState(24);
-  const [minutNaKolo, setMinutNaKolo] = useState(12); // Mexicano
+  const [minutNaKolo, setMinutNaKolo] = useState(12);
+  const [minutPresunu, setMinutPresunu] = useState(3);
 
   // Název
   const [nazev, setNazev] = useState("");
@@ -127,6 +128,7 @@ export default function NovaHraPage() {
           cas_od: casOd,
           cas_do: casDo,
           minut_na_kolo: minutNaKolo,
+          minut_presunu: minutPresunu,
           cisla_kurtu: typ === "mexicano"
             ? cislaMexicano.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n)).sort((a,b) => a-b)
             : null,
@@ -302,6 +304,33 @@ export default function NovaHraPage() {
                           className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
                       </div>
                       <p className="text-xs" style={{ color: "#9ca3af" }}>Doporucujeme 10–12 minut na kolo.</p>
+                    </div>
+                  )}
+                  {typ === "mexicano" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium" style={{ color: "#374151" }}>Cas na presun mezi koly (min)</label>
+                      <div className="flex gap-2 items-center">
+                        {[2, 3, 5].map((m) => (
+                          <button key={m} onClick={() => setMinutPresunu(m)}
+                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${minutPresunu === m ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                            {m} min
+                          </button>
+                        ))}
+                        <input type="number" min={1} max={15} value={minutPresunu}
+                          onChange={(e) => setMinutPresunu(Number(e.target.value))}
+                          className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      </div>
+                      {(() => {
+                        const [hOd, mOd] = casOd.split(":").map(Number);
+                        const [hDo, mDo] = casDo.split(":").map(Number);
+                        const celkem = (hDo * 60 + mDo) - (hOd * 60 + mOd);
+                        const maxKol = Math.floor(celkem / (minutNaKolo + minutPresunu));
+                        return celkem > 0 ? (
+                          <p className="text-xs" style={{ color: "#9ca3af" }}>
+                            {celkem} min celkem → max <strong>{maxKol} kol</strong> ({minutNaKolo} + {minutPresunu} min/kolo)
+                          </p>
+                        ) : null;
+                      })()}
                     </div>
                   )}
 
