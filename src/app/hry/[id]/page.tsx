@@ -810,29 +810,55 @@ function spocitejHarmonogram(
     return Math.round(lim * 0.45) + 5;
   }
 
-  // Kurty 1..pocetKurtu, každý volný od startMin
-  const kurtyVolne: number[] = Array.from({ length: pocetKurtu }, () => startMin);
-  const kurtyIndexy: number[] = Array.from({ length: pocetKurtu }, (_, i) => i + 1);
-
-  const result: HarmonogramZaznam[] = [];
-
   // Skupiny nejdřív, pak playoff
   const serazene = [
     ...zapasy.filter(z => z.faze === "skupina"),
     ...zapasy.filter(z => z.faze !== "skupina"),
   ];
 
-  for (const z of serazene) {
-    // Nejdříve volný kurt
-    let nejdrivIdx = 0;
-    for (let i = 1; i < pocetKurtu; i++) {
-      if (kurtyVolne[i] < kurtyVolne[nejdrivIdx]) nejdrivIdx = i;
+  const result: HarmonogramZaznam[] = [];
+  const pending = [...serazene];
+  let casNow = startMin;
+
+  // Synchronizovana kola s kontrolou konfliktu tymu — tym hraje jen jednou v kole
+  while (pending.length > 0) {
+    const teamsThisRound = new Set<string>();
+    const assignedThisRound: { z: TurnajZapas; kurt: number; delka: number }[] = [];
+    let courtIdx = 0;
+    let i = 0;
+    while (courtIdx < pocetKurtu && i < pending.length) {
+      const m = pending[i];
+      if (!teamsThisRound.has(m.tym1_id) && !teamsThisRound.has(m.tym2_id)) {
+        teamsThisRound.add(m.tym1_id);
+        teamsThisRound.add(m.tym2_id);
+        const delka = delkaZapasu(m);
+        assignedThisRound.push({ z: m, kurt: courtIdx + 1, delka });
+        pending.splice(i, 1);
+        courtIdx++;
+        // i stays at same position (we removed current)
+      } else {
+        i++;
+      }
     }
-    const kurt = kurtyIndexy[nejdrivIdx];
-    const start = kurtyVolne[nejdrivIdx];
-    const delka = delkaZapasu(z);
-    kurtyVolne[nejdrivIdx] = start + delka + prechod;
-    result.push({ zapasId: z.id, kurt, casStartMin: start, casEndMin: start + delka });
+
+    if (assignedThisRound.length === 0) {
+      // Vsechny zbyle zapasy maji konflikt s teamsThisRound — pak by forever-loop.
+      // Force: vezmi prvni zbyly zapas (vykonej, i kdyz technicky konflikt nelze)
+      const m = pending.shift();
+      if (!m) break;
+      assignedThisRound.push({ z: m, kurt: 1, delka: delkaZapasu(m) });
+    }
+
+    const maxDelka = Math.max(...assignedThisRound.map(a => a.delka));
+    for (const { z, kurt, delka } of assignedThisRound) {
+      result.push({
+        zapasId: z.id,
+        kurt,
+        casStartMin: casNow,
+        casEndMin: casNow + delka,
+      });
+    }
+    casNow += maxDelka + prechod;
   }
 
   return result;
@@ -913,6 +939,8 @@ function pairPlayoffMatches(
   return zapasy;
 }
 
+const SKUPINY_NAZVY_LOCAL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
 function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   const supabase = createClient();
   const settings = (hra.settings ?? {}) as TurnajSettings;
@@ -949,6 +977,10 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   const [smazatModal, setSmazatModal] = useState(false);
   const [mazem, setMazem] = useState(false);
   const [kurtModal, setKurtModal] = useState<string | null>(null);
+  const [editHraciTymId, setEditHraciTymId] = useState<string | null>(null);
+  const [editHrac1, setEditHrac1] = useState("");
+  const [editHrac2, setEditHrac2] = useState("");
+  const [ukladamHrace, setUkladamHrace] = useState(false);
 
   const router = useRouter();
 
@@ -1167,6 +1199,50 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
       // Gamy / Body: vyber kurt rucne
       setKurtModal(zapasId);
     }
+  }
+
+  async function ulozHraceTymu(tymId: string) {
+    const tym = tymy.find(t => t.id === tymId);
+    if (!tym) return;
+    setUkladamHrace(true);
+
+    const novyH1 = editHrac1.trim();
+    const novyH2 = editHrac2.trim();
+    let h1Id: string | null = tym.hrac1_id;
+    let h2Id: string | null = tym.hrac2_id;
+
+    // Hrac 1 — vytvor nebo update
+    if (novyH1) {
+      if (h1Id) {
+        await supabase.from("hra_ucastnici").update({ jmeno: novyH1 }).eq("id", h1Id);
+      } else {
+        const { data } = await supabase.from("hra_ucastnici").insert({ hra_id: hra.id, jmeno: novyH1, user_id: null, pohlavi: "neuvedeno" }).select().single();
+        h1Id = data?.id ?? null;
+      }
+    } else if (h1Id) {
+      // Smazat priradeni (ale ne ucastnika — mozna je v jine hre)
+      // Pro jednoduchost: ponechame ucastnika, jen odvazeme od tymu
+      h1Id = null;
+    }
+
+    if (novyH2) {
+      if (h2Id) {
+        await supabase.from("hra_ucastnici").update({ jmeno: novyH2 }).eq("id", h2Id);
+      } else {
+        const { data } = await supabase.from("hra_ucastnici").insert({ hra_id: hra.id, jmeno: novyH2, user_id: null, pohlavi: "neuvedeno" }).select().single();
+        h2Id = data?.id ?? null;
+      }
+    } else if (h2Id) {
+      h2Id = null;
+    }
+
+    await supabase.from("turnaj_tymy").update({ hrac1_id: h1Id, hrac2_id: h2Id }).eq("id", tymId);
+
+    setEditHraciTymId(null);
+    setEditHrac1("");
+    setEditHrac2("");
+    setUkladamHrace(false);
+    nactiTurnaj();
   }
 
   async function ulozInfo() {
@@ -1789,6 +1865,85 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
                 })}
               </div>
             </section>
+            {playoff && !playoffExistuje && (() => {
+              // Placeholder bracket — pokud playoff jeste neni vygenerovan
+              const numSkupin = skupinyNazvy.length;
+              if (numSkupin === 0) return null;
+              const bracketLabel = (sIdx: number, pos: number) => `${pos}${SKUPINY_NAZVY_LOCAL[sIdx]}`;
+              const pasma: { label: string; semis: { tym1: string; tym2: string }[] }[] = [];
+              if (multiTier) {
+                // multi-tier: kazde pasmo 4 tymy
+                const tymyVPoradi: { tym: string; pasmoIdx: number }[] = [];
+                const maxPos = Math.max(...skupinyNazvy.map(s => (skupinyMap[s] ?? []).length));
+                for (let pos = 0; pos < maxPos; pos++) {
+                  skupinyNazvy.forEach((_s, sIdx) => {
+                    tymyVPoradi.push({ tym: bracketLabel(sIdx, pos + 1), pasmoIdx: Math.floor(tymyVPoradi.length / 4) });
+                  });
+                }
+                const pocetPasem = Math.ceil(tymy.length / 4);
+                for (let p = 0; p < pocetPasem; p++) {
+                  const tymyPasma = tymyVPoradi.filter(x => x.pasmoIdx === p).map(x => x.tym);
+                  if (tymyPasma.length < 2) continue;
+                  const semis: { tym1: string; tym2: string }[] = [];
+                  // krizovy bracket: 1v4, 2v3 — nebo primy 1v2, 3v4
+                  if (typPlayoff === "krizovy" && tymyPasma.length === 4) {
+                    semis.push({ tym1: tymyPasma[0], tym2: tymyPasma[3] });
+                    semis.push({ tym1: tymyPasma[1], tym2: tymyPasma[2] });
+                  } else {
+                    for (let i = 0; i + 1 < tymyPasma.length; i += 2) {
+                      semis.push({ tym1: tymyPasma[i], tym2: tymyPasma[i + 1] });
+                    }
+                  }
+                  pasma.push({ label: `Pasmo ${p + 1} (${p * 4 + 1}.–${(p + 1) * 4}.)`, semis });
+                }
+              } else {
+                // non-multi-tier: top 2 z kazde skupiny
+                const semis: { tym1: string; tym2: string }[] = [];
+                if (typPlayoff === "krizovy" && numSkupin >= 2) {
+                  // 1A vs 2B, 2A vs 1B (pro 2 skupiny)
+                  for (let sIdx = 0; sIdx < numSkupin; sIdx++) {
+                    const otherIdx = (sIdx + 1) % numSkupin;
+                    semis.push({ tym1: bracketLabel(sIdx, 1), tym2: bracketLabel(otherIdx, 2) });
+                  }
+                } else {
+                  // primy: 1A vs 2A, 1B vs 2B atd.
+                  for (let sIdx = 0; sIdx < numSkupin; sIdx++) {
+                    semis.push({ tym1: bracketLabel(sIdx, 1), tym2: bracketLabel(sIdx, 2) });
+                  }
+                }
+                pasma.push({ label: "Finalove playoff (top 2 z kazde skupiny)", semis });
+              }
+              return (
+                <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                  <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
+                    <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Playoff (struktura)</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>
+                      Zapasy se vygeneruji po dokonceni skupin a kliknuti na &quot;Zahajit playoff&quot;.
+                    </p>
+                  </div>
+                  {pasma.map((pasmo, pIdx) => (
+                    <div key={pIdx}>
+                      <div className="px-5 py-1.5 border-b border-zinc-50">
+                        <p className="text-xs font-semibold" style={{ color: "#6b7280" }}>{pasmo.label}</p>
+                      </div>
+                      <div className="divide-y divide-zinc-50">
+                        {pasmo.semis.map((s, sIdx) => (
+                          <div key={sIdx} className="px-5 py-2 flex items-center gap-2 text-xs" style={{ color: "#9ca3af" }}>
+                            <span className="w-16">Semifinále</span>
+                            <span className="flex-1 text-right font-semibold">{s.tym1}</span>
+                            <span style={{ color: "#d1d5db" }}>vs</span>
+                            <span className="flex-1 font-semibold">{s.tym2}</span>
+                          </div>
+                        ))}
+                        <div className="px-5 py-2 text-xs italic" style={{ color: "#d1d5db" }}>
+                          Finále &amp; o 3. místo se vygeneruje po dohrání semifinále.
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </section>
+              );
+            })()}
           </div>
         );
       })()}
@@ -2023,30 +2178,63 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
                 {filtrovaneTymy.map(t => {
                   const h1 = t.hrac1_id ? hraciDB.find(h => h.id === t.hrac1_id) : null;
                   const h2 = t.hrac2_id ? hraciDB.find(h => h.id === t.hrac2_id) : null;
+                  const editujem = editHraciTymId === t.id;
                   return (
-                    <div key={t.id} className="px-5 py-3 flex items-center gap-3">
-                      <span className="text-xs font-bold w-5 shrink-0" style={{ color: "#9ca3af" }}>{t.skupina}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>{t.nazev}</p>
-                        {(h1 || h2) ? (
-                          <p className="text-xs" style={{ color: "#6b7280" }}>
-                            {h1?.jmeno ?? "—"}{h2 ? ` · ${h2.jmeno}` : ""}
-                          </p>
-                        ) : (
-                          <p className="text-xs italic" style={{ color: "#9ca3af" }}>Bez prirazenych hracu</p>
+                    <div key={t.id} className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold w-5 shrink-0" style={{ color: "#9ca3af" }}>{t.skupina}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>{t.nazev}</p>
+                          {!editujem && (
+                            (h1 || h2) ? (
+                              <p className="text-xs" style={{ color: "#6b7280" }}>
+                                {h1?.jmeno ?? "—"}{h2 ? ` · ${h2.jmeno}` : ""}
+                              </p>
+                            ) : (
+                              <p className="text-xs italic" style={{ color: "#9ca3af" }}>Bez prirazenych hracu</p>
+                            )
+                          )}
+                        </div>
+                        {jeEditor && !jeZruseno && !editujem && (
+                          <button onClick={() => {
+                            setEditHraciTymId(t.id);
+                            setEditHrac1(h1?.jmeno ?? "");
+                            setEditHrac2(h2?.jmeno ?? "");
+                          }}
+                            className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1 text-xs font-medium hover:bg-zinc-50"
+                            style={{ color: "#801A28" }}>
+                            Upravit
+                          </button>
                         )}
                       </div>
+                      {editujem && (
+                        <div className="mt-3 flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <input type="text" value={editHrac1} onChange={e => setEditHrac1(e.target.value)}
+                              placeholder="Jmeno hrace 1"
+                              className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                            <input type="text" value={editHrac2} onChange={e => setEditHrac2(e.target.value)}
+                              placeholder="Jmeno hrace 2"
+                              className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <button onClick={() => { setEditHraciTymId(null); setEditHrac1(""); setEditHrac2(""); }}
+                              className="rounded-lg px-3 py-1.5 text-xs font-medium border border-zinc-200"
+                              style={{ color: "#374151" }}>
+                              Zrusit
+                            </button>
+                            <button onClick={() => ulozHraceTymu(t.id)} disabled={ukladamHrace}
+                              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                              style={{ backgroundColor: "#801A28" }}>
+                              {ukladamHrace ? "Ukladam..." : "Ulozit"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
-              {jeEditor && !jeZruseno && (
-                <div className="px-5 py-3 border-t border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
-                  <p className="text-xs" style={{ color: "#9ca3af" }}>
-                    Editor hracu — moznost doplnit jmena k tymum bez prirazeni — bude doplneno v dalsi verzi.
-                  </p>
-                </div>
-              )}
             </section>
           </div>
         );

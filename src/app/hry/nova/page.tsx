@@ -54,8 +54,19 @@ function vypocitejPocetSkupin(n: number): number {
   return Math.ceil(n / 4);
 }
 
+// Fisher-Yates shuffle (deterministicky bez seedu)
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function rozdelDoSkupin(tymy: ParEntry[], numSkupin: number): ParEntry[][] {
   const groups: ParEntry[][] = Array.from({ length: numSkupin }, () => []);
+  // Snake-style distribuce (po zamichani je to OK — kazda skupina dostane podobny prumer poradi)
   tymy.forEach((t, i) => groups[i % numSkupin].push(t));
   return groups;
 }
@@ -105,6 +116,7 @@ export default function NovaHraPage() {
   const [singlesHraci,       setSinglesHraci]       = useState<SingEntry[]>(Array.from({ length: 8 }, (_, i) => ({ id: i, jmeno: "", pohlavi: "" })));
   const [losovanoSingles,    setLosovanoSingles]    = useState<ParEntry[]>([]);
   const [losovano,           setLosovano]           = useState(false);
+  const [losovaneTymy,       setLosovaneTymy]       = useState<ParEntry[] | null>(null);
 
   const [nazev, setNazev] = useState("");
   const [stav,  setStav]  = useState<"idle" | "loading" | "chyba">("idle");
@@ -156,7 +168,7 @@ export default function NovaHraPage() {
   }, [typ, typParovani, pouzitNazvyTymu, pary, singlesHraci, losovano, losovanoSingles]);
 
   const pocetSkupin = useMemo(() => vypocitejPocetSkupin(efektivniTymy.length), [efektivniTymy.length]);
-  const skupiny     = useMemo(() => rozdelDoSkupin(efektivniTymy, pocetSkupin), [efektivniTymy, pocetSkupin]);
+  const skupiny     = useMemo(() => rozdelDoSkupin(losovaneTymy ?? efektivniTymy, pocetSkupin), [losovaneTymy, efektivniTymy, pocetSkupin]);
 
   // Celkovy cas k dispozici v minutach
   const celkemMinut = useMemo(() => {
@@ -326,8 +338,8 @@ export default function NovaHraPage() {
       }
     }
 
-    // Tymy (pary nebo nazvy)
-    const skupinyData = rozdelDoSkupin(tymy, pocetSkupin);
+    // Tymy (pary nebo nazvy) — pouzij losovany seznam pokud existuje
+    const skupinyData = rozdelDoSkupin(losovaneTymy ?? tymy, pocetSkupin);
     const tymyInsert = skupinyData.flatMap((skupina, si) =>
       skupina.map((tym, ti) => {
         const link = parToUcastnici[tym.id];
@@ -900,6 +912,18 @@ export default function NovaHraPage() {
                 </p>
               </div>
 
+              {/* Rozlosovat */}
+              <div className="flex items-center justify-between gap-3 px-1">
+                <p className="text-xs" style={{ color: losovaneTymy ? "#374151" : "#9ca3af" }}>
+                  {losovaneTymy ? "Pary rozlosovany nahodne" : "Pary jsou v zadanem poradi — klikni pro nahodne rozlosovani."}
+                </p>
+                <button onClick={() => setLosovaneTymy(shuffleArray(efektivniTymy))}
+                  className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold border-2 transition-all"
+                  style={{ borderColor: "#801A28", color: "#801A28", backgroundColor: "white" }}>
+                  {losovaneTymy ? "Rozlosovat znovu" : "Rozlosovat"}
+                </button>
+              </div>
+
               {skupiny.map((skupina, si) => (
                 <div key={si} className="bg-white rounded-2xl border border-zinc-100 p-5">
                   <p className="text-xs font-bold mb-3" style={{ color: "#801A28" }}>Skupina {SKUPINY_NAZVY[si]}</p>
@@ -959,7 +983,7 @@ export default function NovaHraPage() {
               {chyba && <p className="text-sm text-center" style={{ color: "#801A28" }}>{chyba}</p>}
 
               <div className="flex gap-3">
-                <button onClick={() => setKrok(3)} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
+                <button onClick={() => { setKrok(3); setLosovaneTymy(null); }} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
                 <button onClick={vytvorHru} disabled={stav === "loading"}
                   className="flex-1 rounded-full py-3 text-sm font-semibold text-white disabled:opacity-60"
                   style={{ backgroundColor: "#801A28" }}>

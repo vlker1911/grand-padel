@@ -64,6 +64,23 @@ if celkemMinut > (casDo - casOd) → HARD BLOCK:
 - **Čas:** ukazujeme po kurtech s fixními časy (synchronizovaná kola)
 - **Gamy/Body:** flat fronta s pořadovým číslem #1, #2, … BEZ auto-přiřazení kurtu. Organizátor klikne "Spustit" → modal s volnými kurty → vybere → uloží `z.kurt`, `z.cas_zacatek`. Kurt se ukáže až poté.
 
+### Konflikt týmů v synchronizovaných kolech (v0.7.8)
+- `spocitejHarmonogram` musí v každém kole zajistit, že **žádný tým nehraje 2×**.
+- Algoritmus: greedy per round — pro každý kurt vyber první zápas, jehož oba týmy nejsou v `teamsThisRound`. Pokud žádný nevyhovuje, kurt je idle v daném kole.
+- Není optimální (může vytvořit více kol než nutné), ale je correct.
+
+### Random losování do skupin (v0.7.8)
+- `rozdelDoSkupin` distribuuje snake-style (`i % numSkupin`) — pro POŘADÍ vstupu dělá alternaci 1A,1B,2A,2B,...
+- Aby skupiny byly opravdu random: před distribucí použít `shuffleArray` (Fisher-Yates)
+- V krok 4 souhrn je tlačítko "Rozlosovat" / "Rozlosovat znovu" — uloží do `losovaneTymy` shuffled array
+- `vytvorHru` použije `losovaneTymy ?? efektivniTymy`
+
+### Playoff placeholdery v Pořadí zápasů (v0.7.8)
+- Před vygenerováním playoff (před kliknutím "Zahajit playoff") se v Pořadí zápasů zobrazuje **struktura** playoff
+- Placeholdery: "1A vs 4B" (multi-tier křížový), "1A vs 2B" (non-multi-tier křížový), "1A vs 2A" (přímý)
+- Pásma jsou označená "Pásmo 1 (1.–4.)", "Pásmo 2 (5.–8.)"
+- Po kliknutí "Zahajit playoff" placeholder zmizí a reálné zápasy se objeví
+
 ### Spustit zápas — kde je tlačítko:
 - V tabu **Pořadí zápasů** u každého plánovaného zápasu
 - V tabu **Rozlosování** v expandable seznamu zápasů per skupina
