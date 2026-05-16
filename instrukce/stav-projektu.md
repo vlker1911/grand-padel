@@ -15,6 +15,7 @@
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.7.5 | 16. 5. 2026 | Turnaj: validace času bere počet týmů z formuláře (nečeká na vyplnění), Pořadí zápasů bez matoucích auto-kurtů, Spustit zápas tlačítko v Pořadí i Rozlosování |
 | v0.7.4 | 16. 5. 2026 | Turnaj: bug fix — Smazat tiše selhalo (chybělo RLS DELETE), přidány policies pro hry/hra_ucastnici/hra_zapasy, error handling v smazatTurnaj, /hry list rozlišuje "Zrušeno" |
 | v0.7.3 | 16. 5. 2026 | Turnaj: manuální výběr kurtu pro gamy/body při Spustit zápas (modal s obsazenými kurty), auto-stopa `cas_zacatek`/`cas_konec`/`vitez_id`. Dokumenty přesunuty do `web-app/instrukce/` (verzované) |
 | v0.7.2 | 16. 5. 2026 | Turnaj: HARD BLOCK Pokračovat pro gamy/body co se nevejdou do času (původně jen warning), Pořadí zápasů přepracováno — pro gamy/body fronta bez fixních časů, pro Čas synchronizovaná kola s časy |

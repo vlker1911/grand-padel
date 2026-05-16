@@ -1567,13 +1567,31 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
                     Zobrazit zapasy ({zapasyTeto.length})
                   </summary>
                   <div className="divide-y divide-zinc-50">
-                    {zapasyTeto.map(z => (
-                      <div key={z.id} className="px-5 py-2 flex items-center gap-2 text-xs" style={{ color: "#6b7280" }}>
-                        <span className="flex-1 text-right">{jmenoTymu(z.tym1_id)}</span>
-                        <span style={{ color: "#d1d5db" }}>vs</span>
-                        <span className="flex-1">{jmenoTymu(z.tym2_id)}</span>
-                      </div>
-                    ))}
+                    {zapasyTeto.map(z => {
+                      const hotovo = z.skore_tym1 != null;
+                      return (
+                        <div key={z.id} className="px-5 py-2 flex items-center gap-2 text-xs">
+                          <span className="flex-1 text-right" style={{ color: hotovo ? "#9ca3af" : "#374151" }}>{jmenoTymu(z.tym1_id)}</span>
+                          <span style={{ color: "#d1d5db" }}>vs</span>
+                          <span className="flex-1" style={{ color: hotovo ? "#9ca3af" : "#374151" }}>{jmenoTymu(z.tym2_id)}</span>
+                          {hotovo ? (
+                            <span className="text-xs font-bold shrink-0" style={{ color: "#6b7280" }}>{z.skore_tym1}:{z.skore_tym2}</span>
+                          ) : z.stav === "probiha" ? (
+                            <span className="shrink-0 text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>
+                              Kurt {z.kurt}
+                            </span>
+                          ) : jeEditor && !jeZruseno ? (
+                            <button onClick={() => spustitZapas(z.id)}
+                              className="shrink-0 rounded-lg px-2 py-0.5 text-xs font-semibold text-white"
+                              style={{ backgroundColor: "#801A28" }}>
+                              Spustit
+                            </button>
+                          ) : (
+                            <span className="shrink-0 text-xs" style={{ color: "#9ca3af" }}>—</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </details>
               </section>
@@ -1638,13 +1656,26 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
                                 {jmenoTymu(z.tym1_id)} <span style={{ color: "#d1d5db" }}>vs</span> {jmenoTymu(z.tym2_id)}
                               </p>
                             </div>
-                            <div className="shrink-0 text-right">
-                              {hotovo
-                                ? <span className="text-sm font-bold" style={{ color: "#6b7280" }}>{z.skore_tym1} : {z.skore_tym2}</span>
-                                : z.stav === "probiha"
-                                ? <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
-                                : <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Planovany</span>
-                              }
+                            <div className="shrink-0 text-right flex items-center gap-2">
+                              {hotovo ? (
+                                <span className="text-sm font-bold" style={{ color: "#6b7280" }}>{z.skore_tym1} : {z.skore_tym2}</span>
+                              ) : z.stav === "probiha" ? (
+                                <>
+                                  <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
+                                  {jeEditor && <button onClick={() => zrusitSpusteni(z.id)} className="text-xs underline" style={{ color: "#9ca3af" }}>x</button>}
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Planovany</span>
+                                  {jeEditor && !jeZruseno && (
+                                    <button onClick={() => spustitZapas(z.id)}
+                                      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
+                                      style={{ backgroundColor: "#801A28" }}>
+                                      Spustit
+                                    </button>
+                                  )}
+                                </>
+                              )}
                             </div>
                           </div>
                         );
@@ -1657,8 +1688,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
           );
         }
 
-        // GAMY / BODY format: fronta bez fixnich casu
-        // Razeni: skupiny nejdriv (po skupinach abecedne, v ramci zapasy po poradi), pak playoff (po fazich)
+        // GAMY / BODY format: fronta bez fixnich casu, kurt se prizadi rucne pri Spustit
         const skupinyZapasy = zapasySkupin.slice().sort((a, b) => {
           const sa = a.skupina ?? "", sb = b.skupina ?? "";
           if (sa !== sb) return sa.localeCompare(sb);
@@ -1666,15 +1696,13 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
         });
         const playoffZapasy = zapasyPlayoff.slice().sort((a, b) => (a.faze ?? "").localeCompare(b.faze ?? ""));
         const fronta = [...skupinyZapasy, ...playoffZapasy];
-        const pocetKurtu = hra.pocet_kurtu;
 
         return (
           <div className="flex flex-col gap-4">
             <div className="rounded-xl p-3" style={{ backgroundColor: "#F2EDE4" }}>
               <p className="text-xs" style={{ color: "#374151" }}>
-                <strong>Fronta zapasu</strong> — prvni {pocetKurtu} zapasy startuji na vsech kurtech v {hra.settings?.cas_od}.
-                Po dokonceni zapasu se uvolneny kurt prevezme dalsim zapasem v poradi.
-                <br/><span style={{ color: "#9ca3af" }}>Kurt se prirazuje dynamicky — gamy a body neumi predikovat presny cas konce zapasu (6:0 vs 7:6 tiebreak).</span>
+                <strong>Fronta zapasu</strong> — kazdy zapas spustis kliknutim na <em>Spustit</em>, vyberes kurt a zacne se hrat.
+                <br/><span style={{ color: "#9ca3af" }}>Gamy a body neumi predikovat cas — 6:0 trva 10 min, 7:6 v tiebreaku i 30 min.</span>
               </p>
             </div>
             <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
@@ -1685,14 +1713,10 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
                 {fronta.map((z, idx) => {
                   const hotovo = z.skore_tym1 != null;
                   const skupinaLabel = z.skupina ? `Skupina ${z.skupina}` : z.faze === "playoff" ? "Finale" : z.faze.replace("playoff_pas_", "Pas ");
-                  const prvni = idx < pocetKurtu;
                   return (
                     <div key={z.id} className="px-5 py-3 flex items-center gap-3">
                       <div className="shrink-0 w-10 text-center">
                         <p className="text-xs font-bold" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>#{idx + 1}</p>
-                        {prvni && !hotovo && z.stav !== "probiha" && (
-                          <p className="text-xs mt-0.5" style={{ color: "#801A28" }}>Kurt {idx + 1}</p>
-                        )}
                         {z.kurt && (z.stav === "probiha" || hotovo) && (
                           <p className="text-xs mt-0.5" style={{ color: "#801A28" }}>Kurt {z.kurt}</p>
                         )}
@@ -1704,15 +1728,26 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
                           {jmenoTymu(z.tym1_id)} <span style={{ color: "#d1d5db" }}>vs</span> {jmenoTymu(z.tym2_id)}
                         </p>
                       </div>
-                      <div className="shrink-0 text-right">
-                        {hotovo
-                          ? <span className="text-sm font-bold" style={{ color: "#6b7280" }}>{z.skore_tym1} : {z.skore_tym2}</span>
-                          : z.stav === "probiha"
-                          ? <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
-                          : prvni
-                          ? <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#fff5f5", color: "#801A28" }}>Pripraveny</span>
-                          : <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Ve fronte</span>
-                        }
+                      <div className="shrink-0 text-right flex items-center gap-2">
+                        {hotovo ? (
+                          <span className="text-sm font-bold" style={{ color: "#6b7280" }}>{z.skore_tym1} : {z.skore_tym2}</span>
+                        ) : z.stav === "probiha" ? (
+                          <>
+                            <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
+                            {jeEditor && <button onClick={() => zrusitSpusteni(z.id)} className="text-xs underline" style={{ color: "#9ca3af" }}>x</button>}
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Ve fronte</span>
+                            {jeEditor && !jeZruseno && (
+                              <button onClick={() => spustitZapas(z.id)}
+                                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
+                                style={{ backgroundColor: "#801A28" }}>
+                                Spustit
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   );

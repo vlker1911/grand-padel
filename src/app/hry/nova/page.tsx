@@ -165,14 +165,32 @@ export default function NovaHraPage() {
     return (hDo * 60 + mDo) - (hOd * 60 + mOd);
   }, [casOd, casDo]);
 
-  // Pocet zapasu — skupiny + playoff
+  // Predikovany pocet tymu — z formularovych poli (i kdyz uzivatel jeste nezadal jmena)
+  const pocetTymuPredikovany = useMemo(() => {
+    if (typ !== "turnaj") return 0;
+    const p = typeof pocetTymu === "number" ? pocetTymu : 0;
+    const s = typeof pocetSinglesHracu === "number" ? Math.floor(pocetSinglesHracu / 2) : 0;
+    if (typParovani === "pary") return p;
+    if (typParovani === "singles") return s;
+    return p + s;
+  }, [typ, typParovani, pocetTymu, pocetSinglesHracu]);
+
+  // Pocet zapasu — skupiny + playoff (podle predikovaneho poctu tymu)
   const pocetZapasu = useMemo(() => {
-    const n = efektivniTymy.length;
+    const n = pocetTymuPredikovany;
     if (n < 2) return 0;
-    const skupinaZapasy = skupiny.reduce((acc, s) => acc + (s.length * (s.length - 1)) / 2, 0);
-    const playoffZapasy = playoff ? (multiTier ? n - skupiny.length : Math.ceil(n / 2)) : 0;
+    const pocetSkupinPred = vypocitejPocetSkupin(n);
+    // Distribuce na skupiny — pokud n je delitelne pocetSkupinPred, tak je to rovne
+    const baseSize = Math.floor(n / pocetSkupinPred);
+    const extra = n % pocetSkupinPred;
+    let skupinaZapasy = 0;
+    for (let i = 0; i < pocetSkupinPred; i++) {
+      const size = baseSize + (i < extra ? 1 : 0);
+      skupinaZapasy += (size * (size - 1)) / 2;
+    }
+    const playoffZapasy = playoff ? (multiTier ? n - pocetSkupinPred : Math.ceil(n / 2)) : 0;
     return skupinaZapasy + playoffZapasy;
-  }, [efektivniTymy, skupiny, playoff, multiTier]);
+  }, [pocetTymuPredikovany, playoff, multiTier]);
 
   // Auto-vypocet kola pro CAS format
   const autoKolo = useMemo(() => {
@@ -193,8 +211,7 @@ export default function NovaHraPage() {
   }, [scoringTyp, autoKolo, scoringLimit]);
 
   const odhadTurnaje = useMemo(() => {
-    const n = efektivniTymy.length;
-    if (n < 2) return null;
+    if (pocetTymuPredikovany < 2) return null;
     const kurty = typeof pocetKurtu === "number" ? pocetKurtu : 2;
     const minNaZapas = scoringTyp === "gamy"
       ? scoringLimit * 3 + 5
@@ -204,7 +221,7 @@ export default function NovaHraPage() {
     const totalMin = Math.ceil(pocetZapasu / kurty) * (minNaZapas + 3);
     const h = Math.floor(totalMin / 60), m = totalMin % 60;
     return { total: pocetZapasu, totalMin, text: h > 0 ? `${h}h ${m > 0 ? m + "min" : ""}` : `${m} minut` };
-  }, [efektivniTymy.length, pocetKurtu, scoringTyp, scoringLimit, pocetZapasu]);
+  }, [pocetTymuPredikovany, pocetKurtu, scoringTyp, scoringLimit, pocetZapasu]);
 
   // Varovani: turnaj se nevejde do casu (gamy/body)
   const turnajSeNevejde = useMemo(() => {

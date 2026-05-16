@@ -62,7 +62,13 @@ if celkemMinut > (casDo - casOd) → HARD BLOCK:
 
 ### Display v "Pořadí zápasů" tab:
 - **Čas:** ukazujeme po kurtech s fixními časy (synchronizovaná kola)
-- **Gamy/Body:** flat fronta s pořadovým číslem. První N (= počet kurtů) má "Kurt X" — startují simultanně. Zbytek "Ve frontě" — kurt se přiřadí dynamicky až po uvolnění.
+- **Gamy/Body:** flat fronta s pořadovým číslem #1, #2, … BEZ auto-přiřazení kurtu. Organizátor klikne "Spustit" → modal s volnými kurty → vybere → uloží `z.kurt`, `z.cas_zacatek`. Kurt se ukáže až poté.
+
+### Spustit zápas — kde je tlačítko:
+- V tabu **Pořadí zápasů** u každého plánovaného zápasu
+- V tabu **Rozlosování** v expandable seznamu zápasů per skupina
+- V tabu **Tabulky** (přes `renderZapas` se scoring inputy)
+- Klik vyvolá `kurtModal` (jen gamy/body) nebo přímo uloží (cas — kurt z harmonogramu)
 
 ---
 
