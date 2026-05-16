@@ -27,6 +27,181 @@ function odhadMinut(body: number) {
   return Math.round(body * 0.45);
 }
 
+// ===== Wizard / kalkulator variant =====
+
+type WizardScoringTyp = "gamy" | "body" | "cas";
+type WizardPlayoffMode = "bez" | "medaile" | "vitez" | "umisteni";
+type WizardVitezBracket = "auto" | "top4" | "top8" | "top16";
+
+type WizardInput = {
+  pocetTymu: number;
+  pocetKurtu: number;
+  casOdMin: number;
+  casDoMin: number;
+  scoringTyp: WizardScoringTyp;
+  scoringLimit: number;  // pro cas se predpoklada autoKolo (0 = spocti)
+  playoffMode: WizardPlayoffMode;
+  vitezBracket?: WizardVitezBracket;
+};
+
+type WizardVariant = WizardInput & {
+  zapasuSkupiny: number;
+  zapasuPlayoff: number;
+  totalZapasu: number;
+  minNaZapas: number;
+  totalMin: number;
+  celkemMinut: number;
+  fits: boolean;
+  rezerva: number;
+  pocetSkupin: number;
+  scoringDelkaKola?: number;  // pro cas — vypoctena delka kola
+  scoringInvalid?: boolean;   // pro cas — kdyz delka kola < 10
+};
+
+function calculateWizardVariant(input: WizardInput): WizardVariant {
+  const n = input.pocetTymu;
+  const pocetSkupin = vypocitejPocetSkupin(n);
+  // Skupinove zapasy
+  const baseSize = Math.floor(n / pocetSkupin);
+  const extra = n % pocetSkupin;
+  let zapasuSkupiny = 0;
+  for (let i = 0; i < pocetSkupin; i++) {
+    const size = baseSize + (i < extra ? 1 : 0);
+    zapasuSkupiny += (size * (size - 1)) / 2;
+  }
+  // Playoff zapasy
+  let zapasuPlayoff = 0;
+  if (input.playoffMode === "umisteni") {
+    const pocetPasem = Math.ceil(n / 4);
+    for (let p = 0; p < pocetPasem; p++) {
+      const tymyPasma = Math.min(4, n - p * 4);
+      if (tymyPasma === 4) zapasuPlayoff += 4;
+      else if (tymyPasma === 3) zapasuPlayoff += 1;
+      else if (tymyPasma === 2) zapasuPlayoff += 1;
+    }
+  } else if (input.playoffMode === "vitez") {
+    let bracketSize: number;
+    const vb = input.vitezBracket ?? "auto";
+    if (vb === "top4") bracketSize = 4;
+    else if (vb === "top8") bracketSize = 8;
+    else if (vb === "top16") bracketSize = 16;
+    else { bracketSize = 2; while (bracketSize * 2 <= n && bracketSize < 16) bracketSize *= 2; }
+    while (bracketSize > n && bracketSize > 2) bracketSize /= 2;
+    zapasuPlayoff = bracketSize - 1;
+  } else if (input.playoffMode === "medaile") {
+    zapasuPlayoff = n >= 4 ? 4 : (n >= 2 ? 1 : 0);
+  }
+
+  const totalZapasu = zapasuSkupiny + zapasuPlayoff;
+  const celkemMinut = input.casDoMin - input.casOdMin;
+
+  // Pro cas format spocti delku kola automaticky
+  let minNaZapas: number;
+  let scoringDelkaKola: number | undefined;
+  let scoringInvalid = false;
+  if (input.scoringTyp === "cas") {
+    const kol = Math.ceil(totalZapasu / input.pocetKurtu);
+    if (kol > 0 && celkemMinut > 0) {
+      const delkaKola = Math.floor((celkemMinut - (kol - 1) * 3) / kol);
+      scoringDelkaKola = Math.max(10, Math.min(60, delkaKola));
+      scoringInvalid = delkaKola < 10;
+      minNaZapas = scoringDelkaKola + 3;
+    } else {
+      minNaZapas = 13;  // default
+      scoringInvalid = true;
+    }
+  } else if (input.scoringTyp === "gamy") {
+    minNaZapas = input.scoringLimit * 3 + 5;
+  } else {
+    minNaZapas = odhadMinut(input.scoringLimit) + 5;
+  }
+
+  // Cas potreba: per faze (skupiny + playoff)
+  function casZaZapasy(z: number): number {
+    if (z === 0) return 0;
+    const k = Math.ceil(z / input.pocetKurtu);
+    return k * minNaZapas + (k - 1) * 3;
+  }
+  const minSk = casZaZapasy(zapasuSkupiny);
+  const minPl = casZaZapasy(zapasuPlayoff);
+  const prechodMeziFazemi = (zapasuSkupiny > 0 && zapasuPlayoff > 0) ? 3 : 0;
+  const totalMin = minSk + minPl + prechodMeziFazemi;
+
+  const fits = !scoringInvalid && totalMin <= celkemMinut;
+  const rezerva = celkemMinut - totalMin;
+
+  return {
+    ...input,
+    zapasuSkupiny, zapasuPlayoff, totalZapasu,
+    minNaZapas, totalMin, celkemMinut,
+    fits, rezerva, pocetSkupin,
+    scoringDelkaKola, scoringInvalid,
+  };
+}
+
+// Generuje varianty pro vsechny kombinace
+function generateWizardVariants(baseInput: { pocetTymu: number; casOdMin: number; casDoMin: number }): WizardVariant[] {
+  const variants: WizardVariant[] = [];
+  const kurtyOptions = [1, 2, 3, 4, 5, 6, 8, 10];
+  const playoffModes: WizardPlayoffMode[] = ["umisteni", "vitez", "medaile", "bez"];
+  const vitezBrackets: WizardVitezBracket[] = ["auto", "top4", "top8", "top16"];
+  const gamyLimits = [4, 5, 6];
+  const bodyLimits = [16, 24, 32];
+
+  for (const kurty of kurtyOptions) {
+    for (const playoffMode of playoffModes) {
+      const bracketsToTry: (WizardVitezBracket | undefined)[] = playoffMode === "vitez" ? vitezBrackets : [undefined];
+      for (const vb of bracketsToTry) {
+        // Cas format (auto)
+        variants.push(calculateWizardVariant({
+          pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
+          casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
+          scoringTyp: "cas", scoringLimit: 0,
+          playoffMode, vitezBracket: vb,
+        }));
+        for (const lim of gamyLimits) {
+          variants.push(calculateWizardVariant({
+            pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
+            casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
+            scoringTyp: "gamy", scoringLimit: lim,
+            playoffMode, vitezBracket: vb,
+          }));
+        }
+        for (const lim of bodyLimits) {
+          variants.push(calculateWizardVariant({
+            pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
+            casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
+            scoringTyp: "body", scoringLimit: lim,
+            playoffMode, vitezBracket: vb,
+          }));
+        }
+      }
+    }
+  }
+  return variants;
+}
+
+function pickWizardRecommendations(variants: WizardVariant[]): { optimalni?: WizardVariant; nejvice?: WizardVariant; nejmin?: WizardVariant } {
+  const fits = variants.filter(v => v.fits);
+  if (fits.length === 0) return {};
+  // "Nejvíc zápasů" — fits with max totalZapasu, smallest kurty (efficient)
+  const nejvice = [...fits].sort((a, b) =>
+    b.totalZapasu - a.totalZapasu || a.pocetKurtu - b.pocetKurtu
+  )[0];
+  // "Optimální" — solid fits with reserve 10-30 min, prefer umisteni for more matches
+  const optimalni = [...fits].sort((a, b) => {
+    const aIdeal = Math.abs(a.rezerva - 20);  // ~20 min reserve ideal
+    const bIdeal = Math.abs(b.rezerva - 20);
+    if (aIdeal !== bIdeal) return aIdeal - bIdeal;
+    return b.totalZapasu - a.totalZapasu;
+  })[0];
+  // "Nejméně náročné" — most reserve, fewest matches
+  const nejmin = [...fits].sort((a, b) =>
+    b.rezerva - a.rezerva || a.totalZapasu - b.totalZapasu
+  )[0];
+  return { optimalni, nejvice, nejmin };
+}
+
 function sparujSingles(players: SingEntry[]): ParEntry[] {
   const filled = players.filter(p => p.jmeno.trim());
   const muzi   = [...filled.filter(p => p.pohlavi === "m")].sort(() => Math.random() - 0.5);
@@ -121,6 +296,11 @@ export default function NovaHraPage() {
   const [losovanoSingles,    setLosovanoSingles]    = useState<ParEntry[]>([]);
   const [losovano,           setLosovano]           = useState(false);
   const [losovaneTymy,       setLosovaneTymy]       = useState<ParEntry[] | null>(null);
+  const [wizardOpen,         setWizardOpen]         = useState(false);
+  const [wizardTymu,         setWizardTymu]         = useState<number | "">(8);
+  const [wizardKurtu,        setWizardKurtu]        = useState<number | "">(3);
+  const [wizardCasOd,        setWizardCasOd]        = useState("16:00");
+  const [wizardCasDo,        setWizardCasDo]        = useState("18:00");
 
   const [nazev, setNazev] = useState("");
   const [stav,  setStav]  = useState<"idle" | "loading" | "chyba">("idle");
@@ -297,6 +477,37 @@ export default function NovaHraPage() {
     };
   }, [pocetTymuPredikovany, pocetKurtu, scoringTyp, scoringLimit, pocetZapasu, pocetZapasuDetail]);
 
+  // Wizard: doporuceni
+  const wizardVarianty = useMemo(() => {
+    const tymu = typeof wizardTymu === "number" ? wizardTymu : 0;
+    if (tymu < 2) return [];
+    const [hOd, mOd] = wizardCasOd.split(":").map(Number);
+    const [hDo, mDo] = wizardCasDo.split(":").map(Number);
+    const od = hOd * 60 + mOd;
+    const dod = hDo * 60 + mDo;
+    if (dod - od <= 0) return [];
+    return generateWizardVariants({ pocetTymu: tymu, casOdMin: od, casDoMin: dod });
+  }, [wizardTymu, wizardCasOd, wizardCasDo]);
+
+  const wizardDoporuceni = useMemo(() => pickWizardRecommendations(wizardVarianty), [wizardVarianty]);
+
+  function pouzitWizardVariantu(v: WizardVariant) {
+    setTyp("turnaj");
+    setPocetKurtu(v.pocetKurtu);
+    setCasOd(wizardCasOd);
+    setCasDo(wizardCasDo);
+    setScoringTyp(v.scoringTyp);
+    if (v.scoringTyp !== "cas") {
+      setScoringLimit(v.scoringLimit);
+      setScoringLimitPlayoff(v.scoringLimit);
+    }
+    setPlayoffMode(v.playoffMode);
+    if (v.vitezBracket) setVitezBracket(v.vitezBracket);
+    // Synchronizuj pocet tymu — predpokladame pary mode
+    nastavPocetTymu(v.pocetTymu);
+    setWizardOpen(false);
+  }
+
   // Varovani: turnaj se nevejde do casu (gamy/body)
   const turnajSeNevejde = useMemo(() => {
     if (scoringTyp === "cas") return false;
@@ -467,7 +678,13 @@ export default function NovaHraPage() {
           {krok === 1 && (
             <div className="flex flex-col gap-6">
               <div>
-                <h2 className="text-base font-semibold mb-3" style={{ color: "#0A0A0A" }}>Format hry</h2>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-base font-semibold" style={{ color: "#0A0A0A" }}>Format hry</h2>
+                  <button onClick={() => setWizardOpen(true)}
+                    className="text-xs underline" style={{ color: "#801A28" }}>
+                    Doporuč variantu turnaje
+                  </button>
+                </div>
                 <div className="flex flex-col gap-3">
                   {FORMATY.map(f => (
                     <button key={f.typ} onClick={() => setTyp(f.typ)}
@@ -1087,6 +1304,98 @@ export default function NovaHraPage() {
 
         </div>
       </main>
+
+      {/* Wizard modal */}
+      {wizardOpen && (() => {
+        const popisPlayoff = (m: WizardPlayoffMode, vb?: WizardVitezBracket) => {
+          if (m === "bez") return "bez playoff";
+          if (m === "medaile") return "Final Four (4 zápasy)";
+          if (m === "vitez") return `single elim${vb && vb !== "auto" ? ` (${vb})` : ""}`;
+          return "Multi-tier (o umístění)";
+        };
+        const popisFormat = (v: WizardVariant) => {
+          if (v.scoringTyp === "cas") return `${v.scoringDelkaKola} min/kolo`;
+          if (v.scoringTyp === "gamy") return `do ${v.scoringLimit} gamů`;
+          return `${v.scoringLimit} bodů`;
+        };
+        const formatMin = (m: number) => {
+          const h = Math.floor(m / 60), mm = m % 60;
+          return h > 0 ? `${h}h ${mm > 0 ? mm + "min" : ""}` : `${mm} min`;
+        };
+        const renderVariant = (label: string, color: string, v: WizardVariant) => (
+          <div className="rounded-xl p-4 border-2" style={{ borderColor: color, backgroundColor: "#fafafa" }}>
+            <p className="text-xs font-bold mb-2" style={{ color }}>{label}</p>
+            <p className="text-sm font-semibold mb-1" style={{ color: "#0A0A0A" }}>
+              {v.pocetKurtu} {v.pocetKurtu === 1 ? "kurt" : v.pocetKurtu < 5 ? "kurty" : "kurtů"}, {popisFormat(v)}, {popisPlayoff(v.playoffMode, v.vitezBracket)}
+            </p>
+            <div className="text-xs space-y-0.5" style={{ color: "#6b7280" }}>
+              <p>{v.zapasuSkupiny + v.zapasuPlayoff} zápasů ({v.zapasuSkupiny} skupin + {v.zapasuPlayoff} playoff)</p>
+              <p>Potřeba {formatMin(v.totalMin)}, rezerva <strong>{formatMin(v.rezerva)}</strong></p>
+            </div>
+            <button onClick={() => pouzitWizardVariantu(v)}
+              className="mt-3 w-full rounded-lg py-2 text-xs font-semibold text-white"
+              style={{ backgroundColor: color }}>
+              Použít tuto variantu
+            </button>
+          </div>
+        );
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 overflow-y-auto" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => setWizardOpen(false)}>
+            <div className="bg-white rounded-2xl p-6 max-w-2xl w-full my-auto" onClick={e => e.stopPropagation()}>
+              <h3 className="text-lg font-bold mb-1" style={{ color: "#0A0A0A" }}>Doporuč variantu turnaje</h3>
+              <p className="text-sm mb-4" style={{ color: "#6b7280" }}>
+                Zadej kolik máš týmů a kolik času — najdu pro tebe nejlepší kombinace.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                <div>
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Počet týmů</label>
+                  <input type="number" min={2} max={128} value={wizardTymu}
+                    onChange={e => { const n = parseInt(e.target.value); setWizardTymu(isNaN(n) ? "" : n); }}
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Čas od</label>
+                  <input type="time" value={wizardCasOd} onChange={e => setWizardCasOd(e.target.value)}
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Čas do</label>
+                  <input type="time" value={wizardCasDo} onChange={e => setWizardCasDo(e.target.value)}
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                </div>
+              </div>
+
+              {Object.keys(wizardDoporuceni).length === 0 ? (
+                <div className="rounded-xl p-4" style={{ backgroundColor: "#fef2f2" }}>
+                  <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Žádná varianta se nevejde do času.</p>
+                  <p className="text-xs mt-1" style={{ color: "#7f1d1d" }}>
+                    Zkus prodloužit čas nebo snížit počet týmů.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                  {wizardDoporuceni.optimalni && renderVariant("OPTIMÁLNÍ", "#801A28", wizardDoporuceni.optimalni)}
+                  {wizardDoporuceni.nejvice && renderVariant("MAX ZÁPASŮ", "#0f766e", wizardDoporuceni.nejvice)}
+                  {wizardDoporuceni.nejmin && renderVariant("S REZERVOU", "#16a34a", wizardDoporuceni.nejmin)}
+                </div>
+              )}
+
+              <p className="text-xs mb-3" style={{ color: "#9ca3af" }}>
+                Wizard zkusil {wizardVarianty.length} kombinací (1-10 kurtů × 4 playoff módy × 7 formátů).
+                Z toho {wizardVarianty.filter(v => v.fits).length} se vejde do času.
+              </p>
+
+              <div className="flex justify-end">
+                <button onClick={() => setWizardOpen(false)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200"
+                  style={{ color: "#374151" }}>
+                  Zavřít
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

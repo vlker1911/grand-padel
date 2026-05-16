@@ -15,6 +15,7 @@
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.7.13 | 16. 5. 2026 | **Wizard** v krok 1 turnaje — tlačítko "Doporuč variantu", modal se 3 doporučeními (Optimální/Max zápasů/S rezervou) z 200+ kombinací (1-10 kurtů × 4 playoff × 7 formátů). Klikem se vyplní celý formulář |
 | v0.7.12 | 16. 5. 2026 | 3 bug fixy: (1) Americano validace skóre (cap na limit, kontrola součtu = limit), (2) Single elim volba bracket size (auto/top4/top8/top16), (3) Harmonogram round-robin pořadí v skupině (circle method) → 4 kola místo 6 pro 8 týmů + 3 kurty |
 | v0.7.11 | 16. 5. 2026 | Turnaj **3 playoff módy** (medaile/vitez/umisteni) + bez. generujPlayoff a auto-gen pro každý mód, Single elim s top 2^k, migrace ze starých settings. Otestováno 20 scénářů |
 | v0.7.10 | 16. 5. 2026 | Turnaj odhad: oprava pro lichý počet týmů + n%4≠0 v multi-tier (poslední pásmo nemá vždy 4 týmy → ne 4 zápasů). Non-multi-tier s pocetSkupin≥3 jen first round. Testováno 20 scénářů |
