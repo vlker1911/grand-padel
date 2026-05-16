@@ -17,6 +17,7 @@ Uživatel: Roman Vlk, začátečník bez zkušeností s kódem. Vše vysvětlova
 Vždy si přečti před prací:
 - `web-app/instrukce/stav-projektu.md` — co je hotové, co chybí, aktuální verze
 - `web-app/instrukce/turnaj-koncept.md` — **DŮLEŽITÉ** pravidla turnajů, výpočty, edge cases (aktualizuj při změnách logiky turnajů)
+- `web-app/instrukce/pravidla/` — **PRAVIDLA HER** (PADEL, AMERICANO, MEXICANO, TURNAJ). Při úpravě validace skóre nebo herní logiky vždy ověř proti pravidlům.
 - `README.md` v root — přehled projektu
 
 ## Stack

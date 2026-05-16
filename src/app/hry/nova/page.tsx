@@ -282,6 +282,7 @@ export default function NovaHraPage() {
   const [scoringTyp,         setScoringTyp]         = useState<"gamy" | "body" | "cas">("gamy");
   const [scoringLimit,       setScoringLimit]       = useState(4);
   const [scoringLimitPlayoff,setScoringLimitPlayoff]= useState(6);
+  const [gamyTiebreak,       setGamyTiebreak]       = useState<"sudden_death" | "advantage">("sudden_death");
   const [odlisnyScoring,     setOdlisnyScoring]     = useState(false);
   // playoffMode nahrazuje: playoff (bool), multiTier (bool), typPlayoff (krizovy/primy)
   const [playoffMode,        setPlayoffMode]        = useState<"bez" | "medaile" | "vitez" | "umisteni">("umisteni");
@@ -581,6 +582,7 @@ export default function NovaHraPage() {
         playoff, typ_playoff: typPlayoff, multi_tier: multiTier,
         playoff_mode: playoffMode,
         vitez_bracket: vitezBracket,
+        gamy_tiebreak: gamyTiebreak,
         typ_parovani: typParovani,
         rezim_kurtu: rezimKurtu,
       },
@@ -882,6 +884,23 @@ export default function NovaHraPage() {
                                 {scoringTyp === "gamy" ? "gamy na zapas" : "bodu na zapas"}
                               </span>
                             </div>
+                            {scoringTyp === "gamy" && (
+                              <div className="flex flex-col gap-1 mt-1">
+                                <p className="text-xs" style={{ color: "#6b7280" }}>Tiebreak pravidlo:</p>
+                                <div className="flex gap-2">
+                                  <button onClick={() => setGamyTiebreak("sudden_death")}
+                                    className={`flex-1 rounded-lg py-2 px-2 text-xs font-semibold border-2 transition-all ${gamyTiebreak === "sudden_death" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                    <div>Sudden death</div>
+                                    <div className="text-xs font-normal opacity-70 mt-0.5">max {scoringLimit}:{scoringLimit-1}</div>
+                                  </button>
+                                  <button onClick={() => setGamyTiebreak("advantage")}
+                                    className={`flex-1 rounded-lg py-2 px-2 text-xs font-semibold border-2 transition-all ${gamyTiebreak === "advantage" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                    <div>Advantage</div>
+                                    <div className="text-xs font-normal opacity-70 mt-0.5">max {scoringLimit+1}:{scoringLimit}</div>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                             <label className="flex items-center gap-2 text-xs cursor-pointer mt-1" style={{ color: "#6b7280" }}>
                               <input type="checkbox" checked={odlisnyScoring} onChange={e => setOdlisnyScoring(e.target.checked)} className="rounded" />
                               Jiny format pro playoff

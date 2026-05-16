@@ -35,6 +35,7 @@ type Hra = {
     rezim_kurtu?: "auto" | "1-1" | "2-1";
     playoff_mode?: "bez" | "medaile" | "vitez" | "umisteni";
     vitez_bracket?: "auto" | "top4" | "top8" | "top16";
+    gamy_tiebreak?: "sudden_death" | "advantage";
   } | null;
 };
 
@@ -1158,14 +1159,16 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
 
   // Finalni poradi: vitezove pasem playoff (nebo skupin pokud bez playoff)
   // Pro kazde pasmo (faze): finale -> 1. a 2. misto, o3misto -> 3. a 4. misto
+  // Pro vitez s vyssim bracketem (top8, top16) je finale v kole 3, 4...
   const finalniPoradi = useMemo((): { nazev: string; skore: number }[] => {
     if (!vsechnoHotove) return [];
     if (playoff && playoffExistuje) {
       const result: { nazev: string; skore: number }[] = [];
       const fazePoradi = [...new Set(zapasyPlayoff.map(z => z.faze))].sort();
       fazePoradi.forEach(faze => {
-        const finale = zapasyPlayoff.find(z => z.faze === faze && z.kolo === 2 && z.umisteni === "final");
-        const o3 = zapasyPlayoff.find(z => z.faze === faze && z.kolo === 2 && z.umisteni === "o3misto");
+        // Najdi zapas s umisteni="final" v jakemkoliv kole (pro vitez muze byt v kolo 2, 3 nebo 4)
+        const finale = zapasyPlayoff.find(z => z.faze === faze && z.umisteni === "final");
+        const o3 = zapasyPlayoff.find(z => z.faze === faze && z.umisteni === "o3misto");
         if (finale && finale.skore_tym1 != null && finale.skore_tym2 != null) {
           const s1 = finale.skore_tym1, s2 = finale.skore_tym2;
           const winnerId = s1 > s2 ? finale.tym1_id : finale.tym2_id;
@@ -1196,7 +1199,12 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
     if (vsechnoHotove && !ohnostrojUkazanRef.current) {
       ohnostrojUkazanRef.current = true;
       setZobrazOhnostroj(true);
+      // Nastav hra.stav na "ukonceno" pokud jeste neni
+      if (hra.stav !== "ukonceno") {
+        supabase.from("hry").update({ stav: "ukonceno" }).eq("id", hra.id).then(() => {});
+      }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vsechnoHotove]);
 
   const harmonogram = useMemo(() => spocitejHarmonogram(
@@ -1239,8 +1247,10 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
       return;
     }
     if (scoringTyp === "gamy") {
-      // Limit na max = lim, oba musi byt <= lim
-      const capped = Math.min(n, lim);
+      // Advantage tiebreak povoluje vitez=limit+1, sudden_death=limit max
+      const tb = hra.settings?.gamy_tiebreak ?? "sudden_death";
+      const maxAllowed = tb === "advantage" ? lim + 1 : lim;
+      const capped = Math.min(n, maxAllowed);
       setScoreMap(prev => ({ ...prev, [id]: { ...getScore(id), [field]: String(capped) } }));
       return;
     }
@@ -1252,11 +1262,27 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
     const sc = getScore(zapasId);
     const s1 = parseInt(sc.s1), s2 = parseInt(sc.s2);
     if (isNaN(s1) || isNaN(s2)) return;
+    const zapas = zapasy.find(z => z.id === zapasId);
+    if (!zapas) return;
+    // Validace dle scoringTyp — guard i pro programaticka volani
+    const lim = zapas.faze === "skupina" ? scoringLimit : scoringLimitPlayoff;
+    if (scoringTyp === "body" && s1 + s2 !== lim) return;
+    if (scoringTyp === "gamy") {
+      const w = Math.max(s1, s2), l = Math.min(s1, s2);
+      const tb = hra.settings?.gamy_tiebreak ?? "sudden_death";
+      if (tb === "sudden_death") {
+        if (w !== lim || l > lim - 1 || s1 === s2) return;
+      } else {
+        const normalWin = w === lim && l <= lim - 2;
+        const tiebreakWin = w === lim + 1 && l === lim;
+        if (!normalWin && !tiebreakWin) return;
+      }
+    }
+    if (scoringTyp === "cas" && zapas.faze !== "skupina" && s1 === s2) return;
     setUkladam(zapasId);
     const nyni = new Date();
     const hh = String(nyni.getHours()).padStart(2, "0");
     const mm = String(nyni.getMinutes()).padStart(2, "0");
-    const zapas = zapasy.find(z => z.id === zapasId);
     const vitez = s1 > s2 ? zapas?.tym1_id : s2 > s1 ? zapas?.tym2_id : null;
     await supabase.from("turnaj_zapasy").update({
       skore_tym1: s1,
@@ -1298,8 +1324,9 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
             }
             if (noveZapasy.length > 0) await supabase.from("turnaj_zapasy").insert(noveZapasy);
           }
-        } else if (zapas.kolo === 1 && kolo.length === 2) {
-          // Medaile / umisteni: po 2 semifinale → finale + o 3. misto
+        } else if (zapas.kolo === 1 && kolo.length === 2 && !kolo[0].umisteni) {
+          // Medaile / umisteni s 4 tymy: po 2 semifinale → finale + o 3. misto
+          // (Maly pasma s 2-3 tymy uz maji umisteni="final" pri tvorbe, neresime)
           const m1 = kolo[0], m2 = kolo[1];
           const winner1 = m1.skore_tym1! > m1.skore_tym2! ? m1.tym1_id : m1.tym2_id;
           const loser1  = m1.skore_tym1! > m1.skore_tym2! ? m1.tym2_id : m1.tym1_id;
@@ -1314,6 +1341,9 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
     }
 
     setUpravitId(null);
+
+    // Pokud jsou vsechny zapasy hotove (vc. nove vlozenych), nastav hra.stav=ukonceno
+    // Naciti znovu a checkne to v nasledujicim useEffect (viz nize)
     nactiTurnaj();
     setUkladam(null);
   }
@@ -1480,12 +1510,12 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
           </div>
           {zobrazInputy ? (
             <div className="flex items-center gap-1.5 shrink-0">
-              <input type="number" min={0} max={scoringTyp === "cas" ? undefined : limit} value={sc.s1}
+              <input type="number" min={0} max={scoringTyp === "cas" ? undefined : (scoringTyp === "gamy" && (hra.settings?.gamy_tiebreak ?? "sudden_death") === "advantage" ? limit + 1 : limit)} value={sc.s1}
                 onChange={e => updateScore(z.id, "s1", e.target.value, z.faze)}
                 placeholder="—"
                 className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
               <span className="font-bold text-sm" style={{ color: "#9ca3af" }}>:</span>
-              <input type="number" min={0} max={scoringTyp === "cas" ? undefined : limit} value={sc.s2}
+              <input type="number" min={0} max={scoringTyp === "cas" ? undefined : (scoringTyp === "gamy" && (hra.settings?.gamy_tiebreak ?? "sudden_death") === "advantage" ? limit + 1 : limit)} value={sc.s2}
                 onChange={e => updateScore(z.id, "s2", e.target.value, z.faze)}
                 placeholder="—"
                 className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
@@ -1513,8 +1543,23 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
           let platne = !isNaN(n1) && !isNaN(n2) && sc.s1 !== "" && sc.s2 !== "";
           let hint = "";
           if (platne && scoringTyp === "body" && n1 + n2 !== limit) { platne = false; hint = `Soucet musi byt ${limit}`; }
-          if (platne && scoringTyp === "gamy" && Math.max(n1, n2) !== limit) { platne = false; hint = `Vitez musi mit ${limit} gamu`; }
-          if (platne && scoringTyp === "gamy" && n1 === n2) { platne = false; hint = "Remiza v gamy neni mozna"; }
+          if (platne && scoringTyp === "gamy") {
+            const w = Math.max(n1, n2), l = Math.min(n1, n2);
+            const tb = hra.settings?.gamy_tiebreak ?? "sudden_death";
+            if (tb === "sudden_death") {
+              // Vitez=limit, porazeny=0..limit-1
+              if (w !== limit || l > limit - 1) { platne = false; hint = `Sudden death: max ${limit}:${limit-1}`; }
+              if (platne && n1 === n2) { platne = false; hint = "Remiza v gamy neni mozna"; }
+            } else {
+              // advantage: vitez=limit + porazeny ≤ limit-2, NEBO vitez=limit+1 + porazeny=limit
+              const normalWin = w === limit && l <= limit - 2;
+              const tiebreakWin = w === limit + 1 && l === limit;
+              if (!normalWin && !tiebreakWin) {
+                platne = false;
+                hint = `Advantage: ${limit}:0–${limit}:${limit-2} nebo ${limit+1}:${limit}`;
+              }
+            }
+          }
           if (platne && scoringTyp === "cas" && z.faze !== "skupina" && n1 === n2) { platne = false; hint = "V playoff musi byt vitez"; }
           return (
             <div className="mt-3 flex items-center justify-between gap-2">
