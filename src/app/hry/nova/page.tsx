@@ -187,11 +187,10 @@ export default function NovaHraPage() {
     return p + s;
   }, [typ, typParovani, pocetTymu, pocetSinglesHracu]);
 
-  // Pocet zapasu — skupiny + playoff (podle predikovaneho poctu tymu)
-  // Musi sedet s tim co generujPlayoff fakticky vytvori v [id]/page.tsx
-  const pocetZapasu = useMemo(() => {
+  // Pocet zapasu — skupiny + playoff (rozdeleno pro rozpis)
+  const pocetZapasuDetail = useMemo(() => {
     const n = pocetTymuPredikovany;
-    if (n < 2) return 0;
+    if (n < 2) return { skupiny: 0, playoff: 0, celkem: 0 };
     const pocetSkupinPred = vypocitejPocetSkupin(n);
     // Skupinove zapasy: vsechny kombinace v ramci skupiny
     const baseSize = Math.floor(n / pocetSkupinPred);
@@ -201,17 +200,16 @@ export default function NovaHraPage() {
       const size = baseSize + (i < extra ? 1 : 0);
       skupinaZapasy += (size * (size - 1)) / 2;
     }
-    // Playoff zapasy — kompletni bracket:
-    //  - multi-tier: kazde pasmo (4 tymy) = 2 semi + 1 final + 1 o 3. misto = 4 zapasy
-    //  - non-multi-tier (4 tymy, 2 skupiny): 2 semi + 1 final + 1 o 3. misto = 4 zapasy
-    //  - non-multi-tier vetsi (6-8 tymu): zatim nepodporujeme cele brackets, jen prvni kolo
+    // Playoff: multi-tier = pocetPasem × 4, non-multi-tier (4 tymy do playoff) = 4
     const playoffZapasy = playoff
       ? (multiTier
           ? Math.ceil(n / 4) * 4
-          : pocetSkupinPred * 2)  // 2 semi + 2 (final + o3) = 2*pocetSkupin pro 4-team bracket
+          : pocetSkupinPred * 2)
       : 0;
-    return skupinaZapasy + playoffZapasy;
+    return { skupiny: skupinaZapasy, playoff: playoffZapasy, celkem: skupinaZapasy + playoffZapasy };
   }, [pocetTymuPredikovany, playoff, multiTier]);
+
+  const pocetZapasu = pocetZapasuDetail.celkem;
 
   // Auto-vypocet kola pro CAS format
   const autoKolo = useMemo(() => {
@@ -239,10 +237,38 @@ export default function NovaHraPage() {
       : scoringTyp === "cas"
       ? scoringLimit + 3
       : odhadMinut(scoringLimit) + 5;
-    const totalMin = Math.ceil(pocetZapasu / kurty) * (minNaZapas + 3);
-    const h = Math.floor(totalMin / 60), m = totalMin % 60;
-    return { total: pocetZapasu, totalMin, text: h > 0 ? `${h}h ${m > 0 ? m + "min" : ""}` : `${m} minut` };
-  }, [pocetTymuPredikovany, pocetKurtu, scoringTyp, scoringLimit, pocetZapasu]);
+    const prechod = 3;
+
+    function casZaZapasy(n: number) {
+      if (n === 0) return 0;
+      const kol = Math.ceil(n / kurty);
+      return kol * minNaZapas + (kol - 1) * prechod;
+    }
+
+    const minSkupiny = casZaZapasy(pocetZapasuDetail.skupiny);
+    const minPlayoff = casZaZapasy(pocetZapasuDetail.playoff);
+    const minPrechodMeziFazemi = (pocetZapasuDetail.skupiny > 0 && pocetZapasuDetail.playoff > 0) ? prechod : 0;
+    const totalMin = minSkupiny + minPlayoff + minPrechodMeziFazemi;
+
+    function format(min: number) {
+      const h = Math.floor(min / 60), m = min % 60;
+      return h > 0 ? `${h}h ${m > 0 ? m + "min" : ""}` : `${m} min`;
+    }
+
+    return {
+      total: pocetZapasu,
+      totalMin,
+      text: format(totalMin),
+      minSkupiny,
+      minSkupinyText: format(minSkupiny),
+      minPlayoff,
+      minPlayoffText: format(minPlayoff),
+      minNaZapas,
+      kolSkupin: Math.ceil(pocetZapasuDetail.skupiny / kurty),
+      kolPlayoff: Math.ceil(pocetZapasuDetail.playoff / kurty),
+      kurty,
+    };
+  }, [pocetTymuPredikovany, pocetKurtu, scoringTyp, scoringLimit, pocetZapasu, pocetZapasuDetail]);
 
   // Varovani: turnaj se nevejde do casu (gamy/body)
   const turnajSeNevejde = useMemo(() => {
@@ -624,24 +650,39 @@ export default function NovaHraPage() {
                                 </span>
                               </div>
                             )}
-                            {turnajSeNevejde && (
-                              <div className="rounded-xl p-3 mt-1" style={{ backgroundColor: "#fef2f2", borderLeft: "3px solid #801A28" }}>
-                                <p className="text-xs font-semibold mb-1" style={{ color: "#801A28" }}>Turnaj nelze stihnout</p>
-                                <p className="text-xs" style={{ color: "#7f1d1d" }}>
-                                  Odhad casu: <strong>{odhadTurnaje?.text}</strong>, k dispozici jen <strong>{Math.floor(celkemMinut/60)}h {celkemMinut % 60}min</strong>.
-                                  <br/>Mas tri moznosti:
-                                </p>
-                                <ul className="text-xs mt-1.5 ml-3 list-disc" style={{ color: "#7f1d1d" }}>
-                                  <li>Prodlouz cas (zmen <em>Cas k dispozici</em> vyse)</li>
-                                  <li>Pridej kurty (zmen <em>Pocet kurtu</em> vyse)</li>
-                                  <li>Prepnout na format <strong>Cas</strong> — kolo se prizpusobi automaticky:</li>
-                                </ul>
-                                <button onClick={() => { setScoringTyp("cas"); setScoringLimit(12); setScoringLimitPlayoff(12); }}
-                                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white mt-2" style={{ backgroundColor: "#801A28" }}>
-                                  Prepnout na Cas
-                                </button>
-                              </div>
-                            )}
+                            {turnajSeNevejde && odhadTurnaje && (() => {
+                              const chybi = odhadTurnaje.totalMin - celkemMinut;
+                              const chybiH = Math.floor(chybi / 60), chybiM = chybi % 60;
+                              const chybiText = chybiH > 0 ? `${chybiH}h ${chybiM}min` : `${chybiM} min`;
+                              return (
+                                <div className="rounded-xl p-3 mt-1" style={{ backgroundColor: "#fef2f2", borderLeft: "3px solid #801A28" }}>
+                                  <p className="text-xs font-semibold mb-2" style={{ color: "#801A28" }}>Turnaj nelze stihnout v zadanem case</p>
+                                  <div className="grid grid-cols-3 gap-2 mb-2 text-xs" style={{ color: "#7f1d1d" }}>
+                                    <div><span style={{ color: "#9ca3af" }}>Potreba:</span> <strong>{odhadTurnaje.text}</strong></div>
+                                    <div><span style={{ color: "#9ca3af" }}>K dispozici:</span> <strong>{Math.floor(celkemMinut/60)}h {celkemMinut % 60}min</strong></div>
+                                    <div><span style={{ color: "#9ca3af" }}>Chybi:</span> <strong>{chybiText}</strong></div>
+                                  </div>
+                                  <div className="rounded-lg p-2 mb-2 text-xs" style={{ backgroundColor: "white", color: "#374151" }}>
+                                    <p className="font-semibold mb-1" style={{ color: "#0A0A0A" }}>Rozpis casu:</p>
+                                    <p>• Skupiny: <strong>{pocetZapasuDetail.skupiny} zapasu</strong> v {odhadTurnaje.kolSkupin} kolech &times; {odhadTurnaje.minNaZapas} min = <strong>{odhadTurnaje.minSkupinyText}</strong></p>
+                                    {pocetZapasuDetail.playoff > 0 && (
+                                      <p>• Playoff: <strong>{pocetZapasuDetail.playoff} zapasu</strong> v {odhadTurnaje.kolPlayoff} kolech &times; {odhadTurnaje.minNaZapas} min = <strong>{odhadTurnaje.minPlayoffText}</strong></p>
+                                    )}
+                                    <p className="text-xs mt-1" style={{ color: "#9ca3af" }}>Pocita s {odhadTurnaje.kurty} kurty, {odhadTurnaje.minNaZapas} min/zapas, 3 min prechod mezi koly.</p>
+                                  </div>
+                                  <p className="text-xs font-semibold mb-1" style={{ color: "#7f1d1d" }}>Mas tri moznosti:</p>
+                                  <ul className="text-xs mb-2 ml-4 list-disc" style={{ color: "#7f1d1d" }}>
+                                    <li>Prodlouz cas o <strong>{chybiText}</strong> (zmen <em>Cas k dispozici</em> vyse)</li>
+                                    <li>Pridej kurty (zkus o 1 vic — <em>Pocet kurtu</em> vyse)</li>
+                                    <li>Prepni na format <strong>Cas</strong> — kolo se zkrati a vse se vejde:</li>
+                                  </ul>
+                                  <button onClick={() => { setScoringTyp("cas"); setScoringLimit(12); setScoringLimitPlayoff(12); }}
+                                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: "#801A28" }}>
+                                    Prepnout na Cas
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </>
                         )}
                       </div>
