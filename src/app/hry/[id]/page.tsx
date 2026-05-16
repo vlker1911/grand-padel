@@ -52,9 +52,12 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
   const [editZapas, setEditZapas] = useState<string | null>(null);
   const [skore, setSkore] = useState({ s1: "", s2: "" });
   const [ukladam, setUkladam] = useState(false);
+  const [zobrazFinal, setZobrazFinal] = useState(false);
 
+  const limit = hra.body_na_zapas;
   const kola = [...new Set(zapasy.map(z => z.kolo))].sort((a, b) => a - b);
   const zapasyKola = zapasy.filter(z => z.kolo === aktivniKolo);
+  const vsechnyOdehrany = zapasy.length > 0 && zapasy.every(z => z.skore_tym1 != null);
 
   const tabulka = spocitejTabulku(
     ucastnici.map(u => ({ id: u.id, jmeno: u.jmeno })),
@@ -68,6 +71,24 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
 
   function jmeno(id: string) { return ucastnici.find(u => u.id === id)?.jmeno ?? "?"; }
 
+  function handleS1Change(val: string) {
+    const n = parseInt(val);
+    if (!isNaN(n) && n >= 0 && n <= limit) {
+      setSkore({ s1: val, s2: String(limit - n) });
+    } else {
+      setSkore({ s1: val, s2: skore.s2 });
+    }
+  }
+
+  function handleS2Change(val: string) {
+    const n = parseInt(val);
+    if (!isNaN(n) && n >= 0 && n <= limit) {
+      setSkore({ s1: String(limit - n), s2: val });
+    } else {
+      setSkore({ s1: skore.s1, s2: val });
+    }
+  }
+
   async function ulozSkore() {
     if (!editZapas) return;
     setUkladam(true);
@@ -80,8 +101,54 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
     setUkladam(false);
   }
 
+  // Finalni obrazovka
+  if (zobrazFinal || (vsechnyOdehrany && hra.stav === "ukonceno")) {
+    return (
+      <div className="flex flex-col gap-4">
+        <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+          <div className="px-5 py-6 border-b border-zinc-100 text-center">
+            <h2 className="text-xl font-bold" style={{ color: "#801A28" }}>Vysledky — konecne poradi</h2>
+            <p className="text-sm mt-1" style={{ color: "#6b7280" }}>{hra.nazev}</p>
+          </div>
+          <div className="divide-y divide-zinc-50">
+            {tabulka.map((h, i) => (
+              <div key={h.id} className="px-5 py-4 flex items-center gap-4">
+                <span className="text-2xl font-black w-8 text-center" style={{
+                  color: i === 0 ? "#f59e0b" : i === 1 ? "#9ca3af" : i === 2 ? "#cd7c32" : "#d1d5db"
+                }}>
+                  {i + 1}.
+                </span>
+                <span className="flex-1 font-semibold text-base" style={{ color: "#0A0A0A" }}>{h.jmeno}</span>
+                <span className="font-bold text-lg" style={{ color: i === 0 ? "#801A28" : "#374151" }}>{h.body} b</span>
+              </div>
+            ))}
+          </div>
+        </section>
+        <button onClick={() => setZobrazFinal(false)}
+          className="w-full rounded-full py-3 text-sm font-semibold border border-zinc-200 bg-white"
+          style={{ color: "#374151" }}>
+          Zpet na zapasy
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
+
+      {/* Banner — vsechny zapasy odehrany */}
+      {vsechnyOdehrany && (
+        <div className="rounded-2xl p-4 flex items-center justify-between gap-4"
+          style={{ backgroundColor: "#801A28" }}>
+          <p className="text-sm font-semibold text-white">Vsechny zapasy jsou odehrany!</p>
+          <button onClick={() => setZobrazFinal(true)}
+            className="rounded-full px-5 py-2 text-sm font-semibold bg-white shrink-0"
+            style={{ color: "#801A28" }}>
+            Zobrazit vysledky
+          </button>
+        </div>
+      )}
+
       {/* Tabulka */}
       <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
         <div className="px-5 py-4 border-b border-zinc-100">
@@ -150,12 +217,22 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
                 )}
               </div>
               {editZapas === z.id && (
-                <div className="mt-3 flex items-center gap-2 justify-end">
-                  <input type="number" min={0} max={99} value={skore.s1} onChange={e => setSkore({ ...skore, s1: e.target.value })}
-                    className="w-14 rounded-lg border-2 border-[#801A28] px-2 py-2 text-center text-sm font-bold focus:outline-none" />
-                  <span className="font-bold text-sm" style={{ color: "#9ca3af" }}>:</span>
-                  <input type="number" min={0} max={99} value={skore.s2} onChange={e => setSkore({ ...skore, s2: e.target.value })}
-                    className="w-14 rounded-lg border-2 border-[#801A28] px-2 py-2 text-center text-sm font-bold focus:outline-none" />
+                <div className="mt-3 flex items-center gap-2 justify-end flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-xs" style={{ color: "#9ca3af" }}>{jmeno(z.tym1_hrac1_id).split(" ")[0]}</span>
+                      <input type="number" min={0} max={limit} value={skore.s1}
+                        onChange={e => handleS1Change(e.target.value)}
+                        className="w-14 rounded-lg border-2 border-[#801A28] px-2 py-2 text-center text-sm font-bold focus:outline-none" />
+                    </div>
+                    <span className="font-bold text-sm mt-4" style={{ color: "#9ca3af" }}>:</span>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-xs" style={{ color: "#9ca3af" }}>{jmeno(z.tym2_hrac1_id).split(" ")[0]}</span>
+                      <input type="number" min={0} max={limit} value={skore.s2}
+                        onChange={e => handleS2Change(e.target.value)}
+                        className="w-14 rounded-lg border-2 border-[#801A28] px-2 py-2 text-center text-sm font-bold focus:outline-none" />
+                    </div>
+                  </div>
                   <button onClick={ulozSkore} disabled={ukladam}
                     className="rounded-lg px-4 py-2 text-xs font-semibold text-white"
                     style={{ backgroundColor: "#801A28" }}>
@@ -171,6 +248,14 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
           ))}
         </div>
       </section>
+
+      {jeEditor && vsechnyOdehrany && (
+        <button onClick={() => setZobrazFinal(true)}
+          className="w-full rounded-full py-3 text-sm font-semibold text-white"
+          style={{ backgroundColor: "#801A28" }}>
+          Zobrazit konecne vysledky
+        </button>
+      )}
     </div>
   );
 }
