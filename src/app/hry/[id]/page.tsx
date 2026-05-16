@@ -566,7 +566,7 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
                     {[0, 1].map(idx => {
                       const fieldKey = `${p.kurt}-${tym}-${idx}`;
                       const hodnota = p[tym][idx];
-                      const kurtoviHraci = navrhyPerKurt[p.kurt] ?? vsichniHraci;
+                      const kurtoviHraci = navrhyPerKurt[p.kurt] ?? ucastnici.map(u => u.jmeno);
                       const filtrovani = kurtoviHraci.filter(h =>
                         h.toLowerCase().includes(hodnota.toLowerCase()) && h !== hodnota
                       );

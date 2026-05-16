@@ -303,7 +303,18 @@ export default function NovaHraPage() {
                           onChange={(e) => setMinutNaKolo(Number(e.target.value))}
                           className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
                       </div>
-                      <p className="text-xs" style={{ color: "#9ca3af" }}>Doporucujeme 10–12 minut na kolo.</p>
+                      {(() => {
+                        const [hOd, mOd] = casOd.split(":").map(Number);
+                        const [hDo, mDo] = casDo.split(":").map(Number);
+                        const celkem = (hDo * 60 + mDo) - (hOd * 60 + mOd);
+                        if (celkem <= 0) return <p className="text-xs" style={{ color: "#9ca3af" }}>Doporucujeme 10–12 minut na kolo.</p>;
+                        const maxKol = Math.floor(celkem / (minutNaKolo + minutPresunu));
+                        return (
+                          <p className="text-xs" style={{ color: "#9ca3af" }}>
+                            {minutNaKolo} min hra + {minutPresunu} min presun = {minutNaKolo + minutPresunu} min/kolo realne → max <strong>{maxKol} kol</strong> za {celkem} min
+                          </p>
+                        );
+                      })()}
                     </div>
                   )}
                   {typ === "mexicano" && (
