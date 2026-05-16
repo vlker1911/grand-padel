@@ -34,11 +34,17 @@ Méně formální / komunitní turnaje často používají:
 
 ## Validace skóre — co je platné
 
-### Variant A: "Advantage tiebreak" (do X, tiebreak při X:X)
+### Variant A: "Advantage" (standardní tenis/padel)
 Validní skóre:
-- Vítěz `X`, poražený `0` až `X-2` (např. do 6: 6:0, 6:1, 6:2, 6:3, 6:4)
-- Vítěz `X+1`, poražený `X` (tiebreak: 7:6)
-- **Maximum:** X+1:X
+- **Normal win:** vítěz `X`, poražený `0` až `X-2` (do 6: 6:0–6:4)
+- **Win by 2 po 5:5:** vítěz `X+1`, poražený `X-1` (do 6: **7:5** — po 5:5 → 6:5 → 7:5)
+- **Tiebreak po 6:6:** vítěz `X+1`, poražený `X` (do 6: 7:6)
+
+**Posloupnost:**
+- 5:5 → 6:5 (zatím nedohráno) → **7:5** (set končí, win by 2)
+- 5:5 → 6:5 → 6:6 → tiebreak → **7:6** (set končí tiebreakem)
+
+**Maximum skóre:** X+1:X (tiebreak) nebo X+1:X-1 (win by 2)
 
 ### Variant B: "Sudden death tiebreak" (do X, tiebreak při X-1:X-1)
 Validní skóre:
@@ -56,12 +62,13 @@ Validní skóre:
 
 ## Doporučení pro Grand Padel turnaje
 
-| Formát | Tiebreak rule | Maximum skóre | Výhody |
+| Formát | Tiebreak rule | Validní výsledky | Výhody |
 |---|---|---|---|
-| **Do 6 gamů** | Advantage (6:6) | 7:6 | Standardní padel set |
-| **Do 6 gamů** | Sudden death (5:5) | 6:5 | Rychlé, předvídatelné |
-| **Do 5 gamů** | Sudden death (4:4) | 5:4 | Krátké zápasy, vhodné pro turnaje s mnoha týmy |
-| **Do 4 gamů** | Sudden death (3:3) | 4:3 | Velmi krátké, pro rychlé turnaje |
+| **Do 6 gamů** | Advantage | 6:0–6:4, 7:5, 7:6 | Standardní padel set |
+| **Do 6 gamů** | Sudden death | 6:0–6:5 | Rychlé, předvídatelné |
+| **Do 5 gamů** | Advantage | 5:0–5:3, 6:4, 6:5 | Kratší set |
+| **Do 5 gamů** | Sudden death | 5:0–5:4 | Velmi rychlé |
+| **Do 4 gamů** | Sudden death | 4:0–4:3 | Mini-formát pro turnaje s mnoha týmy |
 
 **Pro Grand Padel doporučení (default):** **Sudden death** — předvídatelný čas zápasu, jednoduchá validace.
 

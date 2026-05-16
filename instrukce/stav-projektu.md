@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.7.14  
+**Aktuální:** v0.7.15  
 **Poslední změna:** 16. 5. 2026  
-**Git tag:** v0.7.14
+**Git tag:** v0.7.15
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.7.15 | 16. 5. 2026 | **Oprava advantage gamy**: 7:5 (win by 2 po 5:5→6:5→7:5) je teď validní. Tři možné výsledky pro advantage: normalWin (6:0–6:4), winByTwo (7:5), tiebreakWin (7:6) |
 | v0.7.14 | 16. 5. 2026 | **Pravidla her** ([instrukce/pravidla/](pravidla/)) PADEL/AMERICANO/MEXICANO/TURNAJ. Gamy tiebreak validace (sudden_death/advantage), audit fixes: finalniPoradi pro vitez s víc kolama, auto-gen pro malá pásma, `hra.stav=ukonceno` po dokončení |
 | v0.7.13 | 16. 5. 2026 | **Wizard** v krok 1 turnaje — tlačítko "Doporuč variantu", modal se 3 doporučeními (Optimální/Max zápasů/S rezervou) z 200+ kombinací (1-10 kurtů × 4 playoff × 7 formátů). Klikem se vyplní celý formulář |
 | v0.7.12 | 16. 5. 2026 | 3 bug fixy: (1) Americano validace skóre (cap na limit, kontrola součtu = limit), (2) Single elim volba bracket size (auto/top4/top8/top16), (3) Harmonogram round-robin pořadí v skupině (circle method) → 4 kola místo 6 pro 8 týmů + 3 kurty |

@@ -1274,8 +1274,9 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
         if (w !== lim || l > lim - 1 || s1 === s2) return;
       } else {
         const normalWin = w === lim && l <= lim - 2;
+        const winByTwo = w === lim + 1 && l === lim - 1;
         const tiebreakWin = w === lim + 1 && l === lim;
-        if (!normalWin && !tiebreakWin) return;
+        if (!normalWin && !winByTwo && !tiebreakWin) return;
       }
     }
     if (scoringTyp === "cas" && zapas.faze !== "skupina" && s1 === s2) return;
@@ -1551,12 +1552,16 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
               if (w !== limit || l > limit - 1) { platne = false; hint = `Sudden death: max ${limit}:${limit-1}`; }
               if (platne && n1 === n2) { platne = false; hint = "Remiza v gamy neni mozna"; }
             } else {
-              // advantage: vitez=limit + porazeny ≤ limit-2, NEBO vitez=limit+1 + porazeny=limit
+              // advantage (tenis/padel standard):
+              //   normalWin: vitez=limit, porazeny ≤ limit-2 (napr. do 6: 6:0-6:4)
+              //   winByTwo:  vitez=limit+1, porazeny=limit-1 (po 5:5 → 6:5 → 7:5)
+              //   tiebreakWin: vitez=limit+1, porazeny=limit (tiebreak po 6:6 → 7:6)
               const normalWin = w === limit && l <= limit - 2;
+              const winByTwo = w === limit + 1 && l === limit - 1;
               const tiebreakWin = w === limit + 1 && l === limit;
-              if (!normalWin && !tiebreakWin) {
+              if (!normalWin && !winByTwo && !tiebreakWin) {
                 platne = false;
-                hint = `Advantage: ${limit}:0–${limit}:${limit-2} nebo ${limit+1}:${limit}`;
+                hint = `Advantage: ${limit}:0–${limit}:${limit-2}, ${limit+1}:${limit-1} nebo ${limit+1}:${limit}`;
               }
             }
           }

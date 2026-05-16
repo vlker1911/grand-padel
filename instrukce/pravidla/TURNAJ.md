@@ -62,10 +62,13 @@ Aplikace nabízí: do 4, 5, 6 gamů (nebo vlastní).
 - Pro **do 5:** max 5:4
 - Pro **do 4:** max 4:3
 
-#### Advantage — "do X, tiebreak při X:X → X+1:X"
-- Validní skóre: vítěz=X, poražený=0 až X-2 NEBO vítěz=X+1, poražený=X
-- Pro **do 6:** 6:0 až 6:4 (normální) nebo 7:6 (tiebreak)
-- Pro **do 5:** 5:0 až 5:3 nebo 6:5
+#### Advantage — standardní tenis/padel
+- Validní skóre:
+  - Normal win: vítěz=X, poražený ≤ X-2 (do 6: 6:0–6:4)
+  - Win by 2 po (X-1):(X-1): vítěz=X+1, poražený=X-1 (do 6: **7:5**)
+  - Tiebreak po X:X: vítěz=X+1, poražený=X (do 6: 7:6)
+- Pro **do 6:** 6:0, 6:1, 6:2, 6:3, 6:4, **7:5**, 7:6
+- Pro **do 5:** 5:0, 5:1, 5:2, 5:3, 6:4, 6:5
 
 #### No tiebreak — "win by 2"
 - Vítěz ≥ X, rozdíl ≥ 2 (neomezený)
@@ -82,8 +85,9 @@ if scoringTyp === "gamy" with sudden_death:
   s1 !== s2 (gamy nemůžou končit remízou)
 
 if scoringTyp === "gamy" with advantage:
-  Case 1: max(s1,s2) === L AND min(s1,s2) ≤ L-2
-  Case 2: max(s1,s2) === L+1 AND min(s1,s2) === L
+  Case 1 (normal):    max(s1,s2) === L     AND min(s1,s2) ≤ L-2
+  Case 2 (win by 2):  max(s1,s2) === L+1   AND min(s1,s2) === L-1   ← 7:5
+  Case 3 (tiebreak):  max(s1,s2) === L+1   AND min(s1,s2) === L     ← 7:6
 ```
 
 ### Body (do X bodů)
