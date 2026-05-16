@@ -92,11 +92,29 @@
 | `cenik` | ✅ Vytvořena, naplněna daty (špička/mimo špičku/víkend) |
 | `oteviraci_doba` | ✅ Vytvořena, naplněna daty (Po–Ne pro každou pobočku) |
 | `hry` | ✅ Vytvořena (s `settings jsonb`) — Americano, Mexicano, Turnaj |
-| `hra_ucastnici` | ✅ Vytvořena — hráči ke hře |
-| `hra_zapasy` | ✅ Vytvořena — zápasy (kola, skóre) |
+| `hra_ucastnici` | ✅ Vytvořena — hráči ke hře (36+ řádků) |
+| `hra_zapasy` | ✅ Vytvořena — zápasy (kola, skóre). **Mexicano persistuje sem (v0.7.16)** |
+| `hra_editatori` | ✅ Vytvořena — editoři hry kromě vlastníka |
+| `turnaj_tymy` | ✅ Vytvořena — týmy turnaje (s názvy + hráči) |
+| `turnaj_zapasy` | ✅ Vytvořena — zápasy turnaje (skupiny + playoff) |
+| `hra_skupiny` | 🟡 Vytvořená, nepoužitá (zatím) |
+| `hra_skupiny_ucastnici` | 🟡 Vytvořená, nepoužitá (zatím) |
+| `contact_messages` | ✅ Vytvořená — kontaktní formulář |
 | `profily` | ⏳ Naplánováno — napojení na Supabase Auth |
 | `rezervace` | ⏳ Naplánováno — rezervační systém |
 | `blokace` | ⏳ Naplánováno — blokace kurtů (údržba apod.) |
+| `platby` | ⏳ Naplánováno |
+| `kredity` | ⏳ Naplánováno |
+
+### RLS policies (manuálně v Supabase Dashboardu)
+
+| Tabulka | SELECT | INSERT | UPDATE | DELETE |
+|---|---|---|---|---|
+| `hry` | public | auth.uid()=created_by | created_by=auth.uid() | created_by=auth.uid() ✅ (v0.7.4) |
+| `hra_ucastnici` | public | true | (chybí?) | EXISTS hra owner ✅ (v0.7.4) |
+| `hra_zapasy` | public | true | hra owner OR editor | hra owner ✅ (v0.7.4) |
+| `turnaj_tymy` | public | hra owner | hra owner OR editor | hra owner ✅ (v0.5.1) |
+| `turnaj_zapasy` | public | hra owner OR editor | hra owner OR editor | hra owner ✅ (v0.5.1) |
 
 ---
 
@@ -113,15 +131,46 @@
 
 ## Další kroky (v pořadí priority)
 
+### Web základ
 1. ✅ Kontaktní formulář — Resend, posílá na info@grandpadel.cz
-2. ✅ Databáze Supabase — tabulky, naplněna daty (pobočky, kurty, ceník, otevírací doba)
-3. ✅ Přihlašování — email + heslo + Google (Supabase Auth), NavbarAuth komponenta
-4. ✅ Instagram sekce — 3 příspěvky, odkaz na @grandpadelcz, reálné fotky
-5. ✅ Reálné fotky a video — hero.mp4, padel1–3.png, ig1–3.png
-6. Rezervační systém — UI výběr termínu a kurtu, logika, rozhraní pro zákazníka
-7. Deploy na Vercel — po schválení Pepou
-8. Resend domain verification — po přístupu k DNS grandpadel.cz
-9. Apple login — srpen/září 2026
+2. ✅ Databáze Supabase — tabulky, naplněna daty
+3. ✅ Přihlašování — email + heslo + Google
+4. ✅ Instagram sekce + reálné fotky
+5. ⏳ Rezervační systém — UI výběr termínu a kurtu, logika
+6. ⏳ Deploy na Vercel — po schválení Pepou
+7. ⏳ Resend domain verification — po přístupu k DNS grandpadel.cz
+8. ⏳ Apple login — srpen/září 2026
+
+### Herní centrum — co dál (po v0.7.16)
+
+**🔴 Vysoká priorita:**
+- **Veřejný read-only pohled** (v0.7.17?) — sdílecí URL pro hráče bez přihlášení, schovat editor controls
+- **Implementace režimu kurtů** (auto/1-1/2-1) v plánování — setting se ukládá, ale harmonogram pořád běží v auto
+- **Obnovit zrušený turnaj** — tlačítko v UI chybí
+- **Odebrat tým** z turnaje — UI chybí
+
+**🟠 Střední:**
+- **`window.location.reload()`** → `nactiTurnaj()` (ztrácí state)
+- **Editace formátu/scoring** po vytvoření turnaje
+- **Dead vars cleanup** (`playoff`, `multiTier`, `typPlayoff` redundantní s `playoffMode`)
+- **Mexicano `body_na_zapas` rename** na `minut_na_kolo` (kolize sémantiky)
+- **Mexicano tabulka individuálních výsledků** (kdo má kolik vítězství)
+- **Garance odpočinku** (15 min mezi zápasy téhož týmu)
+
+**🟢 Budoucí:**
+- **Export PDF** kompletního turnaje
+- **QR kód** pro sdílecí URL
+- **Šablony turnajů** ("Klubový open 8 týmů" → klik → vyplnit formulář)
+- **Hromadný import týmů** (CSV/paste)
+- **Notifikace hráčům** ("Tvůj zápas za 10 min")
+- **Statistiky hráčů** (win rate, ranking)
+- **Live timer** pro Čas formát
+
+### Známé bugy / TODO
+
+- Race condition při init Mexicano kola 1 (2 uživatelé současně) — málo pravděpodobné
+- Non-multi-tier playoff s 6+ týmy v playoff: jen first round, žádné finále se neauto-generuje
+- Lichý počet hráčů v Mexicanu: jen `floor(n/4)×4` hraje, zbytek nehraje
 
 ## Rozhodnutí
 
