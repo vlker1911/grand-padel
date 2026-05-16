@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
@@ -9,12 +9,16 @@ import { generujAmericano } from "@/lib/americano";
 type Typ = "americano" | "mexicano" | "turnaj";
 
 const FORMATY: { typ: Typ; nazev: string; popis: string }[] = [
-  { typ: "americano", nazev: "Americano", popis: "Rotující páry, individuální skóre. Každý hraje s každým." },
-  { typ: "mexicano", nazev: "Mexicano", popis: "Hráči jsou přiřazeni na kurty. Po každém kole se přesouvají podle výsledků. Hraje se na čas." },
-  { typ: "turnaj",   nazev: "Turnaj",    popis: "Skupinová fáze pro páry/týmy. Volitelný playoff pavouk. Harmonogram s časovým plánem." },
+  { typ: "americano", nazev: "Americano", popis: "Rotujici pary, individualni skore. Kazdy hraje s kazdym." },
+  { typ: "mexicano", nazev: "Mexicano", popis: "Hraci se presouvaji po kurtech podle vysledku. Hraje se na cas." },
+  { typ: "turnaj",   nazev: "Turnaj",    popis: "Skupiny + volitelny playoff. Pary nebo jednotlivci. Body nebo gamy." },
 ];
 
 type HracEntry = { jmeno: string; email: string };
+type ParEntry  = { id: number; jmeno1: string; pohlavi1: string; jmeno2: string; pohlavi2: string };
+type SingEntry = { id: number; jmeno: string; pohlavi: string };
+
+const SKUPINY_NAZVY = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 function odhadMinut(body: number) {
   if (body === 16) return 8;
@@ -23,145 +27,240 @@ function odhadMinut(body: number) {
   return Math.round(body * 0.45);
 }
 
+function sparujSingles(players: SingEntry[]): ParEntry[] {
+  const filled = players.filter(p => p.jmeno.trim());
+  const muzi   = [...filled.filter(p => p.pohlavi === "m")].sort(() => Math.random() - 0.5);
+  const zeny   = [...filled.filter(p => p.pohlavi === "z")].sort(() => Math.random() - 0.5);
+  const ostatni = [...filled.filter(p => p.pohlavi !== "m" && p.pohlavi !== "z")].sort(() => Math.random() - 0.5);
+
+  const result: ParEntry[] = [];
+  let id = 10000;
+  const minMix = Math.min(muzi.length, zeny.length);
+  for (let i = 0; i < minMix; i++) {
+    result.push({ id: id++, jmeno1: muzi[i].jmeno, pohlavi1: "m", jmeno2: zeny[i].jmeno, pohlavi2: "z" });
+  }
+  const zbyvajici = [...muzi.slice(minMix), ...zeny.slice(minMix), ...ostatni].sort(() => Math.random() - 0.5);
+  for (let i = 0; i + 1 < zbyvajici.length; i += 2) {
+    result.push({ id: id++, jmeno1: zbyvajici[i].jmeno, pohlavi1: zbyvajici[i].pohlavi, jmeno2: zbyvajici[i + 1].jmeno, pohlavi2: zbyvajici[i + 1].pohlavi });
+  }
+  return result;
+}
+
+function vypocitejPocetSkupin(n: number): number {
+  if (n <= 4)  return 1;
+  if (n <= 8)  return 2;
+  if (n <= 12) return 3;
+  if (n <= 16) return 4;
+  return Math.ceil(n / 4);
+}
+
+function rozdelDoSkupin(tymy: ParEntry[], numSkupin: number): ParEntry[][] {
+  const groups: ParEntry[][] = Array.from({ length: numSkupin }, () => []);
+  tymy.forEach((t, i) => groups[i % numSkupin].push(t));
+  return groups;
+}
+
 export default function NovaHraPage() {
-  const router = useRouter();
+  const router   = useRouter();
   const supabase = createClient();
 
-  const [krok, setKrok] = useState<1 | 2 | 3>(1);
-  const [typ, setTyp] = useState<Typ | null>(null);
+  const [krok, setKrok] = useState(1);
+  const [typ,  setTyp]  = useState<Typ | null>(null);
 
-  // Parametry
-  const [pocetHracu, setPocetHracu] = useState<number | "">(8);
-  const [pocetKurtu, setPocetKurtu] = useState<number | "">(2);
-  const [cislaMexicano, setCislaMexicano] = useState("1, 2");
-  const [casOd, setCasOd] = useState("16:00");
-  const [casDo, setCasDo] = useState("18:00");
+  // Sdilene parametry
+  const [pocetKurtu,     setPocetKurtu]     = useState<number | "">(2);
+  const [cislaMexicano,  setCislaMexicano]  = useState("1, 2");
+  const [casOd,          setCasOd]          = useState("16:00");
+  const [casDo,          setCasDo]          = useState("18:00");
 
   // Americano / Mexicano
+  const [pocetHracu,  setPocetHracu]  = useState<number | "">(8);
   const [bodyNaZapas, setBodyNaZapas] = useState(24);
   const [minutNaKolo, setMinutNaKolo] = useState(12);
-  const [minutPresunu, setMinutPresunu] = useState(3);
+  const [minutPresunu,setMinutPresunu]= useState(3);
+  const [hraci,       setHraci]       = useState<HracEntry[]>(Array.from({ length: 8 }, () => ({ jmeno: "", email: "" })));
 
-  // Název
+  // Turnaj
+  const [typParovani,        setTypParovani]        = useState<"pary" | "singles" | "mix">("pary");
+  const [scoringTyp,         setScoringTyp]         = useState<"gamy" | "body">("gamy");
+  const [scoringLimit,       setScoringLimit]       = useState(4);
+  const [scoringLimitPlayoff,setScoringLimitPlayoff]= useState(6);
+  const [odlisnyScoring,     setOdlisnyScoring]     = useState(false);
+  const [playoff,            setPlayoff]            = useState(true);
+  const [typPlayoff,         setTypPlayoff]         = useState<"krizovy" | "primy">("krizovy");
+  const [multiTier,          setMultiTier]          = useState(true);
+  const [pary,               setPary]               = useState<ParEntry[]>(Array.from({ length: 4 }, (_, i) => ({ id: i, jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" })));
+  const [singlesHraci,       setSinglesHraci]       = useState<SingEntry[]>(Array.from({ length: 4 }, (_, i) => ({ id: i, jmeno: "", pohlavi: "" })));
+  const [losovanoSingles,    setLosovanoSingles]    = useState<ParEntry[]>([]);
+  const [losovano,           setLosovano]           = useState(false);
+
   const [nazev, setNazev] = useState("");
-
-  // Hráči
-  const [hraci, setHraci] = useState<HracEntry[]>(
-    Array.from({ length: 8 }, () => ({ jmeno: "", email: "" }))
-  );
-
-  const [stav, setStav] = useState<"idle" | "loading" | "chyba">("idle");
+  const [stav,  setStav]  = useState<"idle" | "loading" | "chyba">("idle");
   const [chyba, setChyba] = useState("");
 
+  // === Americano/Mexicano helpers ===
   function nastavPocetHracu(n: number) {
-    const validN = Math.max(4, n);
-    setPocetHracu(validN);
-    setHraci((prev) => {
-      if (validN > prev.length) return [...prev, ...Array.from({ length: validN - prev.length }, () => ({ jmeno: "", email: "" }))];
-      return prev.slice(0, validN);
-    });
+    const v = Math.max(4, n);
+    setPocetHracu(v);
+    setHraci(prev => v > prev.length
+      ? [...prev, ...Array.from({ length: v - prev.length }, () => ({ jmeno: "", email: "" }))]
+      : prev.slice(0, v));
   }
+  function pridejHrace() { setHraci([...hraci, { jmeno: "", email: "" }]); setPocetHracu(typeof pocetHracu === "number" ? pocetHracu + 1 : 1); }
+  function odeberHrace(i: number) { if (hraci.length <= 4) return; const n = hraci.filter((_, idx) => idx !== i); setHraci(n); setPocetHracu(n.length); }
+  function updateHrac(i: number, pole: keyof HracEntry, hodnota: string) { const n = [...hraci]; n[i] = { ...n[i], [pole]: hodnota }; setHraci(n); }
 
-  function pridejHrace() {
-    setHraci([...hraci, { jmeno: "", email: "" }]);
-    setPocetHracu(typeof pocetHracu === "number" ? pocetHracu + 1 : 1);
-  }
+  // === Turnaj helpers ===
+  function updatePar(id: number, pole: keyof ParEntry, hodnota: string) { setPary(prev => prev.map(p => p.id === id ? { ...p, [pole]: hodnota } : p)); }
+  function pridejPar() { if (pary.length >= 128) return; const newId = Math.max(0, ...pary.map(p => p.id)) + 1; setPary([...pary, { id: newId, jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" }]); }
+  function odeberPar(id: number) { if (pary.length <= 2) return; setPary(prev => prev.filter(p => p.id !== id)); }
+  function updateSingle(id: number, pole: keyof SingEntry, hodnota: string) { setSinglesHraci(prev => prev.map(s => s.id === id ? { ...s, [pole]: hodnota } : s)); }
+  function pridejSingle() { const newId = Math.max(0, ...singlesHraci.map(s => s.id)) + 1; setSinglesHraci([...singlesHraci, { id: newId, jmeno: "", pohlavi: "" }]); }
+  function odeberSingle(id: number) { if (singlesHraci.length <= 2) return; setSinglesHraci(prev => prev.filter(s => s.id !== id)); }
+  function losuj() { setLosovanoSingles(sparujSingles(singlesHraci)); setLosovano(true); }
 
-  function odeberHrace(i: number) {
-    if (hraci.length <= 4) return;
-    const novi = hraci.filter((_, idx) => idx !== i);
-    setHraci(novi);
-    setPocetHracu(novi.length);
-  }
+  const efektivniTymy = useMemo((): ParEntry[] => {
+    if (typ !== "turnaj") return [];
+    const platniPary = pary.filter(p => p.jmeno1.trim() && p.jmeno2.trim());
+    if (typParovani === "pary")    return platniPary;
+    if (typParovani === "singles") return losovano ? losovanoSingles : sparujSingles(singlesHraci);
+    const singPary = losovano ? losovanoSingles : sparujSingles(singlesHraci);
+    return [...platniPary, ...singPary];
+  }, [typ, typParovani, pary, singlesHraci, losovano, losovanoSingles]);
 
-  function updateHrac(i: number, pole: keyof HracEntry, hodnota: string) {
-    const novi = [...hraci];
-    novi[i] = { ...novi[i], [pole]: hodnota };
-    setHraci(novi);
-  }
+  const pocetSkupin = useMemo(() => vypocitejPocetSkupin(efektivniTymy.length), [efektivniTymy.length]);
+  const skupiny     = useMemo(() => rozdelDoSkupin(efektivniTymy, pocetSkupin), [efektivniTymy, pocetSkupin]);
 
-  // Výpočet harmonogramu turnaje
-  function vypocitejHarmonogram() {
-    const k = typeof pocetKurtu === "number" ? pocetKurtu : 2;
-    const h = typeof pocetHracu === "number" ? pocetHracu : 8;
-    const tymy = Math.ceil(h / 2);
-    const kolaSku = Math.max(tymy - 1, 1); // zjednodušeno
-    const minNaZapas = odhadMinut(bodyNaZapas);
-    const [hodOd, minOd] = casOd.split(":").map(Number);
-    const totalMin = (parseInt(casDo) - hodOd) * 60 + (parseInt(casDo.split(":")[1]) - minOd);
-    const lines: string[] = [];
-    let cur = hodOd * 60 + minOd + 5; // 5 min rozehřívání
-    for (let kolo = 1; kolo <= kolaSku; kolo++) {
-      const konec = cur + minNaZapas;
-      const hKonec = Math.floor(konec / 60).toString().padStart(2, "0");
-      const mKonec = (konec % 60).toString().padStart(2, "0");
-      lines.push(`Kolo ${kolo}: ${Math.floor(cur / 60).toString().padStart(2, "0")}:${(cur % 60).toString().padStart(2, "0")} – ${hKonec}:${mKonec}`);
-      cur = konec + 1;
-    }
-    return lines;
-  }
+  const odhadTurnaje = useMemo(() => {
+    const n = efektivniTymy.length;
+    if (n < 2) return null;
+    const kurty = typeof pocetKurtu === "number" ? pocetKurtu : 2;
+    const minNaZapas = scoringTyp === "gamy" ? scoringLimit * 3 + 5 : odhadMinut(scoringLimit) + 5;
+    const skupinaZapasy = skupiny.reduce((acc, s) => acc + (s.length * (s.length - 1)) / 2, 0);
+    const playoffZapasy = playoff ? (multiTier ? n - skupiny.length : Math.ceil(n / 2)) : 0;
+    const total = skupinaZapasy + playoffZapasy;
+    const totalMin = Math.ceil(total / kurty) * (minNaZapas + 3);
+    const h = Math.floor(totalMin / 60), m = totalMin % 60;
+    return { total, text: h > 0 ? `${h}h ${m > 0 ? m + "min" : ""}` : `${m} minut` };
+  }, [efektivniTymy, pocetKurtu, scoringTyp, scoringLimit, skupiny, playoff, multiTier]);
 
+  // === Vytvoreni hry ===
   async function vytvorHru() {
     if (!typ) return;
     setStav("loading");
     setChyba("");
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setChyba("Musíš být přihlášen."); setStav("chyba"); return; }
-
-    const platniHraci = hraci.filter((h) => h.jmeno.trim());
-    if (platniHraci.length < 4) { setChyba("Zadej alespoň 4 hráče."); setStav("chyba"); return; }
-    if (typ !== "turnaj" && platniHraci.length % 2 !== 0) { setChyba("Počet hráčů musí být sudý."); setStav("chyba"); return; }
+    if (!user) { setChyba("Musis byt prihlasen."); setStav("chyba"); return; }
 
     const k = typeof pocetKurtu === "number" ? pocetKurtu : 2;
 
-    const { data: hra, error: hraErr } = await supabase
-      .from("hry")
-      .insert({
+    // --- AMERICANO / MEXICANO ---
+    if (typ !== "turnaj") {
+      const platni = hraci.filter(h => h.jmeno.trim());
+      if (platni.length < 4)            { setChyba("Zadej alespon 4 hrace."); setStav("chyba"); return; }
+      if (platni.length % 2 !== 0)      { setChyba("Pocet hracu musi byt sudy."); setStav("chyba"); return; }
+
+      const { data: hra, error } = await supabase.from("hry").insert({
         nazev: nazev.trim() || `${FORMATY.find(f => f.typ === typ)?.nazev} ${new Date().toLocaleDateString("cs-CZ")}`,
-        typ,
-        stav: "probiha",
-        created_by: user.id,
-        pocet_kurtu: k,
+        typ, stav: "probiha", created_by: user.id, pocet_kurtu: k,
         body_na_zapas: typ === "mexicano" ? minutNaKolo : bodyNaZapas,
         settings: {
-          cas_od: casOd,
-          cas_do: casDo,
-          minut_na_kolo: minutNaKolo,
-          minut_presunu: minutPresunu,
+          cas_od: casOd, cas_do: casDo,
+          minut_na_kolo: minutNaKolo, minut_presunu: minutPresunu,
           cisla_kurtu: typ === "mexicano"
-            ? cislaMexicano.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n)).sort((a,b) => a-b)
+            ? cislaMexicano.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n)).sort((a, b) => a - b)
             : null,
         },
-      })
-      .select()
-      .single();
+      }).select().single();
 
-    if (hraErr || !hra) { setChyba("Nepodařilo se vytvořit hru."); setStav("chyba"); return; }
+      if (error || !hra) { setChyba("Nepodarilo se vytvorit hru."); setStav("chyba"); return; }
 
-    const { data: ucastnici, error: ucastniciErr } = await supabase
-      .from("hra_ucastnici")
-      .insert(platniHraci.map((h) => ({ hra_id: hra.id, jmeno: h.jmeno.trim(), user_id: null })))
-      .select();
+      const { data: ucastnici } = await supabase.from("hra_ucastnici")
+        .insert(platni.map(h => ({ hra_id: hra.id, jmeno: h.jmeno.trim(), user_id: null }))).select();
+      if (!ucastnici) { setChyba("Nepodarilo se pridat hrace."); setStav("chyba"); return; }
 
-    if (ucastniciErr || !ucastnici) { setChyba("Nepodařilo se přidat hráče."); setStav("chyba"); return; }
-
-    if (typ === "americano") {
-      const rozpis = generujAmericano(ucastnici.map((u) => ({ id: u.id, jmeno: u.jmeno })), k);
-      await supabase.from("hra_zapasy").insert(
-        rozpis.map((z) => ({
+      if (typ === "americano") {
+        const rozpis = generujAmericano(ucastnici.map(u => ({ id: u.id, jmeno: u.jmeno })), k);
+        await supabase.from("hra_zapasy").insert(rozpis.map(z => ({
           hra_id: hra.id, kolo: z.kolo, kurt: z.kurt,
           tym1_hrac1_id: z.tym1[0], tym1_hrac2_id: z.tym1[1],
           tym2_hrac1_id: z.tym2[0], tym2_hrac2_id: z.tym2[1],
           faze: "skupiny",
-        }))
-      );
+        })));
+      }
+
+      router.push(`/hry/${hra.id}`);
+      return;
     }
+
+    // --- TURNAJ ---
+    const tymy = efektivniTymy;
+    if (tymy.length < 2) { setChyba("Zadej alespon 2 tymy."); setStav("chyba"); return; }
+
+    const { data: hra, error: hraErr } = await supabase.from("hry").insert({
+      nazev: nazev.trim() || `Turnaj ${new Date().toLocaleDateString("cs-CZ")}`,
+      typ: "turnaj", stav: "probiha", created_by: user.id, pocet_kurtu: k,
+      body_na_zapas: null,
+      settings: {
+        cas_od: casOd, cas_do: casDo,
+        scoring_typ: scoringTyp,
+        scoring_limit: scoringLimit,
+        scoring_limit_playoff: odlisnyScoring ? scoringLimitPlayoff : scoringLimit,
+        playoff, typ_playoff: typPlayoff, multi_tier: multiTier,
+        typ_parovani: typParovani,
+      },
+    }).select().single();
+
+    if (hraErr || !hra) { setChyba("Nepodarilo se vytvorit turnaj."); setStav("chyba"); return; }
+
+    // Vsichni individualni hraci
+    const vsichniHraci = tymy.flatMap(t => [
+      { hra_id: hra.id, jmeno: t.jmeno1.trim(), pohlavi: t.pohlavi1 || "neuvedeno", user_id: null },
+      { hra_id: hra.id, jmeno: t.jmeno2.trim(), pohlavi: t.pohlavi2 || "neuvedeno", user_id: null },
+    ]);
+    const { data: ucastnici } = await supabase.from("hra_ucastnici").insert(vsichniHraci).select();
+    if (!ucastnici) { setChyba("Nepodarilo se pridat hrace."); setStav("chyba"); return; }
+
+    // Tymy (pary)
+    const skupinyData = rozdelDoSkupin(tymy, pocetSkupin);
+    const tymyInsert = skupinyData.flatMap((skupina, si) =>
+      skupina.map((tym, ti) => {
+        const h1 = ucastnici.find(u => u.jmeno === tym.jmeno1.trim());
+        const h2 = ucastnici.find(u => u.jmeno === tym.jmeno2.trim());
+        return {
+          hra_id: hra.id,
+          nazev: `${tym.jmeno1} / ${tym.jmeno2}`,
+          hrac1_id: h1?.id ?? null,
+          hrac2_id: h2?.id ?? null,
+          skupina: SKUPINY_NAZVY[si],
+          nasazeni: ti + 1,
+        };
+      })
+    );
+
+    const { data: createdTymy } = await supabase.from("turnaj_tymy").insert(tymyInsert).select();
+    if (!createdTymy) { setChyba("Nepodarilo se vytvorit tymy."); setStav("chyba"); return; }
+
+    // Zapasy skupin (vsechny kombinace uvnitr skupiny)
+    const zapasy = skupinyData.flatMap((skupina, si) => {
+      const sName = SKUPINY_NAZVY[si];
+      const sTymy = createdTymy.filter(t => t.skupina === sName);
+      const matches = [];
+      for (let i = 0; i < sTymy.length; i++) {
+        for (let j = i + 1; j < sTymy.length; j++) {
+          matches.push({ hra_id: hra.id, faze: "skupina", skupina: sName, kolo: null, tym1_id: sTymy[i].id, tym2_id: sTymy[j].id, stav: "ceka" });
+        }
+      }
+      return matches;
+    });
+
+    if (zapasy.length > 0) await supabase.from("turnaj_zapasy").insert(zapasy);
 
     router.push(`/hry/${hra.id}`);
   }
 
-  const harmonogram = typ === "turnaj" && krok === 2 ? vypocitejHarmonogram() : [];
+  const maxKrok = typ === "turnaj" ? 4 : 3;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -173,20 +272,19 @@ export default function NovaHraPage() {
             <a href="/hry" className="text-sm hover:underline" style={{ color: "#801A28" }}>Zpet na hry</a>
             <h1 className="text-2xl font-bold mt-3" style={{ color: "#801A28" }}>Nova hra</h1>
             <div className="flex gap-2 mt-4">
-              {[1, 2, 3].map((k) => (
-                <div key={k} className="h-1.5 flex-1 rounded-full"
-                  style={{ backgroundColor: krok >= k ? "#801A28" : "#e5e7eb" }} />
+              {Array.from({ length: maxKrok }, (_, i) => (
+                <div key={i} className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: krok > i ? "#801A28" : "#e5e7eb" }} />
               ))}
             </div>
           </div>
 
-          {/* KROK 1 — Format + parametry */}
+          {/* ===== KROK 1 — Format + parametry ===== */}
           {krok === 1 && (
             <div className="flex flex-col gap-6">
               <div>
                 <h2 className="text-base font-semibold mb-3" style={{ color: "#0A0A0A" }}>Format hry</h2>
                 <div className="flex flex-col gap-3">
-                  {FORMATY.map((f) => (
+                  {FORMATY.map(f => (
                     <button key={f.typ} onClick={() => setTyp(f.typ)}
                       className={`text-left rounded-2xl border-2 p-5 bg-white transition-all ${typ === f.typ ? "border-[#801A28] shadow-md" : "border-zinc-200 hover:border-zinc-300"}`}>
                       <p className="font-bold mb-1" style={{ color: "#0A0A0A" }}>{f.nazev}</p>
@@ -199,171 +297,204 @@ export default function NovaHraPage() {
               {typ && (
                 <div className="bg-white rounded-2xl border border-zinc-100 p-6 flex flex-col gap-5">
 
-                  {/* Pocet hracu */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium" style={{ color: "#374151" }}>
-                      {typ === "turnaj" ? "Pocet tymu" : "Pocet hracu"}
-                    </label>
-                    <input
-                      type="number" min={4} max={256}
-                      value={pocetHracu}
-                      onChange={(e) => {
-                        const n = parseInt(e.target.value);
-                        if (!isNaN(n)) nastavPocetHracu(n);
-                        else setPocetHracu("");
-                      }}
-                      placeholder={typ === "turnaj" ? "napr. 8 tymu" : "napr. 16 hracu"}
-                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]"
-                    />
-                    <p className="text-xs" style={{ color: "#9ca3af" }}>
-                      {typ === "turnaj" ? "Kazdy tym jsou 2 hraci (par)." : "Minimum 4, vzdy sudy pocet."}
-                    </p>
-                  </div>
+                  {/* Pocet hracu — americano/mexicano */}
+                  {typ !== "turnaj" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium" style={{ color: "#374151" }}>Pocet hracu</label>
+                      <input type="number" min={4} max={256} value={pocetHracu}
+                        onChange={e => { const n = parseInt(e.target.value); if (!isNaN(n)) nastavPocetHracu(n); else setPocetHracu(""); }}
+                        className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      <p className="text-xs" style={{ color: "#9ca3af" }}>Minimum 4, vzdy sudy pocet.</p>
+                    </div>
+                  )}
 
                   {/* Pocet kurtu */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium" style={{ color: "#374151" }}>Pocet kurtu</label>
-                    <input
-                      type="number" min={1} max={20}
-                      value={pocetKurtu}
-                      onChange={(e) => {
+                    <input type="number" min={1} max={20} value={pocetKurtu}
+                      onChange={e => {
                         const n = parseInt(e.target.value);
-                        if (!isNaN(n)) {
-                          setPocetKurtu(n);
-                          if (typ === "mexicano") {
-                            setCislaMexicano(Array.from({ length: n }, (_, i) => i + 1).join(", "));
-                          }
-                        } else setPocetKurtu("");
+                        if (!isNaN(n)) { setPocetKurtu(n); if (typ === "mexicano") setCislaMexicano(Array.from({ length: n }, (_, i) => i + 1).join(", ")); }
+                        else setPocetKurtu("");
                       }}
-                      placeholder="napr. 4"
-                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]"
-                    />
+                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
                   </div>
 
                   {/* Cas k dispozici */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium" style={{ color: "#374151" }}>Cas k dispozici</label>
                     <div className="flex items-center gap-3">
-                      <input type="time" value={casOd} onChange={(e) => setCasOd(e.target.value)}
-                        className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
-                      <span className="text-sm font-medium" style={{ color: "#9ca3af" }}>–</span>
-                      <input type="time" value={casDo} onChange={(e) => setCasDo(e.target.value)}
-                        className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      <input type="time" value={casOd} onChange={e => setCasOd(e.target.value)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      <span style={{ color: "#9ca3af" }}>–</span>
+                      <input type="time" value={casDo} onChange={e => setCasDo(e.target.value)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
                     </div>
                   </div>
 
-                  {/* Body / cas na zapas — Americano */}
+                  {/* Americano — body */}
                   {typ === "americano" && (
                     <div className="flex flex-col gap-1.5">
                       <label className="text-sm font-medium" style={{ color: "#374151" }}>Body na zapas</label>
                       <div className="flex gap-2 items-center">
-                        {[16, 24, 32].map((b) => (
+                        {[16, 24, 32].map(b => (
                           <button key={b} onClick={() => setBodyNaZapas(b)}
                             className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${bodyNaZapas === b ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
                             {b}
                           </button>
                         ))}
-                        <input type="number" min={8} max={99} value={bodyNaZapas}
-                          onChange={(e) => setBodyNaZapas(Number(e.target.value))}
-                          className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                        <input type="number" min={8} max={99} value={bodyNaZapas} onChange={e => setBodyNaZapas(Number(e.target.value))}
+                          className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none" />
                       </div>
-                      <p className="text-xs" style={{ color: "#9ca3af" }}>
-                        {bodyNaZapas} bodu = cca {odhadMinut(bodyNaZapas)} minut na zapas
-                      </p>
+                      <p className="text-xs" style={{ color: "#9ca3af" }}>{bodyNaZapas} bodu = cca {odhadMinut(bodyNaZapas)} minut na zapas</p>
                     </div>
                   )}
 
-                  {/* Cisla kurtu + minut na kolo — Mexicano */}
+                  {/* Mexicano */}
                   {typ === "mexicano" && (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-medium" style={{ color: "#374151" }}>Cisla kurtu (oddelena carkou)</label>
-                      <input type="text" value={cislaMexicano} onChange={(e) => {
-                        setCislaMexicano(e.target.value);
-                        const cisla = e.target.value.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-                        if (cisla.length > 0) setPocetKurtu(cisla.length);
-                      }}
-                        placeholder="napr. 3, 4, 5, 6"
-                        className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
-                      <p className="text-xs" style={{ color: "#9ca3af" }}>
-                        Nejnizsi cislo = nejlepsi kurt. Zadej kurty ktere mas k dispozici.
-                      </p>
-                    </div>
-                  )}
-                  {typ === "mexicano" && (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-medium" style={{ color: "#374151" }}>Minut na kolo</label>
-                      <div className="flex gap-2 items-center">
-                        {[10, 12, 15].map((m) => (
-                          <button key={m} onClick={() => setMinutNaKolo(m)}
-                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${minutNaKolo === m ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                            {m} min
-                          </button>
-                        ))}
-                        <input type="number" min={5} max={30} value={minutNaKolo}
-                          onChange={(e) => setMinutNaKolo(Number(e.target.value))}
-                          className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                    <>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Cisla kurtu (oddelena carkou)</label>
+                        <input type="text" value={cislaMexicano} onChange={e => {
+                          setCislaMexicano(e.target.value);
+                          const c = e.target.value.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                          if (c.length > 0) setPocetKurtu(c.length);
+                        }} className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
                       </div>
-                      {(() => {
-                        const [hOd, mOd] = casOd.split(":").map(Number);
-                        const [hDo, mDo] = casDo.split(":").map(Number);
-                        const celkem = (hDo * 60 + mDo) - (hOd * 60 + mOd);
-                        if (celkem <= 0) return <p className="text-xs" style={{ color: "#9ca3af" }}>Doporucujeme 10–12 minut na kolo.</p>;
-                        const maxKol = Math.floor(celkem / (minutNaKolo + minutPresunu));
-                        return (
-                          <p className="text-xs" style={{ color: "#9ca3af" }}>
-                            {minutNaKolo} min hra + {minutPresunu} min presun = {minutNaKolo + minutPresunu} min/kolo realne → max <strong>{maxKol} kol</strong> za {celkem} min
-                          </p>
-                        );
-                      })()}
-                    </div>
-                  )}
-                  {typ === "mexicano" && (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-medium" style={{ color: "#374151" }}>Cas na presun mezi koly (min)</label>
-                      <div className="flex gap-2 items-center">
-                        {[2, 3, 5].map((m) => (
-                          <button key={m} onClick={() => setMinutPresunu(m)}
-                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${minutPresunu === m ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                            {m} min
-                          </button>
-                        ))}
-                        <input type="number" min={1} max={15} value={minutPresunu}
-                          onChange={(e) => setMinutPresunu(Number(e.target.value))}
-                          className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Minut na kolo</label>
+                        <div className="flex gap-2 items-center">
+                          {[10, 12, 15].map(m => (
+                            <button key={m} onClick={() => setMinutNaKolo(m)}
+                              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${minutNaKolo === m ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                              {m} min
+                            </button>
+                          ))}
+                          <input type="number" min={5} max={30} value={minutNaKolo} onChange={e => setMinutNaKolo(Number(e.target.value))}
+                            className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none" />
+                        </div>
+                        {(() => {
+                          const [hOd, mOd] = casOd.split(":").map(Number);
+                          const [hDo, mDo] = casDo.split(":").map(Number);
+                          const celkem = (hDo * 60 + mDo) - (hOd * 60 + mOd);
+                          if (celkem <= 0) return null;
+                          const maxKol = Math.floor(celkem / (minutNaKolo + minutPresunu));
+                          return <p className="text-xs" style={{ color: "#9ca3af" }}>{minutNaKolo} + {minutPresunu} min/kolo → max <strong>{maxKol} kol</strong> za {celkem} min</p>;
+                        })()}
                       </div>
-                      {(() => {
-                        const [hOd, mOd] = casOd.split(":").map(Number);
-                        const [hDo, mDo] = casDo.split(":").map(Number);
-                        const celkem = (hDo * 60 + mDo) - (hOd * 60 + mOd);
-                        const maxKol = Math.floor(celkem / (minutNaKolo + minutPresunu));
-                        return celkem > 0 ? (
-                          <p className="text-xs" style={{ color: "#9ca3af" }}>
-                            {celkem} min celkem → max <strong>{maxKol} kol</strong> ({minutNaKolo} + {minutPresunu} min/kolo)
-                          </p>
-                        ) : null;
-                      })()}
-                    </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Cas na presun (min)</label>
+                        <div className="flex gap-2 items-center">
+                          {[2, 3, 5].map(m => (
+                            <button key={m} onClick={() => setMinutPresunu(m)}
+                              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${minutPresunu === m ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                              {m} min
+                            </button>
+                          ))}
+                          <input type="number" min={1} max={15} value={minutPresunu} onChange={e => setMinutPresunu(Number(e.target.value))}
+                            className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none" />
+                        </div>
+                      </div>
+                    </>
                   )}
 
-                  {/* Body na zapas — Turnaj */}
+                  {/* Turnaj — nastaveni */}
                   {typ === "turnaj" && (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-medium" style={{ color: "#374151" }}>Body na zapas</label>
-                      <div className="flex gap-2 items-center">
-                        {[16, 24, 32].map((b) => (
-                          <button key={b} onClick={() => setBodyNaZapas(b)}
-                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${bodyNaZapas === b ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                            {b}
-                          </button>
-                        ))}
-                        <input type="number" min={8} max={99} value={bodyNaZapas}
-                          onChange={(e) => setBodyNaZapas(Number(e.target.value))}
-                          className="w-16 rounded-xl border-2 border-zinc-200 px-2 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                    <>
+                      {/* Typ parovani */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Typ parovani</label>
+                        <div className="flex gap-2">
+                          {(["pary", "singles", "mix"] as const).map(t => (
+                            <button key={t} onClick={() => setTypParovani(t)}
+                              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${typParovani === t ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                              {t === "pary" ? "Pary" : t === "singles" ? "Jednotlivci" : "Mix"}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs" style={{ color: "#9ca3af" }}>
+                          {typParovani === "pary"    ? "Zadavas rovnou hotove pary (2 hraci = 1 tym)." :
+                           typParovani === "singles" ? "Zadavas jednotlivce — system vytvorí pary losem (gender-aware: prednostne M+Z)." :
+                           "Cast hraci uz maji para, zbytek se dolosuje gender-aware losem."}
+                        </p>
                       </div>
-                      <p className="text-xs" style={{ color: "#9ca3af" }}>
-                        {bodyNaZapas} bodu = cca {odhadMinut(bodyNaZapas)} minut na zapas
-                      </p>
-                    </div>
+
+                      {/* Scoring */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Scoring</label>
+                        <div className="flex gap-2">
+                          {(["gamy", "body"] as const).map(t => (
+                            <button key={t} onClick={() => setScoringTyp(t)}
+                              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${scoringTyp === t ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                              {t === "gamy" ? "Gamy" : "Body"}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs" style={{ color: "#6b7280" }}>
+                            {odlisnyScoring ? "Limit skupiny:" : `Limit (${scoringTyp === "gamy" ? "gamy" : "body"} na zapas):`}
+                          </label>
+                          <div className="flex gap-2 items-center">
+                            {(scoringTyp === "gamy" ? [4, 6, 8] : [16, 24, 32]).map(n => (
+                              <button key={n} onClick={() => setScoringLimit(n)}
+                                className={`flex-1 rounded-xl py-2 text-sm font-semibold border-2 transition-all ${scoringLimit === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                {n}
+                              </button>
+                            ))}
+                            <input type="number" min={1} max={99} value={scoringLimit} onChange={e => setScoringLimit(Number(e.target.value))}
+                              className="w-14 rounded-xl border-2 border-zinc-200 px-2 py-2 text-sm text-center focus:outline-none" />
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "#6b7280" }}>
+                          <input type="checkbox" checked={odlisnyScoring} onChange={e => setOdlisnyScoring(e.target.checked)} className="rounded" />
+                          Jiny limit pro playoff
+                        </label>
+                        {odlisnyScoring && (
+                          <div className="flex gap-2 items-center">
+                            <label className="text-xs shrink-0" style={{ color: "#6b7280" }}>Playoff:</label>
+                            {(scoringTyp === "gamy" ? [4, 6, 8] : [16, 24, 32]).map(n => (
+                              <button key={n} onClick={() => setScoringLimitPlayoff(n)}
+                                className={`flex-1 rounded-xl py-2 text-sm font-semibold border-2 transition-all ${scoringLimitPlayoff === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                {n}
+                              </button>
+                            ))}
+                            <input type="number" min={1} max={99} value={scoringLimitPlayoff} onChange={e => setScoringLimitPlayoff(Number(e.target.value))}
+                              className="w-14 rounded-xl border-2 border-zinc-200 px-2 py-2 text-sm text-center focus:outline-none" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Playoff */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Playoff</label>
+                        <div className="flex gap-2">
+                          <button onClick={() => setPlayoff(true)}
+                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${playoff ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                            Ano
+                          </button>
+                          <button onClick={() => setPlayoff(false)}
+                            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${!playoff ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                            Ne — jen skupiny
+                          </button>
+                        </div>
+                        {playoff && (
+                          <>
+                            <div className="flex gap-2">
+                              <button onClick={() => setTypPlayoff("krizovy")}
+                                className={`flex-1 rounded-xl py-2 text-xs font-semibold border-2 transition-all ${typPlayoff === "krizovy" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                Krizovy (1A vs 2B)
+                              </button>
+                              <button onClick={() => setTypPlayoff("primy")}
+                                className={`flex-1 rounded-xl py-2 text-xs font-semibold border-2 transition-all ${typPlayoff === "primy" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                Primy (1 vs 4, 2 vs 3)
+                              </button>
+                            </div>
+                            <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "#6b7280" }}>
+                              <input type="checkbox" checked={multiTier} onChange={e => setMultiTier(e.target.checked)} className="rounded" />
+                              Vice pasem (1-4, 5-8, 9-12...) — kazdy tym hraje o sve konecne umisteni
+                            </label>
+                          </>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -376,33 +507,15 @@ export default function NovaHraPage() {
             </div>
           )}
 
-          {/* KROK 2 — Nazev + nahlad harmonogramu */}
+          {/* ===== KROK 2 — Nazev ===== */}
           {krok === 2 && (
             <div className="flex flex-col gap-6">
               <div className="bg-white rounded-2xl border border-zinc-100 p-6">
                 <label className="text-sm font-medium block mb-2" style={{ color: "#374151" }}>Nazev hry (volitelne)</label>
-                <input type="text" value={nazev} onChange={(e) => setNazev(e.target.value)}
+                <input type="text" value={nazev} onChange={e => setNazev(e.target.value)}
                   placeholder={`${FORMATY.find(f => f.typ === typ)?.nazev} ${new Date().toLocaleDateString("cs-CZ")}`}
                   className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
               </div>
-
-              {/* Harmonogram turnaje */}
-              {harmonogram.length > 0 && (
-                <div className="bg-white rounded-2xl border border-zinc-100 p-6">
-                  <h3 className="text-sm font-semibold mb-4" style={{ color: "#0A0A0A" }}>Navrhovany harmonogram</h3>
-                  <div className="flex flex-col gap-2">
-                    {harmonogram.map((radek, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm py-2 border-b border-zinc-50 last:border-0">
-                        <span style={{ color: "#374151" }}>{radek}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs mt-3" style={{ color: "#9ca3af" }}>
-                    Vcetne 5 minut na rozehru. Harmonogram se upravi podle skutecneho prubenu.
-                  </p>
-                </div>
-              )}
-
               <div className="flex gap-3">
                 <button onClick={() => setKrok(1)} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
                 <button onClick={() => setKrok(3)} className="flex-1 rounded-full py-3 text-sm font-semibold text-white" style={{ backgroundColor: "#801A28" }}>Pokracovat</button>
@@ -410,49 +523,225 @@ export default function NovaHraPage() {
             </div>
           )}
 
-          {/* KROK 3 — Hraci */}
-          {krok === 3 && (
+          {/* ===== KROK 3 — Hraci (americano/mexicano) ===== */}
+          {krok === 3 && typ !== "turnaj" && (
             <div className="flex flex-col gap-4">
               <div>
-                <h2 className="text-base font-semibold mb-1" style={{ color: "#0A0A0A" }}>
-                  {typ === "turnaj" ? "Pridej tymy (pary)" : "Pridej hrace"}
-                </h2>
-                <p className="text-sm" style={{ color: "#6b7280" }}>
-                  {hraci.length} {typ === "turnaj" ? "tymu" : "hracu"} · hosty staci zadat jmenem
-                </p>
+                <h2 className="text-base font-semibold mb-1" style={{ color: "#0A0A0A" }}>Pridej hrace</h2>
+                <p className="text-sm" style={{ color: "#6b7280" }}>{hraci.length} hracu · hosty staci zadat jmenem</p>
               </div>
-
               <div className="flex flex-col gap-2">
                 {hraci.map((h, i) => (
                   <div key={i} className="bg-white rounded-xl border border-zinc-100 p-4 flex gap-3 items-center">
                     <span className="text-sm font-bold w-6 text-center shrink-0" style={{ color: "#9ca3af" }}>{i + 1}</span>
-                    <input type="text"
-                      placeholder={typ === "turnaj" ? "Nazev tymu nebo jmena hracu" : "Jmeno"}
-                      value={h.jmeno} onChange={(e) => updateHrac(i, "jmeno", e.target.value)}
+                    <input type="text" placeholder="Jmeno" value={h.jmeno} onChange={e => updateHrac(i, "jmeno", e.target.value)}
                       className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
-                    <input type="email" placeholder="E-mail (nepovinne)" value={h.email} onChange={(e) => updateHrac(i, "email", e.target.value)}
+                    <input type="email" placeholder="E-mail (nepovinne)" value={h.email} onChange={e => updateHrac(i, "email", e.target.value)}
                       className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
                     {hraci.length > 4 && (
-                      <button onClick={() => odeberHrace(i)} className="text-zinc-400 hover:text-red-500 transition-colors text-xl leading-none px-1">x</button>
+                      <button onClick={() => odeberHrace(i)} className="text-zinc-400 hover:text-red-500 text-xl leading-none px-1">x</button>
                     )}
                   </div>
                 ))}
               </div>
-
               <button onClick={pridejHrace}
                 className="w-full rounded-xl border-2 border-dashed border-zinc-300 py-3 text-sm font-medium hover:border-[#801A28] transition-colors"
                 style={{ color: "#6b7280" }}>
                 Pridat hrace
               </button>
-
               {chyba && <p className="text-sm text-center" style={{ color: "#801A28" }}>{chyba}</p>}
-
               <div className="flex gap-3">
                 <button onClick={() => setKrok(2)} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
                 <button onClick={vytvorHru} disabled={stav === "loading"}
                   className="flex-1 rounded-full py-3 text-sm font-semibold text-white disabled:opacity-60"
                   style={{ backgroundColor: "#801A28" }}>
                   {stav === "loading" ? "Vytvarim..." : "Spustit hru"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ===== KROK 3 — Tymy / hraci pro turnaj ===== */}
+          {krok === 3 && typ === "turnaj" && (
+            <div className="flex flex-col gap-5">
+              <div>
+                <h2 className="text-base font-semibold mb-1" style={{ color: "#0A0A0A" }}>
+                  {typParovani === "pary" ? "Zadej pary" : typParovani === "singles" ? "Zadej hrace" : "Zadej pary a jednotlivce"}
+                </h2>
+                <p className="text-sm" style={{ color: "#6b7280" }}>Max 128 paru · pohlavni M/Z je volitelne (pomaha pri losovani)</p>
+              </div>
+
+              {/* Pary */}
+              {(typParovani === "pary" || typParovani === "mix") && (
+                <div className="flex flex-col gap-3">
+                  {typParovani === "mix" && <p className="text-xs font-semibold" style={{ color: "#374151" }}>Hotove pary:</p>}
+                  {pary.map((p, i) => (
+                    <div key={p.id} className="bg-white rounded-xl border border-zinc-100 p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold" style={{ color: "#9ca3af" }}>Par {i + 1}</span>
+                        {pary.length > 2 && <button onClick={() => odeberPar(p.id)} className="text-xs" style={{ color: "#9ca3af" }}>odebrat</button>}
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="flex flex-col gap-1 flex-1">
+                          <input type="text" placeholder="Hrac 1" value={p.jmeno1} onChange={e => updatePar(p.id, "jmeno1", e.target.value)}
+                            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                          <div className="flex gap-1">
+                            {[{ v: "m", l: "M" }, { v: "z", l: "Z" }].map(g => (
+                              <button key={g.v} onClick={() => updatePar(p.id, "pohlavi1", p.pohlavi1 === g.v ? "" : g.v)}
+                                className={`flex-1 rounded-lg py-1 text-xs font-semibold border transition-all ${p.pohlavi1 === g.v ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
+                                {g.l}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <span className="self-center text-sm" style={{ color: "#9ca3af" }}>/</span>
+                        <div className="flex flex-col gap-1 flex-1">
+                          <input type="text" placeholder="Hrac 2" value={p.jmeno2} onChange={e => updatePar(p.id, "jmeno2", e.target.value)}
+                            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                          <div className="flex gap-1">
+                            {[{ v: "m", l: "M" }, { v: "z", l: "Z" }].map(g => (
+                              <button key={g.v} onClick={() => updatePar(p.id, "pohlavi2", p.pohlavi2 === g.v ? "" : g.v)}
+                                className={`flex-1 rounded-lg py-1 text-xs font-semibold border transition-all ${p.pohlavi2 === g.v ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
+                                {g.l}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {pary.length < 128 && (
+                    <button onClick={pridejPar}
+                      className="w-full rounded-xl border-2 border-dashed border-zinc-300 py-3 text-sm font-medium hover:border-[#801A28] transition-colors"
+                      style={{ color: "#6b7280" }}>
+                      Pridat par
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Singles */}
+              {(typParovani === "singles" || typParovani === "mix") && (
+                <div className="flex flex-col gap-3">
+                  {typParovani === "mix" && <p className="text-xs font-semibold mt-2" style={{ color: "#374151" }}>Jednotlivci (dolosovani):</p>}
+                  {singlesHraci.map((s, i) => (
+                    <div key={s.id} className="bg-white rounded-xl border border-zinc-100 p-4 flex gap-3 items-center">
+                      <span className="text-sm font-bold w-5 shrink-0" style={{ color: "#9ca3af" }}>{i + 1}</span>
+                      <input type="text" placeholder="Jmeno hrace" value={s.jmeno} onChange={e => updateSingle(s.id, "jmeno", e.target.value)}
+                        className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      <div className="flex gap-1 shrink-0">
+                        {[{ v: "m", l: "M" }, { v: "z", l: "Z" }].map(g => (
+                          <button key={g.v} onClick={() => updateSingle(s.id, "pohlavi", s.pohlavi === g.v ? "" : g.v)}
+                            className={`w-9 rounded-lg py-2 text-xs font-semibold border transition-all ${s.pohlavi === g.v ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
+                            {g.l}
+                          </button>
+                        ))}
+                      </div>
+                      {singlesHraci.length > 2 && (
+                        <button onClick={() => odeberSingle(s.id)} className="text-zinc-400 hover:text-red-500 text-xl leading-none">x</button>
+                      )}
+                    </div>
+                  ))}
+                  <button onClick={pridejSingle}
+                    className="w-full rounded-xl border-2 border-dashed border-zinc-300 py-3 text-sm font-medium hover:border-[#801A28] transition-colors"
+                    style={{ color: "#6b7280" }}>
+                    Pridat hrace
+                  </button>
+
+                  {singlesHraci.filter(s => s.jmeno.trim()).length >= 2 && (
+                    <div className="rounded-xl p-4" style={{ backgroundColor: "#F2EDE4" }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold" style={{ color: "#801A28" }}>
+                          {losovano ? "Vylosovane pary:" : "Losovani paru"}
+                        </p>
+                        <button onClick={losuj} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: "#801A28" }}>
+                          {losovano ? "Losovat znovu" : "Losovat"}
+                        </button>
+                      </div>
+                      {losovano
+                        ? losovanoSingles.map((p, i) => (
+                            <p key={p.id} className="text-xs py-0.5" style={{ color: "#374151" }}>{i + 1}. {p.jmeno1} / {p.jmeno2}</p>
+                          ))
+                        : <p className="text-xs" style={{ color: "#9ca3af" }}>Prednostne sparuje M+Z, zbytek nahodne.</p>
+                      }
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {chyba && <p className="text-sm text-center" style={{ color: "#801A28" }}>{chyba}</p>}
+
+              <div className="flex gap-3">
+                <button onClick={() => setKrok(2)} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
+                <button onClick={() => {
+                  if (efektivniTymy.length < 2) { setChyba("Zadej alespon 2 pary."); return; }
+                  setChyba(""); setKrok(4);
+                }} className="flex-1 rounded-full py-3 text-sm font-semibold text-white" style={{ backgroundColor: "#801A28" }}>
+                  Pokracovat
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ===== KROK 4 — Skupiny + souhrn (turnaj) ===== */}
+          {krok === 4 && typ === "turnaj" && (
+            <div className="flex flex-col gap-5">
+              <div>
+                <h2 className="text-base font-semibold mb-1" style={{ color: "#0A0A0A" }}>Skupiny a souhrn</h2>
+                <p className="text-sm" style={{ color: "#6b7280" }}>
+                  {efektivniTymy.length} tymu · {skupiny.length} {skupiny.length === 1 ? "skupina" : skupiny.length < 5 ? "skupiny" : "skupin"}
+                  {playoff ? " · playoff" : " · jen skupiny"}
+                </p>
+              </div>
+
+              {skupiny.map((skupina, si) => (
+                <div key={si} className="bg-white rounded-2xl border border-zinc-100 p-5">
+                  <p className="text-xs font-bold mb-3" style={{ color: "#801A28" }}>Skupina {SKUPINY_NAZVY[si]}</p>
+                  <div className="flex flex-col gap-1.5">
+                    {skupina.map((tym, ti) => (
+                      <div key={tym.id} className="flex items-center gap-2 text-sm">
+                        <span className="w-4 shrink-0" style={{ color: "#9ca3af" }}>{ti + 1}.</span>
+                        <span className="font-medium" style={{ color: "#0A0A0A" }}>{tym.jmeno1}</span>
+                        <span style={{ color: "#9ca3af" }}>/</span>
+                        <span className="font-medium" style={{ color: "#0A0A0A" }}>{tym.jmeno2}</span>
+                        {(tym.pohlavi1 || tym.pohlavi2) && (
+                          <span className="text-xs" style={{ color: "#d1d5db" }}>({tym.pohlavi1 || "?"}/{tym.pohlavi2 || "?"})</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs mt-3" style={{ color: "#9ca3af" }}>
+                    {(skupina.length * (skupina.length - 1)) / 2} zapasu · kazdy s kazdym
+                  </p>
+                </div>
+              ))}
+
+              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col gap-1.5">
+                <p className="text-sm font-semibold mb-1" style={{ color: "#0A0A0A" }}>Souhrn</p>
+                <p className="text-xs" style={{ color: "#6b7280" }}>
+                  Scoring: {scoringTyp === "gamy" ? `gamy do ${scoringLimit}` : `${scoringLimit} bodu na zapas`}
+                  {odlisnyScoring ? ` · playoff: ${scoringTyp === "gamy" ? `do ${scoringLimitPlayoff}` : `${scoringLimitPlayoff} b`}` : ""}
+                </p>
+                <p className="text-xs" style={{ color: "#6b7280" }}>
+                  Playoff: {playoff
+                    ? `ano — ${typPlayoff === "krizovy" ? "krizovy (1A vs 2B)" : "primy (1 vs 4, 2 vs 3)"}${multiTier ? " · vice pasem" : ""}`
+                    : "ne — jen skupiny"}
+                </p>
+                {odhadTurnaje && (
+                  <p className="text-xs" style={{ color: "#6b7280" }}>
+                    Odhad: <strong>{odhadTurnaje.text}</strong> ({odhadTurnaje.total} zapasu celkem)
+                  </p>
+                )}
+              </div>
+
+              {chyba && <p className="text-sm text-center" style={{ color: "#801A28" }}>{chyba}</p>}
+
+              <div className="flex gap-3">
+                <button onClick={() => setKrok(3)} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
+                <button onClick={vytvorHru} disabled={stav === "loading"}
+                  className="flex-1 rounded-full py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  style={{ backgroundColor: "#801A28" }}>
+                  {stav === "loading" ? "Vytvarim..." : "Spustit turnaj"}
                 </button>
               </div>
             </div>
