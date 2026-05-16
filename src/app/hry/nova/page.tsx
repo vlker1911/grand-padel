@@ -15,7 +15,7 @@ const FORMATY: { typ: Typ; nazev: string; popis: string }[] = [
 ];
 
 type HracEntry = { jmeno: string; email: string };
-type ParEntry  = { id: number; jmeno1: string; pohlavi1: string; jmeno2: string; pohlavi2: string };
+type ParEntry  = { id: number; nazevTymu: string; jmeno1: string; pohlavi1: string; jmeno2: string; pohlavi2: string };
 type SingEntry = { id: number; jmeno: string; pohlavi: string };
 
 const SKUPINY_NAZVY = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -37,11 +37,11 @@ function sparujSingles(players: SingEntry[]): ParEntry[] {
   let id = 10000;
   const minMix = Math.min(muzi.length, zeny.length);
   for (let i = 0; i < minMix; i++) {
-    result.push({ id: id++, jmeno1: muzi[i].jmeno, pohlavi1: "m", jmeno2: zeny[i].jmeno, pohlavi2: "z" });
+    result.push({ id: id++, nazevTymu: "", jmeno1: muzi[i].jmeno, pohlavi1: "m", jmeno2: zeny[i].jmeno, pohlavi2: "z" });
   }
   const zbyvajici = [...muzi.slice(minMix), ...zeny.slice(minMix), ...ostatni].sort(() => Math.random() - 0.5);
   for (let i = 0; i + 1 < zbyvajici.length; i += 2) {
-    result.push({ id: id++, jmeno1: zbyvajici[i].jmeno, pohlavi1: zbyvajici[i].pohlavi, jmeno2: zbyvajici[i + 1].jmeno, pohlavi2: zbyvajici[i + 1].pohlavi });
+    result.push({ id: id++, nazevTymu: "", jmeno1: zbyvajici[i].jmeno, pohlavi1: zbyvajici[i].pohlavi, jmeno2: zbyvajici[i + 1].jmeno, pohlavi2: zbyvajici[i + 1].pohlavi });
   }
   return result;
 }
@@ -82,6 +82,7 @@ export default function NovaHraPage() {
 
   // Turnaj
   const [typParovani,        setTypParovani]        = useState<"pary" | "singles" | "mix">("pary");
+  const [pouzitNazvyTymu,    setPouzitNazvyTymu]    = useState(false);
   const [pocetTymu,          setPocetTymu]          = useState<number | "">(8);
   const [pocetSinglesHracu,  setPocetSinglesHracu]  = useState<number | "">(8);
   const [scoringTyp,         setScoringTyp]         = useState<"gamy" | "body" | "cas">("gamy");
@@ -91,7 +92,7 @@ export default function NovaHraPage() {
   const [playoff,            setPlayoff]            = useState(true);
   const [typPlayoff,         setTypPlayoff]         = useState<"krizovy" | "primy">("krizovy");
   const [multiTier,          setMultiTier]          = useState(true);
-  const [pary,               setPary]               = useState<ParEntry[]>(Array.from({ length: 8 }, (_, i) => ({ id: i, jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" })));
+  const [pary,               setPary]               = useState<ParEntry[]>(Array.from({ length: 8 }, (_, i) => ({ id: i, nazevTymu: "", jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" })));
   const [singlesHraci,       setSinglesHraci]       = useState<SingEntry[]>(Array.from({ length: 8 }, (_, i) => ({ id: i, jmeno: "", pohlavi: "" })));
   const [losovanoSingles,    setLosovanoSingles]    = useState<ParEntry[]>([]);
   const [losovano,           setLosovano]           = useState(false);
@@ -117,7 +118,7 @@ export default function NovaHraPage() {
     const v = Math.min(128, Math.max(2, n));
     setPocetTymu(v);
     setPary(prev => v > prev.length
-      ? [...prev, ...Array.from({ length: v - prev.length }, (_, i) => ({ id: prev.length + i, jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" }))]
+      ? [...prev, ...Array.from({ length: v - prev.length }, (_, i) => ({ id: prev.length + i, nazevTymu: "", jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" }))]
       : prev.slice(0, v));
   }
   function nastavPocetSingles(n: number) {
@@ -129,7 +130,7 @@ export default function NovaHraPage() {
     setLosovano(false);
   }
   function updatePar(id: number, pole: keyof ParEntry, hodnota: string) { setPary(prev => prev.map(p => p.id === id ? { ...p, [pole]: hodnota } : p)); }
-  function pridejPar() { if (pary.length >= 128) return; const newId = Math.max(0, ...pary.map(p => p.id)) + 1; setPary([...pary, { id: newId, jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" }]); setPocetTymu(pary.length + 1); }
+  function pridejPar() { if (pary.length >= 128) return; const newId = Math.max(0, ...pary.map(p => p.id)) + 1; setPary([...pary, { id: newId, nazevTymu: "", jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" }]); setPocetTymu(pary.length + 1); }
   function odeberPar(id: number) { if (pary.length <= 2) return; setPary(prev => prev.filter(p => p.id !== id)); setPocetTymu(prev => typeof prev === "number" ? prev - 1 : prev); }
   function updateSingle(id: number, pole: keyof SingEntry, hodnota: string) { setSinglesHraci(prev => prev.map(s => s.id === id ? { ...s, [pole]: hodnota } : s)); }
   function pridejSingle() { const newId = Math.max(0, ...singlesHraci.map(s => s.id)) + 1; setSinglesHraci([...singlesHraci, { id: newId, jmeno: "", pohlavi: "" }]); setPocetSinglesHracu(singlesHraci.length + 1); setLosovano(false); }
@@ -138,12 +139,12 @@ export default function NovaHraPage() {
 
   const efektivniTymy = useMemo((): ParEntry[] => {
     if (typ !== "turnaj") return [];
-    const platniPary = pary.filter(p => p.jmeno1.trim() && p.jmeno2.trim());
+    const platniPary = pary.filter(p => pouzitNazvyTymu ? p.nazevTymu.trim() : (p.jmeno1.trim() && p.jmeno2.trim()));
     if (typParovani === "pary")    return platniPary;
     if (typParovani === "singles") return losovano ? losovanoSingles : sparujSingles(singlesHraci);
     const singPary = losovano ? losovanoSingles : sparujSingles(singlesHraci);
     return [...platniPary, ...singPary];
-  }, [typ, typParovani, pary, singlesHraci, losovano, losovanoSingles]);
+  }, [typ, typParovani, pouzitNazvyTymu, pary, singlesHraci, losovano, losovanoSingles]);
 
   const pocetSkupin = useMemo(() => vypocitejPocetSkupin(efektivniTymy.length), [efektivniTymy.length]);
   const skupiny     = useMemo(() => rozdelDoSkupin(efektivniTymy, pocetSkupin), [efektivniTymy, pocetSkupin]);
@@ -231,33 +232,42 @@ export default function NovaHraPage() {
 
     if (hraErr || !hra) { setChyba("Nepodarilo se vytvorit turnaj."); setStav("chyba"); return; }
 
-    // Vsichni individualni hraci
-    const vsichniHraci = tymy.flatMap(t => [
-      { hra_id: hra.id, jmeno: t.jmeno1.trim(), pohlavi: t.pohlavi1 || "neuvedeno", user_id: null },
-      { hra_id: hra.id, jmeno: t.jmeno2.trim(), pohlavi: t.pohlavi2 || "neuvedeno", user_id: null },
-    ]);
-    const { data: ucastnici } = await supabase.from("hra_ucastnici").insert(vsichniHraci).select();
-    if (!ucastnici) { setChyba("Nepodarilo se pridat hrace."); setStav("chyba"); return; }
+    // Pomocna mapa par.id -> {h1Id, h2Id} pro propojeni
+    const parToUcastnici: Record<number, { h1Id: string | null; h2Id: string | null }> = {};
 
-    // Tymy (pary)
+    // Pokud nepouzivame nazvy tymu, vlozime individualni hrace do hra_ucastnici
+    if (!pouzitNazvyTymu) {
+      // Vlozime hrace per par, abychom udrzeli vazbu
+      for (const t of tymy) {
+        const { data: parUcastnici, error: ucErr } = await supabase.from("hra_ucastnici").insert([
+          { hra_id: hra.id, jmeno: t.jmeno1.trim(), pohlavi: t.pohlavi1 || "neuvedeno", user_id: null },
+          { hra_id: hra.id, jmeno: t.jmeno2.trim(), pohlavi: t.pohlavi2 || "neuvedeno", user_id: null },
+        ]).select();
+        if (ucErr || !parUcastnici) { setChyba("Nepodarilo se pridat hrace: " + (ucErr?.message ?? "")); setStav("chyba"); return; }
+        parToUcastnici[t.id] = { h1Id: parUcastnici[0]?.id ?? null, h2Id: parUcastnici[1]?.id ?? null };
+      }
+    }
+
+    // Tymy (pary nebo nazvy)
     const skupinyData = rozdelDoSkupin(tymy, pocetSkupin);
     const tymyInsert = skupinyData.flatMap((skupina, si) =>
       skupina.map((tym, ti) => {
-        const h1 = ucastnici.find(u => u.jmeno === tym.jmeno1.trim());
-        const h2 = ucastnici.find(u => u.jmeno === tym.jmeno2.trim());
+        const link = parToUcastnici[tym.id];
         return {
           hra_id: hra.id,
-          nazev: `${tym.jmeno1} / ${tym.jmeno2}`,
-          hrac1_id: h1?.id ?? null,
-          hrac2_id: h2?.id ?? null,
+          nazev: pouzitNazvyTymu && tym.nazevTymu.trim()
+            ? tym.nazevTymu.trim()
+            : `${tym.jmeno1} / ${tym.jmeno2}`,
+          hrac1_id: link?.h1Id ?? null,
+          hrac2_id: link?.h2Id ?? null,
           skupina: SKUPINY_NAZVY[si],
           nasazeni: ti + 1,
         };
       })
     );
 
-    const { data: createdTymy } = await supabase.from("turnaj_tymy").insert(tymyInsert).select();
-    if (!createdTymy) { setChyba("Nepodarilo se vytvorit tymy."); setStav("chyba"); return; }
+    const { data: createdTymy, error: tymyErr } = await supabase.from("turnaj_tymy").insert(tymyInsert).select();
+    if (tymyErr || !createdTymy) { setChyba("Nepodarilo se vytvorit tymy: " + (tymyErr?.message ?? "")); setStav("chyba"); return; }
 
     // Zapasy skupin (vsechny kombinace uvnitr skupiny)
     const zapasy = skupinyData.flatMap((skupina, si) => {
@@ -613,8 +623,30 @@ export default function NovaHraPage() {
                 <h2 className="text-base font-semibold mb-1" style={{ color: "#0A0A0A" }}>
                   {typParovani === "pary" ? "Zadej pary" : typParovani === "singles" ? "Zadej hrace" : "Zadej pary a jednotlivce"}
                 </h2>
-                <p className="text-sm" style={{ color: "#6b7280" }}>Max 128 paru · pohlavni M/Z je volitelne (pomaha pri losovani)</p>
+                <p className="text-sm" style={{ color: "#6b7280" }}>Max 128 paru · pohlavi M/Z je volitelne (pomaha pri losovani)</p>
               </div>
+
+              {/* Toggle nazev tymu vs jmena hracu */}
+              {(typParovani === "pary" || typParovani === "mix") && (
+                <div className="bg-white rounded-xl border border-zinc-100 p-3 flex items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium" style={{ color: "#374151" }}>Jak zadat pary</p>
+                    <p className="text-xs" style={{ color: "#9ca3af" }}>
+                      {pouzitNazvyTymu ? "Jeden nazev tymu (napr. 'Drtice Praha')" : "Jmena dvou hracu (napr. 'Petr / Jana')"}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => setPouzitNazvyTymu(false)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${!pouzitNazvyTymu ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
+                      Jmena
+                    </button>
+                    <button onClick={() => setPouzitNazvyTymu(true)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${pouzitNazvyTymu ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
+                      Nazev tymu
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Pary */}
               {(typParovani === "pary" || typParovani === "mix") && (
@@ -623,9 +655,13 @@ export default function NovaHraPage() {
                   {pary.map((p, i) => (
                     <div key={p.id} className="bg-white rounded-xl border border-zinc-100 p-4 flex flex-col gap-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold" style={{ color: "#9ca3af" }}>Par {i + 1}</span>
+                        <span className="text-xs font-bold" style={{ color: "#9ca3af" }}>{pouzitNazvyTymu ? `Tym ${i + 1}` : `Par ${i + 1}`}</span>
                         {pary.length > 2 && <button onClick={() => odeberPar(p.id)} className="text-xs" style={{ color: "#9ca3af" }}>odebrat</button>}
                       </div>
+                      {pouzitNazvyTymu ? (
+                        <input type="text" placeholder="Nazev tymu" value={p.nazevTymu} onChange={e => updatePar(p.id, "nazevTymu", e.target.value)}
+                          className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      ) : (
                       <div className="flex gap-3">
                         <div className="flex flex-col gap-1 flex-1">
                           <input type="text" placeholder="Hrac 1" value={p.jmeno1} onChange={e => updatePar(p.id, "jmeno1", e.target.value)}
@@ -653,6 +689,7 @@ export default function NovaHraPage() {
                           </div>
                         </div>
                       </div>
+                      )}
                     </div>
                   ))}
                   {pary.length < 128 && (
@@ -746,11 +783,17 @@ export default function NovaHraPage() {
                     {skupina.map((tym, ti) => (
                       <div key={tym.id} className="flex items-center gap-2 text-sm">
                         <span className="w-4 shrink-0" style={{ color: "#9ca3af" }}>{ti + 1}.</span>
-                        <span className="font-medium" style={{ color: "#0A0A0A" }}>{tym.jmeno1}</span>
-                        <span style={{ color: "#9ca3af" }}>/</span>
-                        <span className="font-medium" style={{ color: "#0A0A0A" }}>{tym.jmeno2}</span>
-                        {(tym.pohlavi1 || tym.pohlavi2) && (
-                          <span className="text-xs" style={{ color: "#d1d5db" }}>({tym.pohlavi1 || "?"}/{tym.pohlavi2 || "?"})</span>
+                        {tym.nazevTymu.trim() ? (
+                          <span className="font-medium" style={{ color: "#0A0A0A" }}>{tym.nazevTymu}</span>
+                        ) : (
+                          <>
+                            <span className="font-medium" style={{ color: "#0A0A0A" }}>{tym.jmeno1}</span>
+                            <span style={{ color: "#9ca3af" }}>/</span>
+                            <span className="font-medium" style={{ color: "#0A0A0A" }}>{tym.jmeno2}</span>
+                            {(tym.pohlavi1 || tym.pohlavi2) && (
+                              <span className="text-xs" style={{ color: "#d1d5db" }}>({tym.pohlavi1 || "?"}/{tym.pohlavi2 || "?"})</span>
+                            )}
+                          </>
                         )}
                       </div>
                     ))}
