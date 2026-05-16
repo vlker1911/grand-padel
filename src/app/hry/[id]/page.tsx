@@ -723,6 +723,405 @@ function MexicanoView({ hra, ucastnici, jeEditor }: {
   );
 }
 
+// ---------- TURNAJ ----------
+
+type TurnajTym = {
+  id: string;
+  hra_id: string;
+  nazev: string;
+  hrac1_id: string | null;
+  hrac2_id: string | null;
+  skupina: string;
+  nasazeni: number;
+};
+
+type TurnajZapas = {
+  id: string;
+  hra_id: string;
+  faze: string;
+  skupina: string | null;
+  kolo: number | null;
+  tym1_id: string;
+  tym2_id: string;
+  skore_tym1: number | null;
+  skore_tym2: number | null;
+  stav: string;
+};
+
+type TurnajSettings = {
+  scoring_typ?: "gamy" | "body";
+  scoring_limit?: number;
+  scoring_limit_playoff?: number;
+  playoff?: boolean;
+  typ_playoff?: "krizovy" | "primy";
+  multi_tier?: boolean;
+};
+
+function skupinaTabulka(tymy: TurnajTym[], zapasy: TurnajZapas[]) {
+  const stats: Record<string, { vyhry: number; remisy: number; prohry: number; skore: number; obdrzeno: number }> = {};
+  tymy.forEach(t => { stats[t.id] = { vyhry: 0, remisy: 0, prohry: 0, skore: 0, obdrzeno: 0 }; });
+  for (const z of zapasy) {
+    if (z.skore_tym1 == null || z.skore_tym2 == null) continue;
+    const s1 = z.skore_tym1, s2 = z.skore_tym2;
+    if (stats[z.tym1_id]) { stats[z.tym1_id].skore += s1; stats[z.tym1_id].obdrzeno += s2; if (s1 > s2) stats[z.tym1_id].vyhry++; else if (s1 === s2) stats[z.tym1_id].remisy++; else stats[z.tym1_id].prohry++; }
+    if (stats[z.tym2_id]) { stats[z.tym2_id].skore += s2; stats[z.tym2_id].obdrzeno += s1; if (s2 > s1) stats[z.tym2_id].vyhry++; else if (s1 === s2) stats[z.tym2_id].remisy++; else stats[z.tym2_id].prohry++; }
+  }
+  return tymy
+    .map(t => ({ ...t, ...stats[t.id], body: stats[t.id].vyhry * 2 + stats[t.id].remisy, rozdil: stats[t.id].skore - stats[t.id].obdrzeno }))
+    .sort((a, b) => b.body !== a.body ? b.body - a.body : b.rozdil - a.rozdil);
+}
+
+function generujPlayoff(
+  skupiny: Record<string, TurnajTym[]>,
+  zapasySkupin: TurnajZapas[],
+  typPlayoff: "krizovy" | "primy",
+  multiTier: boolean,
+  hraId: string
+): Omit<TurnajZapas, "id">[] {
+  const skupNames = Object.keys(skupiny).sort();
+  // Poradi v kazde skupine
+  const poradi: Record<string, TurnajTym[]> = {};
+  skupNames.forEach(s => {
+    poradi[s] = skupinaTabulka(skupiny[s], zapasySkupin.filter(z => z.skupina === s));
+  });
+
+  const vsichniVPoradi: TurnajTym[] = [];
+  const maxPos = Math.max(...skupNames.map(s => poradi[s].length));
+  for (let pos = 0; pos < maxPos; pos++) {
+    skupNames.forEach(s => { if (poradi[s][pos]) vsichniVPoradi.push(poradi[s][pos]); });
+  }
+
+  if (!multiTier) {
+    // Jen finalni playoff (top tymy)
+    const postupuji = skupNames.flatMap(s => poradi[s].slice(0, 2));
+    return pairPlayoffMatches(postupuji, typPlayoff, skupNames, hraId, "playoff", 1);
+  }
+
+  // Multi-tier: vsichni hraji o sve umisteni
+  const zapasy: Omit<TurnajZapas, "id">[] = [];
+  const n = vsichniVPoradi.length;
+  const pocetPasem = Math.ceil(n / 4);
+  for (let pas = 0; pas < pocetPasem; pas++) {
+    const tymy = vsichniVPoradi.slice(pas * 4, (pas + 1) * 4);
+    if (tymy.length >= 2) {
+      const faze = pas === 0 ? "playoff" : `playoff_pas_${pas + 1}`;
+      zapasy.push(...pairPlayoffMatches(tymy, typPlayoff, skupNames, hraId, faze, pas + 1));
+    }
+  }
+  return zapasy;
+}
+
+function pairPlayoffMatches(
+  tymy: TurnajTym[],
+  typPlayoff: "krizovy" | "primy",
+  skupNames: string[],
+  hraId: string,
+  faze: string,
+  kolo: number
+): Omit<TurnajZapas, "id">[] {
+  const zapasy: Omit<TurnajZapas, "id">[] = [];
+  if (typPlayoff === "krizovy" && skupNames.length >= 2) {
+    for (let i = 0; i + 1 < tymy.length; i += 2) {
+      zapasy.push({ hra_id: hraId, faze, skupina: null, kolo, tym1_id: tymy[i].id, tym2_id: tymy[i + 1].id, skore_tym1: null, skore_tym2: null, stav: "ceka" });
+    }
+  } else {
+    for (let i = 0; i + 1 < tymy.length; i += 2) {
+      zapasy.push({ hra_id: hraId, faze, skupina: null, kolo, tym1_id: tymy[i].id, tym2_id: tymy[i + 1].id, skore_tym1: null, skore_tym2: null, stav: "ceka" });
+    }
+  }
+  return zapasy;
+}
+
+function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
+  const supabase = createClient();
+  const settings = (hra.settings ?? {}) as TurnajSettings;
+  const scoringTyp = settings.scoring_typ ?? "gamy";
+  const scoringLimit = settings.scoring_limit ?? 4;
+  const scoringLimitPlayoff = settings.scoring_limit_playoff ?? scoringLimit;
+  const playoff = settings.playoff ?? true;
+  const typPlayoff = settings.typ_playoff ?? "krizovy";
+  const multiTier = settings.multi_tier ?? true;
+
+  const [tymy, setTymy] = useState<TurnajTym[]>([]);
+  const [zapasy, setZapasy] = useState<TurnajZapas[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [scoreMap, setScoreMap] = useState<Record<string, { s1: string; s2: string }>>({});
+  const [ukladam, setUkladam] = useState<string | null>(null);
+  const [upravitId, setUpravitId] = useState<string | null>(null);
+  const [generujiPlayoff, setGenerujiPlayoff] = useState(false);
+  const [aktivniFaze, setAktivniFaze] = useState<"skupiny" | "playoff">("skupiny");
+
+  const nactiTurnaj = useCallback(async () => {
+    const [{ data: tymyData }, { data: zapasyData }] = await Promise.all([
+      supabase.from("turnaj_tymy").select("*").eq("hra_id", hra.id).order("nasazeni"),
+      supabase.from("turnaj_zapasy").select("*").eq("hra_id", hra.id),
+    ]);
+    setTymy(tymyData ?? []);
+    setZapasy(zapasyData ?? []);
+    setLoading(false);
+  }, [hra.id, supabase]);
+
+  useEffect(() => { nactiTurnaj(); }, [nactiTurnaj]);
+
+  // Skupiny
+  const skupinyMap = useMemo((): Record<string, TurnajTym[]> => {
+    const m: Record<string, TurnajTym[]> = {};
+    tymy.forEach(t => { if (!m[t.skupina]) m[t.skupina] = []; m[t.skupina].push(t); });
+    return m;
+  }, [tymy]);
+
+  const skupinyNazvy = useMemo(() => Object.keys(skupinyMap).sort(), [skupinyMap]);
+
+  const zapasySkupin = useMemo(() => zapasy.filter(z => z.faze === "skupina"), [zapasy]);
+  const zapasyPlayoff = useMemo(() => zapasy.filter(z => z.faze !== "skupina"), [zapasy]);
+
+  const vsechnySkupinyHotove = useMemo(
+    () => zapasySkupin.length > 0 && zapasySkupin.every(z => z.skore_tym1 != null),
+    [zapasySkupin]
+  );
+
+  const playoffExistuje = zapasyPlayoff.length > 0;
+
+  function jmenoTymu(id: string) {
+    return tymy.find(t => t.id === id)?.nazev ?? "?";
+  }
+
+  function getScore(id: string) { return scoreMap[id] ?? { s1: "", s2: "" }; }
+
+  function updateScore(id: string, field: "s1" | "s2", val: string) {
+    const n = parseInt(val);
+    if (!isNaN(n) && n >= 0) {
+      setScoreMap(prev => ({ ...prev, [id]: { ...getScore(id), [field]: String(n) } }));
+    } else if (val === "") {
+      setScoreMap(prev => ({ ...prev, [id]: { ...getScore(id), [field]: "" } }));
+    }
+  }
+
+  async function ulozSkore(zapasId: string) {
+    const sc = getScore(zapasId);
+    const s1 = parseInt(sc.s1), s2 = parseInt(sc.s2);
+    if (isNaN(s1) || isNaN(s2)) return;
+    setUkladam(zapasId);
+    await supabase.from("turnaj_zapasy").update({ skore_tym1: s1, skore_tym2: s2, stav: "ukonceno" }).eq("id", zapasId);
+    setUpravitId(null);
+    nactiTurnaj();
+    setUkladam(null);
+  }
+
+  async function vytvorPlayoff() {
+    setGenerujiPlayoff(true);
+    const noveZapasy = generujPlayoff(skupinyMap, zapasySkupin, typPlayoff, multiTier, hra.id);
+    await supabase.from("turnaj_zapasy").insert(noveZapasy);
+    nactiTurnaj();
+    setAktivniFaze("playoff");
+    setGenerujiPlayoff(false);
+  }
+
+  function renderZapas(z: TurnajZapas, limit: number) {
+    const sc = getScore(z.id);
+    const jeUpravovany = upravitId === z.id;
+    const jeNezadany = z.skore_tym1 == null;
+    const zobrazInputy = jeEditor && (jeNezadany || jeUpravovany);
+
+    return (
+      <div key={z.id} className="px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 text-right">
+            <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>{jmenoTymu(z.tym1_id)}</p>
+          </div>
+          {zobrazInputy ? (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <input type="number" min={0} value={sc.s1}
+                onChange={e => updateScore(z.id, "s1", e.target.value)}
+                placeholder="—"
+                className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
+              <span className="font-bold text-sm" style={{ color: "#9ca3af" }}>:</span>
+              <input type="number" min={0} value={sc.s2}
+                onChange={e => updateScore(z.id, "s2", e.target.value)}
+                placeholder="—"
+                className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
+            </div>
+          ) : (
+            <div className="shrink-0 text-center w-16">
+              {z.skore_tym1 != null
+                ? <span className="text-base font-bold" style={{ color: "#0A0A0A" }}>{z.skore_tym1} : {z.skore_tym2}</span>
+                : <span className="text-sm" style={{ color: "#9ca3af" }}>vs</span>}
+            </div>
+          )}
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>{jmenoTymu(z.tym2_id)}</p>
+          </div>
+          {jeEditor && z.skore_tym1 != null && !jeUpravovany && (
+            <button onClick={() => { setUpravitId(z.id); setScoreMap(prev => ({ ...prev, [z.id]: { s1: String(z.skore_tym1), s2: String(z.skore_tym2) } })); }}
+              className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium hover:bg-zinc-50"
+              style={{ color: "#801A28" }}>
+              Upravit
+            </button>
+          )}
+        </div>
+        {zobrazInputy && (
+          <div className="mt-3 flex gap-2 justify-end">
+            {(() => {
+              const platne = !isNaN(parseInt(sc.s1)) && !isNaN(parseInt(sc.s2)) && sc.s1 !== "" && sc.s2 !== "";
+              return (
+                <button onClick={() => ulozSkore(z.id)} disabled={ukladam === z.id || !platne}
+                  className="rounded-lg px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+                  style={{ backgroundColor: "#801A28" }}>
+                  {ukladam === z.id ? "..." : "Ulozit"}
+                </button>
+              );
+            })()}
+            {jeUpravovany && (
+              <button onClick={() => setUpravitId(null)}
+                className="rounded-lg px-3 py-2 text-xs font-medium border border-zinc-200 hover:bg-zinc-50">
+                Zrusit
+              </button>
+            )}
+          </div>
+        )}
+        {!zobrazInputy && (
+          <p className="text-xs mt-1 text-right" style={{ color: "#9ca3af" }}>
+            {scoringTyp === "gamy" ? `gamy do ${limit}` : `${limit} bodu`}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (loading) return <div className="bg-white rounded-2xl border border-zinc-100 p-8 text-center"><p className="text-sm" style={{ color: "#9ca3af" }}>Nacitam...</p></div>;
+
+  return (
+    <div className="flex flex-col gap-6">
+
+      {/* Info bar */}
+      <section className="bg-white rounded-2xl border border-zinc-100 px-5 py-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" style={{ color: "#374151" }}>
+          <span><strong>{tymy.length}</strong> tymu</span>
+          <span style={{ color: "#d1d5db" }}>·</span>
+          <span><strong>{skupinyNazvy.length}</strong> {skupinyNazvy.length === 1 ? "skupina" : skupinyNazvy.length < 5 ? "skupiny" : "skupin"}</span>
+          <span style={{ color: "#d1d5db" }}>·</span>
+          <span>{scoringTyp === "gamy" ? `gamy do ${scoringLimit}` : `${scoringLimit} bodu/zapas`}</span>
+          {playoff && <><span style={{ color: "#d1d5db" }}>·</span><span>playoff</span></>}
+          {hra.settings?.cas_od && hra.settings?.cas_do && (
+            <><span style={{ color: "#d1d5db" }}>·</span><span>{hra.settings.cas_od} – {hra.settings.cas_do}</span></>
+          )}
+        </div>
+      </section>
+
+      {/* Faze prepinac */}
+      {playoffExistuje && (
+        <div className="flex gap-2">
+          {(["skupiny", "playoff"] as const).map(f => (
+            <button key={f} onClick={() => setAktivniFaze(f)}
+              className="flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all"
+              style={{ borderColor: aktivniFaze === f ? "#801A28" : "#e5e7eb", color: aktivniFaze === f ? "#801A28" : "#6b7280", backgroundColor: aktivniFaze === f ? "#fff5f5" : "white" }}>
+              {f === "skupiny" ? "Skupiny" : "Playoff"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ===== SKUPINY ===== */}
+      {aktivniFaze === "skupiny" && skupinyNazvy.map(sName => {
+        const tymySkupiny = skupinyMap[sName] ?? [];
+        const zapasyTeto = zapasySkupin.filter(z => z.skupina === sName);
+        const tabulka = skupinaTabulka(tymySkupiny, zapasyTeto);
+
+        return (
+          <div key={sName} className="flex flex-col gap-3">
+            {/* Tabulka skupiny */}
+            <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-100">
+                <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Skupina {sName}</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[400px]">
+                  <thead>
+                    <tr style={{ backgroundColor: "#fafafa" }}>
+                      <th className="text-left pl-5 pr-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>#</th>
+                      <th className="text-left px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>Tym</th>
+                      <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>V</th>
+                      <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>R</th>
+                      <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>P</th>
+                      <th className="text-center px-2 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>Skore</th>
+                      <th className="text-center px-2 pr-5 py-2 font-medium text-xs" style={{ color: "#9ca3af" }}>+/-</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tabulka.map((t, i) => (
+                      <tr key={t.id} className="border-t border-zinc-50">
+                        <td className="pl-5 pr-2 py-3 font-bold text-xs" style={{ color: i < 2 ? "#801A28" : "#9ca3af" }}>{i + 1}</td>
+                        <td className="px-2 py-3 font-semibold text-sm" style={{ color: "#0A0A0A" }}>{t.nazev}</td>
+                        <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#16a34a" }}>{t.vyhry}</td>
+                        <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#6b7280" }}>{t.remisy}</td>
+                        <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#dc2626" }}>{t.prohry}</td>
+                        <td className="px-2 py-3 text-center text-xs font-bold" style={{ color: "#801A28" }}>{t.skore}</td>
+                        <td className="px-2 pr-5 py-3 text-center text-xs font-semibold" style={{ color: t.rozdil >= 0 ? "#16a34a" : "#dc2626" }}>
+                          {t.rozdil >= 0 ? "+" : ""}{t.rozdil}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* Zapasy skupiny */}
+            <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-100">
+                <p className="text-xs font-medium" style={{ color: "#6b7280" }}>Zapasy — skupina {sName}</p>
+              </div>
+              <div className="divide-y divide-zinc-50">
+                {zapasyTeto.map(z => renderZapas(z, scoringLimit))}
+              </div>
+            </section>
+          </div>
+        );
+      })}
+
+      {/* Generovat playoff */}
+      {aktivniFaze === "skupiny" && jeEditor && playoff && vsechnySkupinyHotove && !playoffExistuje && (
+        <button onClick={vytvorPlayoff} disabled={generujiPlayoff}
+          className="w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-60"
+          style={{ backgroundColor: "#801A28" }}>
+          {generujiPlayoff ? "Generuji playoff..." : "Zahajit playoff"}
+        </button>
+      )}
+
+      {/* ===== PLAYOFF ===== */}
+      {aktivniFaze === "playoff" && (
+        <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+          <div className="px-5 py-4 border-b border-zinc-100">
+            <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Playoff</h2>
+            <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>
+              {typPlayoff === "krizovy" ? "Krizovy pavouk (1A vs 2B)" : "Primy pavouk (1 vs 4, 2 vs 3)"}
+              {multiTier ? " · vice pasem" : ""}
+            </p>
+          </div>
+          {(() => {
+            const faze = [...new Set(zapasyPlayoff.map(z => z.faze))].sort();
+            return faze.map(f => (
+              <div key={f}>
+                {faze.length > 1 && (
+                  <div className="px-5 py-2 border-b border-zinc-50" style={{ backgroundColor: "#fafafa" }}>
+                    <p className="text-xs font-semibold" style={{ color: "#6b7280" }}>
+                      {f === "playoff" ? "Finale" : f.replace("playoff_pas_", "Pas ")}
+                    </p>
+                  </div>
+                )}
+                <div className="divide-y divide-zinc-50">
+                  {zapasyPlayoff.filter(z => z.faze === f).map(z => renderZapas(z, scoringLimitPlayoff))}
+                </div>
+              </div>
+            ));
+          })()}
+        </section>
+      )}
+
+    </div>
+  );
+}
+
 // ---------- HLAVNI STRANKA ----------
 
 export default function HraDetailPage() {
@@ -805,10 +1204,7 @@ export default function HraDetailPage() {
             <MexicanoView hra={hra} ucastnici={ucastnici} jeEditor={jeEditor} />
           )}
           {hra.typ === "turnaj" && (
-            <div className="bg-white rounded-2xl border border-zinc-100 p-8 text-center">
-              <p className="font-semibold mb-2" style={{ color: "#0A0A0A" }}>Turnajovy dashboard</p>
-              <p className="text-sm" style={{ color: "#6b7280" }}>Pripravujeme — brzy zde bude rozpis skupin, tabulky a harmonogram.</p>
-            </div>
+            <TurnajView hra={hra} jeEditor={jeEditor} />
           )}
 
         </div>
