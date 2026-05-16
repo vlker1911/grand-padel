@@ -132,6 +132,7 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
   const [upravitId, setUpravitId] = useState<string | null>(null);
   const [ukladam, setUkladam] = useState<string | null>(null);
   const [zobrazOhnostroj, setZobrazOhnostroj] = useState(false);
+  const [zobrazFinal, setZobrazFinal] = useState(false);
   const ohnostrojUkazan = useRef(false);
 
   const limit = hra.body_na_zapas;
@@ -181,11 +182,75 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
     setUkladam(null);
   }
 
+  // Finalni poradi — zobrazí se po ohňostroji
+  if (zobrazFinal) {
+    const top3 = tabulka.slice(0, 3);
+    const zbytek = tabulka.slice(3);
+    const medalStyle = [
+      { poradi: "#f59e0b", bg: "linear-gradient(135deg,#fffbeb,#fef3c7)", border: "#fde68a", nameSize: "2rem", bodySize: "1.5rem" },
+      { poradi: "#9ca3af", bg: "linear-gradient(135deg,#f9fafb,#f3f4f6)", border: "#e5e7eb", nameSize: "1.4rem", bodySize: "1.1rem" },
+      { poradi: "#cd7c32", bg: "linear-gradient(135deg,#fdf8f3,#fef3e2)", border: "#fde8c8", nameSize: "1.15rem", bodySize: "0.95rem" },
+    ];
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={() => setZobrazFinal(false)}
+            className="text-sm hover:underline" style={{ color: "#801A28" }}>
+            Zpet / Upravit vysledky
+          </button>
+          <button onClick={() => { setZobrazFinal(false); setZobrazOhnostroj(true); }}
+            className="rounded-full px-5 py-2 text-sm font-semibold text-white"
+            style={{ backgroundColor: "#801A28" }}>
+            Znovu ohnostroj
+          </button>
+        </div>
+
+        {top3.map((h, i) => {
+          const s = medalStyle[i];
+          return (
+            <div key={h.id} style={{ background: s.bg, border: `2px solid ${s.border}`, borderRadius: "1.25rem", padding: i === 0 ? "1.75rem 1.5rem" : "1.25rem 1.5rem" }}>
+              <div className="flex items-center gap-4">
+                <span style={{ fontSize: i === 0 ? "2.25rem" : "1.75rem", fontWeight: 900, color: s.poradi, lineHeight: 1, minWidth: "2rem" }}>
+                  {i + 1}.
+                </span>
+                <div className="flex-1">
+                  <p style={{ fontSize: s.nameSize, fontWeight: 800, color: "#0A0A0A", lineHeight: 1.1 }}>{h.jmeno}</p>
+                  <p style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+                    {h.vyhry}V · {h.remisy}R · {h.prohry}P · {h.rozdil >= 0 ? "+" : ""}{h.rozdil}
+                  </p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <p style={{ fontSize: s.bodySize, fontWeight: 900, color: s.poradi === "#9ca3af" ? "#374151" : s.poradi }}>{h.body}</p>
+                  <p style={{ fontSize: "0.7rem", color: "#9ca3af" }}>bodu</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {zbytek.length > 0 && (
+          <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden mt-1">
+            {zbytek.map((h, i) => (
+              <div key={h.id} className="flex items-center gap-3 px-5 py-3 border-b border-zinc-50 last:border-0">
+                <span className="text-sm font-bold w-6 shrink-0" style={{ color: "#d1d5db" }}>{i + 4}.</span>
+                <span className="flex-1 text-sm font-medium" style={{ color: "#374151" }}>{h.jmeno}</span>
+                <span className="text-sm font-bold" style={{ color: "#374151" }}>{h.body} b</span>
+                <span className="text-xs" style={{ color: "#9ca3af" }}>
+                  {h.vyhry}V {h.prohry}P {h.rozdil >= 0 ? "+" : ""}{h.rozdil}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
 
       {zobrazOhnostroj && (
-        <OhnostrojOverlay vitez={tabulka[0]?.jmeno ?? ""} onDone={() => setZobrazOhnostroj(false)} />
+        <OhnostrojOverlay vitez={tabulka[0]?.jmeno ?? ""} onDone={() => { setZobrazOhnostroj(false); setZobrazFinal(true); }} />
       )}
 
       {/* Tabulka */}
@@ -318,6 +383,14 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
           })}
         </div>
       </section>
+
+      {jeEditor && vsechnyOdehrany && (
+        <button onClick={() => setZobrazOhnostroj(true)}
+          className="w-full rounded-full py-3 text-sm font-semibold text-white"
+          style={{ backgroundColor: "#801A28" }}>
+          Vyhodnotit
+        </button>
+      )}
 
     </div>
   );
