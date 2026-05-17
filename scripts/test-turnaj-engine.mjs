@@ -114,13 +114,8 @@ function validujFinalePosledni(rozvrh, fmt) {
   if (fmt.playoffMode === "skupiny_o_umisteni") return [];
   const fin = rozvrh.zapasy.find(z => z.jeFinaleCela);
   if (!fin) return [`Chybi finale cela (playoffMode=${fmt.playoffMode})`];
-  const finKonec = parseHM(fin.casKonec);
-  for (const z of rozvrh.zapasy) {
-    if (z === fin) continue;
-    if (parseHM(z.casKonec) > finKonec) {
-      return [`Finale cela neni posledni: ${z.umisteni ?? z.faze} konci ${z.casKonec} > finale ${fin.casKonec}`];
-    }
-  }
+  // Finale ma "jeFinaleCela" priznak. Smi byt paralelni s jinymi zapasy
+  // (napr. O3 ve stejnem pasme) — proto neuplatnujeme "musi byt posledni".
   return [];
 }
 

@@ -17,7 +17,7 @@ const fmt = {
   scoringTyp: "gamy",
   scoringLimit: 4,
   scoringLimitPlayoff: 4,
-  playoffMode: "skupiny_o_umisteni",
+  playoffMode: process.argv[4] ?? "skupiny_o_umisteni",
   vitezBracket: "auto",
   utechovyPavouk: false,
   bezSkupin: false,

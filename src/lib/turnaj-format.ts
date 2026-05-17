@@ -546,19 +546,20 @@ export function generujRozvrh(
     }
   }
 
-  // ===== Finale cela jako posledni zapas turnaje =====
+  // ===== Finale cela (posledni zapas turnaje) =====
+  // Finale ma nejdrivejsi start = po dohrani svych semifinále (+ pauza),
+  // ne nutne po VSECH ostatnich zapasech. Naplanuj umisti na nejdrive
+  // volny kurt — typicky paralelne s O3 / finale nizsich pasem.
+  // "Finale posledni" znamena: ma rezervovany slot v ramci playoff
+  // a koncuje stejne pozde nebo pozdeji nez ostatni (delkaFinaleMin = max).
   if (finaleCela) {
-    const koncePadlsim = zapasy.length > 0
-      ? Math.max(...zapasy.map(z => parseHM(z.casKonec)))
-      : casOdMin;
-    const startFinale = Math.max(finaleCela.nejdriveStart, koncePadlsim + fmt.pauzaMin);
     naplanuj(
       finaleCela.faze,
       null,
       finaleCela.kolo,
       finaleCela.entry,
       finaleCela.umisteni,
-      startFinale,
+      finaleCela.nejdriveStart,
       finaleCela.povoleneKurty,
       true, // jeFinaleCela
     );
