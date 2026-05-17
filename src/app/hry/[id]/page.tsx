@@ -1169,6 +1169,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
   const [zrusitDuvod, setZrusitDuvod] = useState("");
   const [zrusujem, setZrusujem]   = useState(false);
   const [kurtModal, setKurtModal] = useState<string | null>(null);
+  const [kurtDropdownPro, setKurtDropdownPro] = useState<string | null>(null);
   const [editHraciTymId, setEditHraciTymId] = useState<string | null>(null);
   const [editHrac1, setEditHrac1] = useState("");
   const [editHrac2, setEditHrac2] = useState("");
@@ -1518,6 +1519,11 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
 
   async function zrusitSpusteni(zapasId: string) {
     await supabase.from("turnaj_zapasy").update({ stav: "ceka", kurt: null, cas_zacatek: null }).eq("id", zapasId);
+    nactiTurnaj();
+  }
+
+  async function zmenitKurt(zapasId: string, novyKurt: number) {
+    await supabase.from("turnaj_zapasy").update({ kurt: novyKurt }).eq("id", zapasId);
     nactiTurnaj();
   }
 
@@ -1880,82 +1886,160 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
       )}
 
       {/* ===== ROZLOSOVANI ===== */}
-      {aktivniTab === "rozlosovani" && (
-        <div className="flex flex-col gap-4">
-          {skupinyNazvy.map(sName => {
-            const skupinaTymy = skupinyMap[sName] ?? [];
-            const zapasyTeto = zapasySkupin.filter(z => z.skupina === sName);
-            return (
-              <section key={sName} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
-                <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
-                  <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Skupina {sName}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>{skupinaTymy.length} tymu · {(skupinaTymy.length * (skupinaTymy.length - 1)) / 2} zapasu</p>
-                </div>
-                <div className="divide-y divide-zinc-50">
-                  {skupinaTymy.map((t, i) => (
-                    <div key={t.id} className="px-5 py-2.5 flex items-center gap-3 text-sm">
-                      <span className="w-5 shrink-0 text-xs" style={{ color: "#9ca3af" }}>{i + 1}.</span>
-                      <span className="font-medium" style={{ color: "#0A0A0A" }}>{t.nazev}</span>
-                    </div>
-                  ))}
-                </div>
-                <details className="border-t border-zinc-50">
-                  <summary className="px-5 py-2 text-xs cursor-pointer hover:bg-zinc-50" style={{ color: "#9ca3af" }}>
-                    Zobrazit zapasy ({zapasyTeto.length})
-                  </summary>
-                  <div className="divide-y divide-zinc-50">
-                    {zapasyTeto.map(z => {
-                      const hotovo = z.skore_tym1 != null;
-                      return (
-                        <div key={z.id} className="px-5 py-2 flex items-center gap-2 text-xs">
-                          <span className="flex-1 text-right" style={{ color: hotovo ? "#9ca3af" : "#374151" }}>{jmenoTymu(z.tym1_id)}</span>
-                          <span style={{ color: "#d1d5db" }}>vs</span>
-                          <span className="flex-1" style={{ color: hotovo ? "#9ca3af" : "#374151" }}>{jmenoTymu(z.tym2_id)}</span>
-                          {hotovo ? (
-                            <span className="text-xs font-bold shrink-0" style={{ color: "#6b7280" }}>{z.skore_tym1}:{z.skore_tym2}</span>
-                          ) : z.stav === "probiha" ? (
-                            <span className="shrink-0 text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>
-                              Kurt {z.kurt}
+      {aktivniTab === "rozlosovani" && (() => {
+        const vsechny = [...zapasy].sort((a, b) => {
+          const pa = a.poradi_fronta, pb = b.poradi_fronta;
+          if (pa != null && pb != null) return pa - pb;
+          const ca = a.cas_zacatek ?? "", cb = b.cas_zacatek ?? "";
+          if (ca && cb) return ca.localeCompare(cb);
+          if (ca) return -1;
+          if (cb) return 1;
+          return (a.faze ?? "").localeCompare(b.faze ?? "");
+        });
+        const fazeLabel = (z: TurnajZapas) => {
+          if (z.umisteni) return z.umisteni;
+          if (z.faze === "skupina") return `Skupina ${z.skupina}${z.kolo ? ` - kolo ${z.kolo}` : ""}`;
+          if (z.faze === "playoff") return "Finale";
+          return z.faze;
+        };
+        return (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs" style={{ color: "#9ca3af" }}>
+              Casovy rozvrh vsech zapasu. Klikni na kurt pro zmenu, na skore pro zadani vysledku.
+            </p>
+            <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="text-xs" style={{ color: "#6b7280", backgroundColor: "#fafafa" }}>
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium">Cas</th>
+                    <th className="text-left px-2 py-2 font-medium">Kurt</th>
+                    <th className="text-left px-3 py-2 font-medium">Faze</th>
+                    <th className="text-left px-3 py-2 font-medium">Zapas</th>
+                    <th className="text-right px-3 py-2 font-medium">Stav</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vsechny.map(z => {
+                    const hotovo = z.skore_tym1 != null;
+                    const probiha = z.stav === "probiha";
+                    const jeUpravovany = upravitId === z.id;
+                    const jeNezadany = z.skore_tym1 == null;
+                    const zobrazInputy = jeEditor && (jeNezadany || jeUpravovany);
+                    const limit = z.faze === "skupina" ? scoringLimit : scoringLimitPlayoff;
+                    const sc = getScore(z.id);
+                    return (
+                      <tr key={z.id} className="border-t border-zinc-100 align-top">
+                        <td className="px-3 py-3 whitespace-nowrap text-xs" style={{ color: "#374151" }}>
+                          {z.cas_zacatek
+                            ? <>{z.cas_zacatek}<span style={{ color: "#9ca3af" }}>–{z.cas_konec}</span></>
+                            : <span style={{ color: "#9ca3af" }}>—</span>}
+                        </td>
+                        <td className="px-2 py-3 whitespace-nowrap relative">
+                          {jeEditor && !jeZruseno && !probiha && !hotovo ? (
+                            <button onClick={() => setKurtDropdownPro(kurtDropdownPro === z.id ? null : z.id)}
+                              className="rounded-md border border-zinc-200 px-2 py-1 text-xs font-medium hover:bg-zinc-50"
+                              style={{ color: "#374151" }}>
+                              {z.kurt ? `K${z.kurt}` : "—"} ⌄
+                            </button>
+                          ) : (
+                            <span className="text-xs" style={{ color: probiha ? "#16a34a" : "#374151" }}>
+                              {z.kurt ? `K${z.kurt}` : "—"}
                             </span>
+                          )}
+                          {kurtDropdownPro === z.id && (
+                            <div className="absolute z-20 mt-1 bg-white border border-zinc-200 rounded-lg shadow-lg p-1 min-w-[80px]">
+                              {Array.from({ length: hra.pocet_kurtu }, (_, i) => i + 1).map(k => (
+                                <button key={k}
+                                  onClick={() => { zmenitKurt(z.id, k); setKurtDropdownPro(null); }}
+                                  className={`block w-full text-left px-3 py-1.5 text-xs rounded hover:bg-zinc-50 ${z.kurt === k ? "font-bold" : ""}`}
+                                  style={{ color: "#374151" }}>
+                                  Kurt {k}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs whitespace-nowrap" style={{ color: "#9ca3af" }}>
+                          {fazeLabel(z)}
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="flex-1 text-right text-sm font-medium" style={{ color: "#0A0A0A" }}>
+                              {jmenoTymu(z.tym1_id)}
+                            </span>
+                            {zobrazInputy ? (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <input type="number" min={0}
+                                  value={sc.s1} onChange={e => updateScore(z.id, "s1", e.target.value, z.faze)}
+                                  placeholder="—"
+                                  className="w-10 rounded border-2 border-[#801A28] px-1 py-1 text-center text-sm font-bold focus:outline-none" />
+                                <span className="font-bold text-xs" style={{ color: "#9ca3af" }}>:</span>
+                                <input type="number" min={0}
+                                  value={sc.s2} onChange={e => updateScore(z.id, "s2", e.target.value, z.faze)}
+                                  placeholder="—"
+                                  className="w-10 rounded border-2 border-[#801A28] px-1 py-1 text-center text-sm font-bold focus:outline-none" />
+                              </div>
+                            ) : (
+                              <span className="shrink-0 text-center w-14">
+                                {hotovo
+                                  ? <span className="text-sm font-bold" style={{ color: "#0A0A0A" }}>{z.skore_tym1}:{z.skore_tym2}</span>
+                                  : <span className="text-xs" style={{ color: "#9ca3af" }}>vs</span>}
+                              </span>
+                            )}
+                            <span className="flex-1 text-sm font-medium" style={{ color: "#0A0A0A" }}>
+                              {jmenoTymu(z.tym2_id)}
+                            </span>
+                          </div>
+                          {zobrazInputy && (
+                            <div className="flex items-center justify-end gap-2 mt-2">
+                              {jeUpravovany && (
+                                <button onClick={() => setUpravitId(null)}
+                                  className="text-xs underline" style={{ color: "#9ca3af" }}>Zrusit</button>
+                              )}
+                              <button onClick={() => ulozSkore(z.id)} disabled={ukladam === z.id}
+                                className="rounded-lg px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
+                                style={{ backgroundColor: "#801A28" }}>
+                                {ukladam === z.id ? "..." : "Ulozit"}
+                              </button>
+                            </div>
+                          )}
+                          {!zobrazInputy && jeEditor && hotovo && !jeUpravovany && (
+                            <div className="flex justify-end mt-1">
+                              <button onClick={() => { setUpravitId(z.id); setScoreMap(prev => ({ ...prev, [z.id]: { s1: String(z.skore_tym1), s2: String(z.skore_tym2) } })); }}
+                                className="text-xs underline" style={{ color: "#9ca3af" }}>upravit</button>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-right whitespace-nowrap">
+                          {hotovo ? (
+                            <span className="text-xs" style={{ color: "#16a34a" }}>Hotovo</span>
+                          ) : probiha ? (
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#dcfce7", color: "#16a34a" }}>Probiha</span>
+                              {jeEditor && !jeZruseno && (
+                                <button onClick={() => zrusitSpusteni(z.id)}
+                                  className="text-xs underline" style={{ color: "#9ca3af" }}>zrusit start</button>
+                              )}
+                            </div>
                           ) : jeEditor && !jeZruseno ? (
                             <button onClick={() => spustitZapas(z.id)}
-                              className="shrink-0 rounded-lg px-2 py-0.5 text-xs font-semibold text-white"
+                              className="rounded-lg px-2.5 py-1 text-xs font-semibold text-white"
                               style={{ backgroundColor: "#801A28" }}>
                               Spustit
                             </button>
                           ) : (
-                            <span className="shrink-0 text-xs" style={{ color: "#9ca3af" }}>—</span>
+                            <span className="text-xs" style={{ color: "#9ca3af" }}>Planovany</span>
                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </details>
-              </section>
-            );
-          })}
-          {playoffExistuje && (
-            <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
-              <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
-                <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Playoff</p>
-                <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>
-                  {playoffMode === "umisteni" ? "Multi-tier (o umístění)" : playoffMode === "vitez" ? "Single elimination (top 8)" : "Final Four (top 4)"}
-                </p>
-              </div>
-              <div className="divide-y divide-zinc-50">
-                {zapasyPlayoff.map(z => (
-                  <div key={z.id} className="px-5 py-2 flex items-center gap-2 text-xs" style={{ color: "#6b7280" }}>
-                    <span className="text-xs uppercase mr-2" style={{ color: "#9ca3af" }}>{z.faze === "playoff" ? "Finale" : z.faze.replace("playoff_pas_", "Pas ")}</span>
-                    <span className="flex-1 text-right">{jmenoTymu(z.tym1_id)}</span>
-                    <span style={{ color: "#d1d5db" }}>vs</span>
-                    <span className="flex-1">{jmenoTymu(z.tym2_id)}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ===== PORADI ZAPASU ===== */}
       {aktivniTab === "poradi" && (() => {

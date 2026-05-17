@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.8.1  
+**Aktuální:** v0.8.2  
 **Poslední změna:** 17. 5. 2026  
-**Git tag:** v0.8.1
+**Git tag:** v0.8.2
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.8.2 | 17. 5. 2026 | **Tab Rozlosování přepsaný na časovou tabulku** — všechny zápasy seřazené podle `poradi_fronta`/`cas_zacatek`. Sloupce: Čas / Kurt / Fáze / Zápas / Stav. Inline zadání skóre, inline změna kurtu přes dropdown (klik na "Kx ⌄"), spuštění zápasu, úprava výsledku. Stejný look jako preview ve wizardu. Funkce `zmenitKurt(zapasId, novyKurt)` v TurnajView |
 | v0.8.1 | 17. 5. 2026 | **Fix turnajového rozvrhu** — engine teď využívá VŠECHNY kurty paralelně. Multi-tier playoff pásma běží souběžně na rozdělených kurtech (pásmo 1.-4. + pásmo 5.-8. paralelně místo sekvenčně). Finále čela rezervováno jako **poslední zápas turnaje**. Kontrola konfliktu týmů (tým nehraje 2× najednou + pauza). Test runner `scripts/test-turnaj-engine.mjs` (61 scénářů vč. lichých počtů, různých kurtů, všech playoff módů — všechny procházejí). Pravidla zapsána do `web-app/CLAUDE.md`. Příklad: 8 týmů + 4 kurty + multi-tier zkrátilo turnaj z 2h26min na 1h47min |
 | v0.8.0 | 17. 5. 2026 | **Konfigurovatelný turnaj + auto-rozplánovač.** Nový `lib/turnaj-format.ts` engine: round-robin (circle method), playoff (medaile/single elim/multi-tier), útěchový pavouk, kalkulátor časů s podporou různých délek skupina/semi/finále. Po vytvoření turnaje se rozvrh **skupinových zápasů** ukládá do `turnaj_zapasy` rovnou s `cas_zacatek`, `cas_konec`, `kurt`, `kolo` (playoff se dál generuje po dohrání skupin). Wizard rozšířen o krok 5 **Preview** (kompletní tabulka rozvrhu vč. playoff s placeholdery), toggle útěchového pavouka a vlastní délky zápasů. Šablony rychlého startu v kroku 1: Klasický 4-týmový, Big 6 týmů, Drabinka 8 týmů, Sociální round robin |
 | v0.7.18 | 17. 5. 2026 | **Filtr na /hry** — přepínač Aktivní / Ukončené / Zrušené / Vše s počty. Defaultně "Aktivní" (priprava + probiha bez zrušení) |
