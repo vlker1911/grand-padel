@@ -140,41 +140,39 @@ function calculateWizardVariant(input: WizardInput): WizardVariant {
   };
 }
 
-// Generuje varianty pro vsechny kombinace
-function generateWizardVariants(baseInput: { pocetTymu: number; casOdMin: number; casDoMin: number }): WizardVariant[] {
+// Generuje varianty. Wizard navrhuje jen gamy a cas (body nikdy — neni typicke pro turnaje).
+// scoringFilter: "gamy" = jen gamy, "cas" = jen cas, "vse" = obojí.
+function generateWizardVariants(
+  baseInput: { pocetTymu: number; casOdMin: number; casDoMin: number },
+  scoringFilter: "gamy" | "cas" | "vse" = "vse",
+): WizardVariant[] {
   const variants: WizardVariant[] = [];
   const kurtyOptions = [1, 2, 3, 4, 5, 6, 8, 10];
   const playoffModes: WizardPlayoffMode[] = ["umisteni", "vitez", "medaile", "bez"];
   const vitezBrackets: WizardVitezBracket[] = ["auto", "top4", "top8", "top16"];
   const gamyLimits = [4, 5, 6];
-  const bodyLimits = [16, 24, 32];
 
   for (const kurty of kurtyOptions) {
     for (const playoffMode of playoffModes) {
       const bracketsToTry: (WizardVitezBracket | undefined)[] = playoffMode === "vitez" ? vitezBrackets : [undefined];
       for (const vb of bracketsToTry) {
-        // Cas format (auto)
-        variants.push(calculateWizardVariant({
-          pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
-          casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
-          scoringTyp: "cas", scoringLimit: 0,
-          playoffMode, vitezBracket: vb,
-        }));
-        for (const lim of gamyLimits) {
+        if (scoringFilter === "cas" || scoringFilter === "vse") {
           variants.push(calculateWizardVariant({
             pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
             casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
-            scoringTyp: "gamy", scoringLimit: lim,
+            scoringTyp: "cas", scoringLimit: 0,
             playoffMode, vitezBracket: vb,
           }));
         }
-        for (const lim of bodyLimits) {
-          variants.push(calculateWizardVariant({
-            pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
-            casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
-            scoringTyp: "body", scoringLimit: lim,
-            playoffMode, vitezBracket: vb,
-          }));
+        if (scoringFilter === "gamy" || scoringFilter === "vse") {
+          for (const lim of gamyLimits) {
+            variants.push(calculateWizardVariant({
+              pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
+              casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
+              scoringTyp: "gamy", scoringLimit: lim,
+              playoffMode, vitezBracket: vb,
+            }));
+          }
         }
       }
     }
@@ -182,25 +180,53 @@ function generateWizardVariants(baseInput: { pocetTymu: number; casOdMin: number
   return variants;
 }
 
-function pickWizardRecommendations(variants: WizardVariant[]): { optimalni?: WizardVariant; nejvice?: WizardVariant; nejmin?: WizardVariant } {
+// Vrati az `limit` doporuceni v poradi: 2x optimalni, 2x max zapasu, 2x s rezervou
+// (pokud nejsou duplicity). Pak doplni dalsi unikatni.
+function pickWizardRecommendations(variants: WizardVariant[], limit: number = 6): WizardVariant[] {
   const fits = variants.filter(v => v.fits);
-  if (fits.length === 0) return {};
-  // "Nejvíc zápasů" — fits with max totalZapasu, smallest kurty (efficient)
-  const nejvice = [...fits].sort((a, b) =>
-    b.totalZapasu - a.totalZapasu || a.pocetKurtu - b.pocetKurtu
-  )[0];
-  // "Optimální" — solid fits with reserve 10-30 min, prefer umisteni for more matches
+  if (fits.length === 0) return [];
+
   const optimalni = [...fits].sort((a, b) => {
-    const aIdeal = Math.abs(a.rezerva - 20);  // ~20 min reserve ideal
+    const aIdeal = Math.abs(a.rezerva - 20);
     const bIdeal = Math.abs(b.rezerva - 20);
     if (aIdeal !== bIdeal) return aIdeal - bIdeal;
     return b.totalZapasu - a.totalZapasu;
-  })[0];
-  // "Nejméně náročné" — most reserve, fewest matches
-  const nejmin = [...fits].sort((a, b) =>
-    b.rezerva - a.rezerva || a.totalZapasu - b.totalZapasu
-  )[0];
-  return { optimalni, nejvice, nejmin };
+  });
+  const nejvice = [...fits].sort((a, b) =>
+    b.totalZapasu - a.totalZapasu || a.pocetKurtu - b.pocetKurtu,
+  );
+  const sRezervou = [...fits].sort((a, b) =>
+    b.rezerva - a.rezerva || a.totalZapasu - b.totalZapasu,
+  );
+
+  // Klic pro unikatnost: scoring + limit + playoffMode + bracket + pocetKurtu
+  const klic = (v: WizardVariant) =>
+    `${v.scoringTyp}-${v.scoringLimit}-${v.playoffMode}-${v.vitezBracket ?? ""}-${v.pocetKurtu}`;
+
+  const vysledek: WizardVariant[] = [];
+  const seen = new Set<string>();
+  function pridej(v: WizardVariant | undefined, tag: string) {
+    if (!v) return;
+    const k = klic(v);
+    if (seen.has(k)) return;
+    seen.add(k);
+    (v as WizardVariant & { _tag?: string })._tag = tag;
+    vysledek.push(v);
+  }
+
+  // Interleave: 1 optimalni, 1 nejvice, 1 s rezervou, opakovat
+  let i = 0;
+  while (vysledek.length < limit) {
+    const stary = vysledek.length;
+    pridej(optimalni[i], "optimalni");
+    if (vysledek.length >= limit) break;
+    pridej(nejvice[i], "nejvice");
+    if (vysledek.length >= limit) break;
+    pridej(sRezervou[i], "rezerva");
+    i++;
+    if (vysledek.length === stary) break; // nic noveho — vse vycerpano
+  }
+  return vysledek;
 }
 
 function sparujSingles(players: SingEntry[]): ParEntry[] {
@@ -309,6 +335,8 @@ export default function NovaHraPage() {
   const [wizardKurtu,        setWizardKurtu]        = useState<number | "">(3);
   const [wizardCasOd,        setWizardCasOd]        = useState("16:00");
   const [wizardCasDo,        setWizardCasDo]        = useState("18:00");
+  const [wizardScoring,      setWizardScoring]      = useState<"gamy" | "cas" | "vse">("vse");
+  const [wizardZobrazVse,    setWizardZobrazVse]    = useState(false);
 
   const [nazev, setNazev] = useState("");
   const [stav,  setStav]  = useState<"idle" | "loading" | "chyba">("idle");
@@ -494,10 +522,13 @@ export default function NovaHraPage() {
     const od = hOd * 60 + mOd;
     const dod = hDo * 60 + mDo;
     if (dod - od <= 0) return [];
-    return generateWizardVariants({ pocetTymu: tymu, casOdMin: od, casDoMin: dod });
-  }, [wizardTymu, wizardCasOd, wizardCasDo]);
+    return generateWizardVariants({ pocetTymu: tymu, casOdMin: od, casDoMin: dod }, wizardScoring);
+  }, [wizardTymu, wizardCasOd, wizardCasDo, wizardScoring]);
 
-  const wizardDoporuceni = useMemo(() => pickWizardRecommendations(wizardVarianty), [wizardVarianty]);
+  const wizardDoporuceni = useMemo(
+    () => pickWizardRecommendations(wizardVarianty, wizardZobrazVse ? 12 : 6),
+    [wizardVarianty, wizardZobrazVse],
+  );
 
   function aplikujSablonu(id: string) {
     setTyp("turnaj");
@@ -1581,7 +1612,11 @@ export default function NovaHraPage() {
           return "Multi-tier (o umístění)";
         };
         const popisFormat = (v: WizardVariant) => {
-          if (v.scoringTyp === "cas") return `${v.scoringDelkaKola} min/kolo`;
+          if (v.scoringTyp === "cas") {
+            // Odhad kolik gamu se stihne za scoringDelkaKola minut — predpoklad ~3 min/game
+            const odhadGamu = v.scoringDelkaKola ? Math.max(2, Math.floor(v.scoringDelkaKola / 3)) : 0;
+            return `${v.scoringDelkaKola} min/zápas (≈ ${odhadGamu} gamů)`;
+          }
           if (v.scoringTyp === "gamy") return `do ${v.scoringLimit} gamů`;
           return `${v.scoringLimit} bodů`;
         };
@@ -1589,23 +1624,32 @@ export default function NovaHraPage() {
           const h = Math.floor(m / 60), mm = m % 60;
           return h > 0 ? `${h}h ${mm > 0 ? mm + "min" : ""}` : `${mm} min`;
         };
-        const renderVariant = (label: string, color: string, v: WizardVariant) => (
-          <div className="rounded-xl p-4 border-2" style={{ borderColor: color, backgroundColor: "#fafafa" }}>
-            <p className="text-xs font-bold mb-2" style={{ color }}>{label}</p>
-            <p className="text-sm font-semibold mb-1" style={{ color: "#0A0A0A" }}>
-              {v.pocetKurtu} {v.pocetKurtu === 1 ? "kurt" : v.pocetKurtu < 5 ? "kurty" : "kurtů"}, {popisFormat(v)}, {popisPlayoff(v.playoffMode, v.vitezBracket)}
-            </p>
-            <div className="text-xs space-y-0.5" style={{ color: "#6b7280" }}>
-              <p>{v.zapasuSkupiny + v.zapasuPlayoff} zápasů ({v.zapasuSkupiny} skupin + {v.zapasuPlayoff} playoff)</p>
-              <p>Potřeba {formatMin(v.totalMin)}, rezerva <strong>{formatMin(v.rezerva)}</strong></p>
+        const tagInfo = (tag: string) => {
+          if (tag === "optimalni") return { label: "OPTIMÁLNÍ", color: "#801A28" };
+          if (tag === "nejvice") return { label: "MAX ZÁPASŮ", color: "#0f766e" };
+          return { label: "S REZERVOU", color: "#16a34a" };
+        };
+        const renderVariant = (v: WizardVariant, idx: number) => {
+          const tag = (v as WizardVariant & { _tag?: string })._tag ?? "optimalni";
+          const { label, color } = tagInfo(tag);
+          return (
+            <div key={idx} className="rounded-xl p-4 border-2" style={{ borderColor: color, backgroundColor: "#fafafa" }}>
+              <p className="text-xs font-bold mb-2" style={{ color }}>{label}</p>
+              <p className="text-sm font-semibold mb-1" style={{ color: "#0A0A0A" }}>
+                {v.pocetKurtu} {v.pocetKurtu === 1 ? "kurt" : v.pocetKurtu < 5 ? "kurty" : "kurtů"}, {popisFormat(v)}, {popisPlayoff(v.playoffMode, v.vitezBracket)}
+              </p>
+              <div className="text-xs space-y-0.5" style={{ color: "#6b7280" }}>
+                <p>{v.zapasuSkupiny + v.zapasuPlayoff} zápasů ({v.zapasuSkupiny} skupin + {v.zapasuPlayoff} playoff)</p>
+                <p>Potřeba {formatMin(v.totalMin)}, rezerva <strong>{formatMin(v.rezerva)}</strong></p>
+              </div>
+              <button onClick={() => pouzitWizardVariantu(v)}
+                className="mt-3 w-full rounded-lg py-2 text-xs font-semibold text-white"
+                style={{ backgroundColor: color }}>
+                Použít tuto variantu
+              </button>
             </div>
-            <button onClick={() => pouzitWizardVariantu(v)}
-              className="mt-3 w-full rounded-lg py-2 text-xs font-semibold text-white"
-              style={{ backgroundColor: color }}>
-              Použít tuto variantu
-            </button>
-          </div>
-        );
+          );
+        };
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 overflow-y-auto" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => setWizardOpen(false)}>
             <div className="bg-white rounded-2xl p-6 max-w-2xl w-full my-auto" onClick={e => e.stopPropagation()}>
@@ -1613,7 +1657,7 @@ export default function NovaHraPage() {
               <p className="text-sm mb-4" style={{ color: "#6b7280" }}>
                 Zadej kolik máš týmů a kolik času — najdu pro tebe nejlepší kombinace.
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Počet týmů</label>
                   <input type="number" min={2} max={128} value={wizardTymu}
@@ -1632,23 +1676,51 @@ export default function NovaHraPage() {
                 </div>
               </div>
 
-              {Object.keys(wizardDoporuceni).length === 0 ? (
+              <div className="mb-4">
+                <label className="text-xs font-medium block mb-1.5" style={{ color: "#374151" }}>Způsob počítání</label>
+                <div className="flex gap-2 flex-wrap">
+                  {([
+                    ["vse", "Je mi to jedno"],
+                    ["gamy", "Na gamy"],
+                    ["cas", "Na čas"],
+                  ] as Array<["vse" | "gamy" | "cas", string]>).map(([k, label]) => (
+                    <button key={k} onClick={() => setWizardScoring(k)}
+                      className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
+                      style={wizardScoring === k
+                        ? { backgroundColor: "#801A28", color: "white", borderColor: "#801A28" }
+                        : { color: "#374151", borderColor: "#e5e7eb", backgroundColor: "white" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {wizardDoporuceni.length === 0 ? (
                 <div className="rounded-xl p-4" style={{ backgroundColor: "#fef2f2" }}>
                   <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Žádná varianta se nevejde do času.</p>
                   <p className="text-xs mt-1" style={{ color: "#7f1d1d" }}>
-                    Zkus prodloužit čas nebo snížit počet týmů.
+                    Zkus prodloužit čas, snížit počet týmů nebo přepnout způsob počítání.
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                  {wizardDoporuceni.optimalni && renderVariant("OPTIMÁLNÍ", "#801A28", wizardDoporuceni.optimalni)}
-                  {wizardDoporuceni.nejvice && renderVariant("MAX ZÁPASŮ", "#0f766e", wizardDoporuceni.nejvice)}
-                  {wizardDoporuceni.nejmin && renderVariant("S REZERVOU", "#16a34a", wizardDoporuceni.nejmin)}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    {wizardDoporuceni.map((v, i) => renderVariant(v, i))}
+                  </div>
+                  {!wizardZobrazVse && wizardVarianty.filter(v => v.fits).length > wizardDoporuceni.length && (
+                    <div className="flex justify-center mb-3">
+                      <button onClick={() => setWizardZobrazVse(true)}
+                        className="text-xs font-medium underline"
+                        style={{ color: "#801A28" }}>
+                        Zobrazit další varianty
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
 
               <p className="text-xs mb-3" style={{ color: "#9ca3af" }}>
-                Wizard zkusil {wizardVarianty.length} kombinací (1-10 kurtů × 4 playoff módy × 7 formátů).
+                Wizard zkusil {wizardVarianty.length} kombinací.
                 Z toho {wizardVarianty.filter(v => v.fits).length} se vejde do času.
               </p>
 
