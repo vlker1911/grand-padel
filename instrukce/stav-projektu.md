@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.8.7  
+**Aktuální:** v0.9.0  
 **Poslední změna:** 17. 5. 2026  
-**Git tag:** v0.8.7
+**Git tag:** v0.9.0
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.9.0 | 17. 5. 2026 | **Startovné s QR platbou** (česká SPAYD norma). Sdílená komponenta `components/StartovneTab.tsx`. V turnaji je 7. tab "Startovné", v Americanu/Mexicanu rozbalitelná sekce `<details>`. Organizátor zadá předčíslí / číslo účtu / kód banky / částku / VS / zprávu / poznámku. `lib/qr-platba.ts` validuje číslo účtu (modulo 11) a konvertuje na IBAN, generuje SPAYD string. Knihovna `qrcode.react`. Tlačítko "Stáhnout PNG" exportuje QR jako obrázek |
 | v0.8.7 | 17. 5. 2026 | **Kopírovat z předchozího turnaje** — v kroku 1 nové tlačítko "Z předchozího turnaje". Modal načte posledních 20 vlastních turnajů (typ=turnaj, created_by=me) a kliknutím se nastaví celý formulář (kurty, časy, scoring, playoff, útěchový pavouk, bez skupin, vlastní délky). `bez_skupin` se nyní ukládá do `settings` |
 | v0.8.6 | 17. 5. 2026 | **Wizard pamatuje poslední nastavení (localStorage)** + nový přepínač **Struktura** (Je mi to jedno / Skupiny + playoff / Jen playoff bez skupin). `generateWizardVariants` iteruje i přes `bezSkupin`, návrh "bez skupin" má v karte hint "· bez skupin" a popis "jen playoff" |
 | v0.8.5 | 17. 5. 2026 | **Turnaj bez skupin (jen playoff)**. Engine podporuje `bezSkupin: true` — přeskočí skupinovou fázi, týmy jdou rovnou do playoff podle nasazení (1v4/2v3 u Final Four, 1vN/2v(N-1) u single elim, multi-tier po pásmech). Pro bezSkupin se 1. kolo playoff vkládá do DB s reálnými ID rovnou. Krok 3 wizardu má novou sekci "Skupinová fáze" (Ano / Ne) na začátku. Útěchový pavouk přesunut z kroku 4 do kroku 3 k playoff. Test runner 69 scénářů (8 nových bezSkupin variant) |

@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { spocitejTabulku } from "@/lib/americano";
 import { smazatHru as smazatHruDb, nactiPoctyMazani, type HraTyp } from "@/lib/hry";
+import StartovneTab from "@/components/StartovneTab";
 
 type Hra = {
   id: string;
@@ -1153,7 +1154,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
   const [ukladam, setUkladam] = useState<string | null>(null);
   const [upravitId, setUpravitId] = useState<string | null>(null);
   const [generujiPlayoff, setGenerujiPlayoff] = useState(false);
-  type Tab = "info" | "rozlosovani" | "poradi" | "tabulky" | "scoreboard" | "hraci";
+  type Tab = "info" | "rozlosovani" | "poradi" | "tabulky" | "scoreboard" | "hraci" | "startovne";
   const [aktivniTab, setAktivniTab] = useState<Tab>("info");
   const [filtrSkupiny, setFiltrSkupiny] = useState<string>("vse");
   const [hledat, setHledat] = useState("");
@@ -1781,6 +1782,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
           { k: "tabulky",      l: "Tabulky" },
           { k: "scoreboard",   l: "Scoreboard" },
           { k: "hraci",        l: "Hraci" },
+          { k: "startovne",    l: "Startovne" },
         ] as { k: Tab; l: string }[]).map(t => (
           <button key={t.k} onClick={() => setAktivniTab(t.k)}
             className="px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap border-b-2 -mb-px"
@@ -2576,6 +2578,11 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
         );
       })()}
 
+      {/* ===== STARTOVNE ===== */}
+      {aktivniTab === "startovne" && (
+        <StartovneTab hra={hra} jeEditor={jeEditor} />
+      )}
+
       {/* Zrusit turnaj — pouze pro editora a pokud neni jiz zruseny */}
       {jeEditor && !jeZruseno && (
         <div className="pt-4 border-t border-zinc-200">
@@ -2704,6 +2711,18 @@ export default function HraDetailPage() {
           )}
           {hra.typ === "turnaj" && (
             <TurnajView hra={hra} jeEditor={jeEditor} onSmazatRequest={otevriSmazatModal} />
+          )}
+
+          {hra.typ !== "turnaj" && (
+            <details className="mt-6 bg-white rounded-2xl border border-zinc-100 group">
+              <summary className="px-5 py-3 cursor-pointer text-sm font-semibold list-none flex items-center justify-between" style={{ color: "#0A0A0A" }}>
+                <span>Startovné</span>
+                <span className="text-xs group-open:rotate-90 transition-transform" style={{ color: "#9ca3af" }}>▶</span>
+              </summary>
+              <div className="px-5 pb-5 pt-2 border-t border-zinc-100">
+                <StartovneTab hra={hra} jeEditor={jeEditor} />
+              </div>
+            </details>
           )}
 
           {jeEditor && !(hra.typ === "turnaj" && hra.settings?.zruseno) && (
