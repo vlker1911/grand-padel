@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.9.6  
+**Aktuální:** v0.9.7  
 **Poslední změna:** 17. 5. 2026  
-**Git tag:** v0.9.6
+**Git tag:** v0.9.7
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.9.7 | 17. 5. 2026 | **Tab Pořadí zápasů fix.** (1) Bug: `spustitZapas` nyní kontroluje, že žádný z týmů nehraje na jiném kurtu — alert + zákaz. (2) Pořadí zápasů je **fixní podle `poradi_fronta`** (z engine) — žádné přesouvání po dohrání. (3) Inline zadání skóre přímo v řádku — pro probíhající a "upravit" se zobrazí inputy, tlačítko "Uložit skóre" |
 | v0.9.6 | 17. 5. 2026 | **Finále paralelně s O 3. místo.** Engine přestal čekat se zahájením finále až po dohrání všech ostatních — finále se plánuje hned po svých semi (s pauzou). Příklad: 4 týmy/medaile zkráceno z 2h11min na 1h29min (Finále a O 3. místo hrají paralelně na 2 kurtech, oba končí 17:29). Pro multi-tier s víc pásmy než kurtů: některá pásma matematicky dohrají později — to už je přijatelné. Test validátor "finále poslední" uvolněn |
 | v0.9.5 | 17. 5. 2026 | **Star Point = default** (3 shody klasické výhody → Golden Point). Popis opraven, řazení tlačítek (Star / Golden / Klasické výhody) |
 | v0.9.4 | 17. 5. 2026 | **Skupiny o umístění — lepší distribuce + Point Rule.** Druhá fáze zachovává velikost první (8t/2×4 → 2×4, 12t/3×4 → 3×4, 16t/4×4 → 4×4). Distribuce přes globální ranking: nasazení 1-V → top, V+1..2V → 2. atd. Méně zápasů ve velkých turnajích. Tiebreak volba schována — auto: do 4/5 gamů → krátký (vítěz na limit), do 6 → klasický. Nová volba **Pravidlo na 40:40**: Golden Point (default, rychlý) / Star Point (+4 min/zápas) / Klasické výhody (+6 min/zápas). Engine zohledňuje v délce zápasu |
