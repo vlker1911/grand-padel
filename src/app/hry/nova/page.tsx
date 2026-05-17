@@ -352,6 +352,16 @@ export default function NovaHraPage() {
   const [losovano,           setLosovano]           = useState(false);
   const [losovaneTymy,       setLosovaneTymy]       = useState<ParEntry[] | null>(null);
   const [wizardOpen,         setWizardOpen]         = useState(false);
+  const [prevModalOpen,      setPrevModalOpen]      = useState(false);
+  type PrevHra = {
+    id: string;
+    nazev: string;
+    created_at: string;
+    pocet_kurtu: number;
+    settings: Record<string, unknown> | null;
+  };
+  const [prevHry,            setPrevHry]            = useState<PrevHra[]>([]);
+  const [prevNacitam,        setPrevNacitam]        = useState(false);
   const [wizardTymu,         setWizardTymu]         = useState<number | "">(8);
   const [wizardMaxKurtu,     setWizardMaxKurtu]     = useState<number | "">(4);
   const [wizardDelkaH,       setWizardDelkaH]       = useState<number | "">(3);
@@ -585,6 +595,55 @@ export default function NovaHraPage() {
     [wizardVarianty, wizardZobrazVse],
   );
 
+  async function otevriPrevModal() {
+    setPrevModalOpen(true);
+    setPrevNacitam(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setPrevNacitam(false); return; }
+    const { data } = await supabase
+      .from("hry")
+      .select("id, nazev, created_at, pocet_kurtu, settings")
+      .eq("created_by", user.id)
+      .eq("typ", "turnaj")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setPrevHry((data as PrevHra[]) ?? []);
+    setPrevNacitam(false);
+  }
+
+  function aplikujPredchoziTurnaj(h: PrevHra) {
+    setTyp("turnaj");
+    setPocetKurtu(h.pocet_kurtu);
+    const s = (h.settings ?? {}) as Record<string, unknown>;
+    if (typeof s.cas_od === "string") setCasOd(s.cas_od);
+    if (typeof s.cas_do === "string") setCasDo(s.cas_do);
+    if (typeof s.scoring_typ === "string") setScoringTyp(s.scoring_typ as "gamy" | "body" | "cas");
+    if (typeof s.scoring_limit === "number") setScoringLimit(s.scoring_limit);
+    if (typeof s.scoring_limit_playoff === "number") {
+      setScoringLimitPlayoff(s.scoring_limit_playoff);
+      setOdlisnyScoring(s.scoring_limit_playoff !== s.scoring_limit);
+    }
+    if (typeof s.playoff_mode === "string") setPlayoffMode(s.playoff_mode as "bez" | "medaile" | "vitez" | "umisteni");
+    if (typeof s.vitez_bracket === "string") setVitezBracket(s.vitez_bracket as "auto" | "top4" | "top8" | "top16");
+    if (typeof s.gamy_tiebreak === "string") setGamyTiebreak(s.gamy_tiebreak as "sudden_death" | "advantage");
+    if (typeof s.typ_parovani === "string") setTypParovani(s.typ_parovani as "pary" | "singles" | "mix");
+    if (typeof s.rezim_kurtu === "string") setRezimKurtu(s.rezim_kurtu as "auto" | "1-1" | "2-1");
+    if (typeof s.utech_pavouk === "boolean") setUtechovyPavouk(s.utech_pavouk);
+    if (typeof s.bez_skupin === "boolean") setBezSkupin(s.bez_skupin);
+    const tf = s.turnaj_format as Record<string, unknown> | undefined;
+    if (tf) {
+      const ds = tf.delka_skupina_min, dse = tf.delka_semi_min, df = tf.delka_finale_min, pm = tf.pauza_min;
+      const maVlastni = (typeof ds === "number") || (typeof dse === "number") || (typeof df === "number");
+      setVlastniDelky(maVlastni);
+      if (typeof ds === "number") setDelkaSkupinaMin(ds);
+      if (typeof dse === "number") setDelkaSemiMin(dse);
+      if (typeof df === "number") setDelkaFinaleMin(df);
+      if (typeof pm === "number") setPauzaMin(pm);
+    }
+    setPrevModalOpen(false);
+    setKrok(1);
+  }
+
   function aplikujSablonu(id: string) {
     setTyp("turnaj");
     setOdlisnyScoring(false);
@@ -758,6 +817,7 @@ export default function NovaHraPage() {
         typ_parovani: typParovani,
         rezim_kurtu: rezimKurtu,
         utech_pavouk: utechovyPavouk,
+        bez_skupin: bezSkupin,
         turnaj_format: {
           delka_skupina_min: turnajFormat.delkaSkupinaMin,
           delka_semi_min: turnajFormat.delkaSemiMin,
@@ -895,7 +955,7 @@ export default function NovaHraPage() {
 
               {typ === "turnaj" && (
                 <div>
-                  <p className="text-sm font-medium mb-2" style={{ color: "#374151" }}>Sablony rychleho startu</p>
+                  <p className="text-sm font-medium mb-2" style={{ color: "#374151" }}>Rychlý start</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {[
                       { id: "classic4", label: "Klasicky 4-tymovy" },
@@ -909,9 +969,14 @@ export default function NovaHraPage() {
                         {s.label}
                       </button>
                     ))}
+                    <button onClick={otevriPrevModal}
+                      className="text-left rounded-xl border-2 border-dashed border-zinc-300 bg-white px-3 py-2.5 text-xs font-medium hover:border-[#801A28] transition-colors"
+                      style={{ color: "#801A28" }}>
+                      ⟲ Z předchozího turnaje
+                    </button>
                   </div>
                   <p className="text-xs mt-2" style={{ color: "#9ca3af" }}>
-                    Sablony predvyplni krok 1-4. Mezery muzes upravit.
+                    Šablona / předchozí turnaj předvyplní formulář. Můžeš dále upravit.
                   </p>
                 </div>
               )}
@@ -1681,6 +1746,50 @@ export default function NovaHraPage() {
 
         </div>
       </main>
+
+      {/* Modal: Predchozi turnaje */}
+      {prevModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 overflow-y-auto" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => setPrevModalOpen(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-lg w-full my-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-1" style={{ color: "#0A0A0A" }}>Použít nastavení z předchozího turnaje</h3>
+            <p className="text-sm mb-4" style={{ color: "#6b7280" }}>
+              Vyber turnaj, jehož formát chceš zopakovat. Týmy a hráče zadáš ručně, nastavení (kurty, scoring, playoff) se zkopíruje.
+            </p>
+            {prevNacitam ? (
+              <p className="text-sm py-8 text-center" style={{ color: "#9ca3af" }}>Načítám…</p>
+            ) : prevHry.length === 0 ? (
+              <p className="text-sm py-8 text-center" style={{ color: "#9ca3af" }}>Žádné předchozí turnaje.</p>
+            ) : (
+              <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
+                {prevHry.map(h => {
+                  const s = (h.settings ?? {}) as Record<string, unknown>;
+                  return (
+                    <button key={h.id} onClick={() => aplikujPredchoziTurnaj(h)}
+                      className="text-left rounded-xl border border-zinc-200 bg-white px-4 py-3 hover:border-[#801A28] transition-colors">
+                      <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>{h.nazev}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>
+                        {new Date(h.created_at).toLocaleDateString("cs-CZ")}
+                        {" · "}{h.pocet_kurtu} {h.pocet_kurtu === 1 ? "kurt" : h.pocet_kurtu < 5 ? "kurty" : "kurtů"}
+                        {s.scoring_typ ? ` · ${s.scoring_typ}` : ""}
+                        {typeof s.scoring_limit === "number" ? ` ${s.scoring_limit}` : ""}
+                        {s.bez_skupin === true ? " · bez skupin" : ""}
+                        {s.playoff_mode && s.playoff_mode !== "bez" ? ` · ${s.playoff_mode}` : ""}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setPrevModalOpen(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200"
+                style={{ color: "#374151" }}>
+                Zrušit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Wizard modal */}
       {wizardOpen && (() => {

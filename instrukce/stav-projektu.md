@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.8.6  
+**Aktuální:** v0.8.7  
 **Poslední změna:** 17. 5. 2026  
-**Git tag:** v0.8.6
+**Git tag:** v0.8.7
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.8.7 | 17. 5. 2026 | **Kopírovat z předchozího turnaje** — v kroku 1 nové tlačítko "Z předchozího turnaje". Modal načte posledních 20 vlastních turnajů (typ=turnaj, created_by=me) a kliknutím se nastaví celý formulář (kurty, časy, scoring, playoff, útěchový pavouk, bez skupin, vlastní délky). `bez_skupin` se nyní ukládá do `settings` |
 | v0.8.6 | 17. 5. 2026 | **Wizard pamatuje poslední nastavení (localStorage)** + nový přepínač **Struktura** (Je mi to jedno / Skupiny + playoff / Jen playoff bez skupin). `generateWizardVariants` iteruje i přes `bezSkupin`, návrh "bez skupin" má v karte hint "· bez skupin" a popis "jen playoff" |
 | v0.8.5 | 17. 5. 2026 | **Turnaj bez skupin (jen playoff)**. Engine podporuje `bezSkupin: true` — přeskočí skupinovou fázi, týmy jdou rovnou do playoff podle nasazení (1v4/2v3 u Final Four, 1vN/2v(N-1) u single elim, multi-tier po pásmech). Pro bezSkupin se 1. kolo playoff vkládá do DB s reálnými ID rovnou. Krok 3 wizardu má novou sekci "Skupinová fáze" (Ano / Ne) na začátku. Útěchový pavouk přesunut z kroku 4 do kroku 3 k playoff. Test runner 69 scénářů (8 nových bezSkupin variant) |
 | v0.8.4 | 17. 5. 2026 | **Wizard reálnější vstupy.** Místo "Čas od/do" zadává uživatel **délku turnaje (hodiny + minuty)** + quick presety (1.5h / 2h / 3h / 4h / 5h / 6h). Nový vstup **Max kurtů** (default 4) — wizard nenabízí varianty s víc kurty než má klub k dispozici. Nový **Playoff** přepínač (Je mi to jedno / S playoff / Bez playoff). Po výběru se `cas_do` v hlavním formuláři přepočte z `cas_od + délka` (zachovává čas zahájení) |
