@@ -12,6 +12,18 @@ Uživatel: Roman Vlk, začátečník bez zkušeností s kódem. Vše vysvětlova
 
 - **Žádné emoji v UI** — nikde v aplikaci nepoužívat emoji (ani v navigaci, tlačítkách, kartách, nadpisech). Výjimka pouze pokud uživatel explicitně požádá.
 
+## Pravidla turnajového rozvrhu (engine `lib/turnaj-format.ts`)
+
+Tato pravidla musí dodržet jakákoliv úprava enginu nebo plánovače zápasů:
+
+1. **Maximální využití kurtů** — pokud máme N kurtů a v daný moment je více než 1 zápas k naplánování, musí běžet paralelně na různých kurtech. Žádný kurt nesmí stát nevyužitý, pokud na něj čeká zápas.
+2. **Multi-tier playoff pásma běží paralelně** — když je playoff rozdělený na pásma (1.-4., 5.-8., …), pásma se rozdělí o dostupné kurty a hrají souběžně. Sekvenční plánování pásem je chyba.
+3. **Finále čela (1.-4. / nejvyšší pásmo) je vždy poslední zápas turnaje** — všechny ostatní zápasy (skupinové, semifinále nižších pásem, o 3. místo, finále nižších pásem) musí skončit dřív než finále čela. Vyžaduje to rezervovat slot na finále čela jako poslední krok plánování.
+4. **Žádný tým nehraje 2 zápasy zároveň** — engine musí kontrolovat, že tým má dostatek odpočinku mezi zápasy (minimálně 1 minuta, lépe víc). Pokud má tým konflikt, posunout pozdější zápas.
+5. **Vyhrazený slot na finále** — i pokud playoff není multi-tier, finále hlavního bracketu je v ideálním případě posledním zápasem turnaje.
+
+Při změnách enginu vždy spusť `web-app/scripts/test-turnaj-engine.mjs` (nebo ekvivalent) — testuje 50+ scénářů včetně lichých počtů týmů, různého počtu kurtů a všech playoff módů.
+
 ## Živé instrukce a stav projektu
 
 Vždy si přečti před prací:

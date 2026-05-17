@@ -1,6 +1,13 @@
 // Engine pro generovani rozvrhu turnaje s casy a kurty.
 // Bere konfiguraci (settings) + seznam tymu rozdelenych do skupin a vraci
 // kompletni rozvrh: kdy, na kterem kurtu a v jake fazi se hraje.
+//
+// PRAVIDLA (viz web-app/CLAUDE.md):
+//   1. Maximalni vyuziti kurtu — pokud je vic zapasu k naplanovani,
+//      bezi paralelne na ruznych kurtech.
+//   2. Multi-tier playoff pasma bezi paralelne, ne sekvencne.
+//   3. Finale cela (1.-4.) je VZDY posledni zapas turnaje.
+//   4. Zadny tym nehraje 2 zapasy zaroven (pauza mezi zapasy >= pauzaMin).
 
 export type PlayoffMode = "bez" | "medaile" | "vitez" | "umisteni";
 export type ScoringTyp = "gamy" | "body" | "cas";
@@ -16,7 +23,6 @@ export type TurnajFormat = {
   pocetKurtu: number;
   casOd: string;          // "HH:MM"
   casDo: string;          // "HH:MM"
-  // Delky v minutach. Pokud null -> odvozeno ze scoringTyp/Limit.
   delkaSkupinaMin: number | null;
   delkaSemiMin: number | null;
   delkaFinaleMin: number | null;
@@ -24,10 +30,10 @@ export type TurnajFormat = {
 };
 
 export type TymVeSkupine = {
-  tymId: string;          // id z turnaj_tymy
+  tymId: string;
   nazev: string;
   skupina: string;        // "A", "B", ...
-  nasazeni: number;       // poradi ve skupine
+  nasazeni: number;
 };
 
 export type GenZapas = {
@@ -35,23 +41,24 @@ export type GenZapas = {
         "playoff" | "utech_1" | "utech_2" | "utech_finale";
   skupina: string | null;
   kolo: number | null;
-  tym1Id: string | null;     // null = placeholder ("vitez semi 1")
+  tym1Id: string | null;
   tym2Id: string | null;
-  tym1Label: string;          // pro placeholdery: "Vitez S1", "2.A", ...
+  tym1Label: string;
   tym2Label: string;
-  casZacatek: string;         // "HH:MM"
-  casKonec: string;           // "HH:MM"
+  casZacatek: string;
+  casKonec: string;
   kurt: number;
-  poradiFronta: number;       // globalni poradi
-  umisteni: string | null;    // "Final", "O 3. misto", "1. utechove kolo", ...
+  poradiFronta: number;
+  umisteni: string | null;
+  jeFinaleCela: boolean;      // true pro absolutni finale (posledni zapas turnaje)
 };
 
 export type Rozvrh = {
   zapasy: GenZapas[];
-  trvaniMin: number;          // delka od cas_od do konce posledniho zapasu
-  casovyRamec: number;        // cas_do - cas_od v minutach
+  trvaniMin: number;
+  casovyRamec: number;
   vejdeSe: boolean;
-  rezervaMin: number;         // kladne = rezerva, zaporne = prekroceni
+  rezervaMin: number;
   varovani: string[];
 };
 
@@ -68,37 +75,26 @@ function formatHM(min: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-function delkaZapasu(
-  faze: GenZapas["faze"],
-  fmt: TurnajFormat,
-): number {
-  // Vychozi odhad podle scoringTyp.
+function delkaZapasu(faze: GenZapas["faze"], fmt: TurnajFormat): number {
   function odvozPodleSkore(limit: number): number {
     if (fmt.scoringTyp === "cas") return limit;
     if (fmt.scoringTyp === "gamy") return limit * 3 + 5;
-    // body: ~0.45 min/bod + 5 rezerva
     return Math.round(limit * 0.45) + 5;
   }
-  const limitPlayoff = fmt.scoringLimitPlayoff;
-  const limitSkupina = fmt.scoringLimit;
   if (faze === "skupina") {
-    return fmt.delkaSkupinaMin ?? odvozPodleSkore(limitSkupina);
+    return fmt.delkaSkupinaMin ?? odvozPodleSkore(fmt.scoringLimit);
   }
   if (faze === "finale" || faze === "o_3_misto" || faze === "utech_finale") {
-    return fmt.delkaFinaleMin ?? odvozPodleSkore(limitPlayoff);
+    return fmt.delkaFinaleMin ?? odvozPodleSkore(fmt.scoringLimitPlayoff);
   }
-  if (faze === "semifinale" || faze === "ctvrtfinale" || faze === "playoff" ||
-      faze === "utech_1" || faze === "utech_2") {
-    return fmt.delkaSemiMin ?? odvozPodleSkore(limitPlayoff);
-  }
-  return odvozPodleSkore(limitPlayoff);
+  return fmt.delkaSemiMin ?? odvozPodleSkore(fmt.scoringLimitPlayoff);
 }
 
-// Round-robin (circle method) pro skupinu s N tymy: vraci poradi paru.
-// Pro liche N pridame "BYE" placeholder a vyfiltrujeme.
+// Round-robin pary (circle method). Pro liche N pridame BYE.
 function roundRobinPary(tymy: TymVeSkupine[]): Array<Array<[TymVeSkupine, TymVeSkupine]>> {
+  if (tymy.length < 2) return [];
   const liche = tymy.length % 2 !== 0;
-  const list = liche ? [...tymy, null as TymVeSkupine | null] : [...tymy];
+  const list: (TymVeSkupine | null)[] = liche ? [...tymy, null] : [...tymy];
   const n = list.length;
   const kol = n - 1;
   const pulka = n / 2;
@@ -111,13 +107,32 @@ function roundRobinPary(tymy: TymVeSkupine[]): Array<Array<[TymVeSkupine, TymVeS
       if (a && b) round.push([a, b]);
     }
     rounds.push(round);
-    // rotace: prvni fixni, ostatni se posunou
     const fixed = rot[0];
     const rest = rot.slice(1);
     rest.unshift(rest.pop()!);
     rot.splice(0, rot.length, fixed, ...rest);
   }
   return rounds;
+}
+
+// Rozdeleni N kurtu mezi P pasem.
+// N >= P: souvisle bloky, kazde pasmo ma vlastni kurty.
+// N < P: kazde pasmo dostane prave 1 kurt v round-robin (pasma p a p+N sdili stejny kurt
+// a budou se planovat sekvencne — to je nejlepsi co lze, kdyz pasem je vic nez kurtu).
+function rozdelKurty(N: number, P: number): number[][] {
+  if (P <= 0) return [];
+  if (N >= P) {
+    const out: number[][] = [];
+    for (let p = 0; p < P; p++) {
+      const start = Math.floor((p * N) / P);
+      const end = Math.floor(((p + 1) * N) / P);
+      const arr: number[] = [];
+      for (let i = start; i < end; i++) arr.push(i);
+      out.push(arr);
+    }
+    return out;
+  }
+  return Array.from({ length: P }, (_, p) => [p % N]);
 }
 
 // ===== Hlavni funkce =====
@@ -135,23 +150,54 @@ export function generujRozvrh(
     varovani.push("Cas konce musi byt po casu zacatku.");
     return { zapasy: [], trvaniMin: 0, casovyRamec, vejdeSe: false, rezervaMin: 0, varovani };
   }
+  if (fmt.pocetKurtu < 1) {
+    varovani.push("Pocet kurtu musi byt aspon 1.");
+    return { zapasy: [], trvaniMin: 0, casovyRamec, vejdeSe: false, rezervaMin: 0, varovani };
+  }
 
-  // Stav kurtu: kdy je dany kurt znovu volny.
   const kurtVolnyOd: number[] = Array.from({ length: fmt.pocetKurtu }, () => casOdMin);
+
+  function najdiKonecPosledni(tymId: string | null): number {
+    if (!tymId) return 0;
+    let max = 0;
+    for (const z of zapasy) {
+      if (z.tym1Id === tymId || z.tym2Id === tymId) {
+        const k = parseHM(z.casKonec);
+        if (k > max) max = k;
+      }
+    }
+    return max;
+  }
 
   function naplanuj(
     faze: GenZapas["faze"],
     skupina: string | null,
     kolo: number | null,
-    paramEntry: { tym1Id: string | null; tym2Id: string | null; tym1Label: string; tym2Label: string },
+    entry: { tym1Id: string | null; tym2Id: string | null; tym1Label: string; tym2Label: string },
     umisteni: string | null,
-    nejdrive: number, // nejdrivejsi cas zacatku (kvuli zavislosti na predchozim zapase)
+    nejdrive: number,
+    povoleneKurty?: number[],
+    jeFinaleCela: boolean = false,
   ): GenZapas {
-    // Najdi nejdriv volny kurt + cas
-    let bestKurt = 0;
-    let bestCas = Math.max(kurtVolnyOd[0], nejdrive);
-    for (let k = 1; k < fmt.pocetKurtu; k++) {
-      const cas = Math.max(kurtVolnyOd[k], nejdrive);
+    const allowed = (povoleneKurty && povoleneKurty.length > 0)
+      ? povoleneKurty
+      : Array.from({ length: fmt.pocetKurtu }, (_, i) => i);
+
+    // Kontrola konfliktu tymu: tym musi mit pauzu po sve posledni hre
+    const tym1Konec = najdiKonecPosledni(entry.tym1Id);
+    const tym2Konec = najdiKonecPosledni(entry.tym2Id);
+    const minStartTymu = Math.max(
+      tym1Konec > 0 ? tym1Konec + fmt.pauzaMin : 0,
+      tym2Konec > 0 ? tym2Konec + fmt.pauzaMin : 0,
+    );
+    const minStart = Math.max(nejdrive, minStartTymu);
+
+    // Najdi nejdrivejsi volny kurt
+    let bestKurt = allowed[0];
+    let bestCas = Math.max(kurtVolnyOd[bestKurt], minStart);
+    for (let i = 1; i < allowed.length; i++) {
+      const k = allowed[i];
+      const cas = Math.max(kurtVolnyOd[k], minStart);
       if (cas < bestCas) {
         bestCas = cas;
         bestKurt = k;
@@ -162,18 +208,15 @@ export function generujRozvrh(
     const konec = zacatek + trvani;
     kurtVolnyOd[bestKurt] = konec + fmt.pauzaMin;
     const z: GenZapas = {
-      faze,
-      skupina,
-      kolo,
-      tym1Id: paramEntry.tym1Id,
-      tym2Id: paramEntry.tym2Id,
-      tym1Label: paramEntry.tym1Label,
-      tym2Label: paramEntry.tym2Label,
+      faze, skupina, kolo,
+      tym1Id: entry.tym1Id, tym2Id: entry.tym2Id,
+      tym1Label: entry.tym1Label, tym2Label: entry.tym2Label,
       casZacatek: formatHM(zacatek),
       casKonec: formatHM(konec),
       kurt: bestKurt + 1,
       poradiFronta: zapasy.length + 1,
       umisteni,
+      jeFinaleCela,
     };
     zapasy.push(z);
     return z;
@@ -188,7 +231,6 @@ export function generujRozvrh(
   }
   const skupinyKlice = [...skupinyMap.keys()].sort();
 
-  // Pro kazdou skupinu spocti kola (circle method)
   const skupinaKola: Array<{ skupina: string; kolo: number; pary: Array<[TymVeSkupine, TymVeSkupine]> }> = [];
   for (const sk of skupinyKlice) {
     const tymy = skupinyMap.get(sk)!;
@@ -197,23 +239,18 @@ export function generujRozvrh(
       skupinaKola.push({ skupina: sk, kolo: idx + 1, pary });
     });
   }
-
-  // Naplanujeme zapasy podle kol (vsechna kola skupiny A, pak B, ...).
-  // Jednodussi alternativa: prokladat kola napric skupinami pro lepsi vyuziti kurtu.
-  // Pouzijme prokladani: vezmeme max(kola) a iterujeme po kolech.
   const maxKol = Math.max(0, ...skupinyKlice.map(sk => {
     const t = skupinyMap.get(sk)!;
     return t.length % 2 === 0 ? t.length - 1 : t.length;
   }));
+  // Prokladame kola napric skupinami pro maximalni paralelitu kurtu.
   for (let r = 1; r <= maxKol; r++) {
     for (const sk of skupinyKlice) {
       const koloData = skupinaKola.find(k => k.skupina === sk && k.kolo === r);
       if (!koloData) continue;
       for (const [a, b] of koloData.pary) {
         naplanuj(
-          "skupina",
-          sk,
-          r,
+          "skupina", sk, r,
           { tym1Id: a.tymId, tym2Id: b.tymId, tym1Label: a.nazev, tym2Label: b.nazev },
           `Skupina ${sk} - kolo ${r}`,
           casOdMin,
@@ -222,119 +259,184 @@ export function generujRozvrh(
     }
   }
 
-  // Cas, kdy je dohrana skupinova faze (max konec zapasu skupiny)
   const koneSkupin = zapasy.length > 0
     ? Math.max(...zapasy.map(z => parseHM(z.casKonec)))
     : casOdMin;
+  const playoffStart = koneSkupin + fmt.pauzaMin;
 
   // ===== Playoff =====
   const tymuCelkem = tymyVeSkupinach.length;
-  function playoffStart() { return koneSkupin + fmt.pauzaMin; }
+
+  // Pomocna struktura pro odlozene finale cela (rezervovany slot)
+  type OdlozeneFinale = {
+    faze: GenZapas["faze"];
+    entry: { tym1Id: string | null; tym2Id: string | null; tym1Label: string; tym2Label: string };
+    umisteni: string;
+    kolo: number;
+    nejdriveStart: number;        // nejdriv kdyz muze zacit (po jeho vlastnich predchozich kolech)
+    povoleneKurty: number[];      // ulozeno pro pozdejsi planovani
+  };
+  let finaleCela: OdlozeneFinale | null = null;
 
   if (fmt.playoffMode === "medaile") {
-    // Final Four: 2 semi (1A vs 2B, 1B vs 2A pokud 2 skupiny; jinak top4) + finale + o 3.
-    // Pro nedostatek info: pouzijeme placeholdery z poradi ve skupinach.
-    const semi: GenZapas[] = [];
-    if (skupinyKlice.length >= 2) {
-      const sA = skupinyKlice[0], sB = skupinyKlice[1];
-      const s1 = naplanuj("semifinale", null, 1,
-        { tym1Id: null, tym2Id: null, tym1Label: `1.${sA}`, tym2Label: `2.${sB}` },
-        "Semifinale 1", playoffStart());
-      const s2 = naplanuj("semifinale", null, 1,
-        { tym1Id: null, tym2Id: null, tym1Label: `1.${sB}`, tym2Label: `2.${sA}` },
-        "Semifinale 2", playoffStart());
-      semi.push(s1, s2);
-    } else {
-      const s1 = naplanuj("semifinale", null, 1,
-        { tym1Id: null, tym2Id: null, tym1Label: "1.A", tym2Label: "4.A" },
-        "Semifinale 1", playoffStart());
-      const s2 = naplanuj("semifinale", null, 1,
-        { tym1Id: null, tym2Id: null, tym1Label: "2.A", tym2Label: "3.A" },
-        "Semifinale 2", playoffStart());
-      semi.push(s1, s2);
-    }
-    const poSemi = Math.max(...semi.map(z => parseHM(z.casKonec))) + fmt.pauzaMin;
+    // Final Four: 2 semi + finale + o 3. misto. Vsechny kurty pouzitelne.
+    const allKurty = Array.from({ length: fmt.pocetKurtu }, (_, i) => i);
+    const sA = skupinyKlice[0] ?? "A";
+    const sB = skupinyKlice[1] ?? sA;
+    const s1 = naplanuj("semifinale", null, 1,
+      { tym1Id: null, tym2Id: null, tym1Label: `1.${sA}`, tym2Label: `2.${sB}` },
+      "Semifinale 1", playoffStart, allKurty);
+    const s2 = naplanuj("semifinale", null, 1,
+      { tym1Id: null, tym2Id: null, tym1Label: `1.${sB}`, tym2Label: `2.${sA}` },
+      "Semifinale 2", playoffStart, allKurty);
+    const poSemi = Math.max(parseHM(s1.casKonec), parseHM(s2.casKonec)) + fmt.pauzaMin;
     naplanuj("o_3_misto", null, 2,
       { tym1Id: null, tym2Id: null, tym1Label: "Porazeny S1", tym2Label: "Porazeny S2" },
-      "O 3. misto", poSemi);
-    naplanuj("finale", null, 2,
-      { tym1Id: null, tym2Id: null, tym1Label: "Vitez S1", tym2Label: "Vitez S2" },
-      "Finale", poSemi);
+      "O 3. misto", poSemi, allKurty);
+    finaleCela = {
+      faze: "finale",
+      entry: { tym1Id: null, tym2Id: null, tym1Label: "Vitez S1", tym2Label: "Vitez S2" },
+      umisteni: "Finale",
+      kolo: 2,
+      nejdriveStart: poSemi,
+      povoleneKurty: allKurty,
+    };
   } else if (fmt.playoffMode === "vitez") {
-    // Single elim, bracket size podle volby (auto = nejvetsi 2^k <= n, max 16)
+    // Single elim bracket
     let bs: number;
     if (fmt.vitezBracket === "top4") bs = 4;
     else if (fmt.vitezBracket === "top8") bs = 8;
     else if (fmt.vitezBracket === "top16") bs = 16;
     else { bs = 2; while (bs * 2 <= tymuCelkem && bs < 16) bs *= 2; }
     while (bs > tymuCelkem && bs > 2) bs /= 2;
+    const allKurty = Array.from({ length: fmt.pocetKurtu }, (_, i) => i);
 
     let participants: Array<{ id: string | null; label: string }> = [];
     for (let i = 0; i < bs; i++) {
-      // Nasazeni 1..bs pres vsechny skupiny (placeholder)
-      const sk = skupinyKlice[i % skupinyKlice.length];
-      const poradi = Math.floor(i / skupinyKlice.length) + 1;
-      participants.push({ id: null, label: `${poradi}.${sk ?? "A"}` });
+      const sk = skupinyKlice[i % Math.max(1, skupinyKlice.length)] ?? "A";
+      const poradi = Math.floor(i / Math.max(1, skupinyKlice.length)) + 1;
+      participants.push({ id: null, label: `${poradi}.${sk}` });
     }
-
-    let kolo = 1;
-    let kdyMuze = playoffStart();
     const fazePodleVelikosti: Record<number, GenZapas["faze"]> = {
       2: "finale", 4: "semifinale", 8: "ctvrtfinale", 16: "playoff",
     };
+    let kolo = 1;
+    let kdyMuze = playoffStart;
     while (participants.length > 1) {
       const faze = fazePodleVelikosti[participants.length] ?? "playoff";
       const noveKolo: Array<{ id: string | null; label: string }> = [];
       const koloMatches: GenZapas[] = [];
+      const jeFinaleKolo = participants.length === 2;
       for (let i = 0; i < participants.length; i += 2) {
         const a = participants[i], b = participants[i + 1];
-        const z = naplanuj(faze, null, kolo,
-          { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
-          faze === "finale" ? "Finale" : faze === "semifinale" ? `Semifinale ${i/2 + 1}` : `Playoff K${kolo} #${i/2 + 1}`,
-          kdyMuze);
-        koloMatches.push(z);
-        noveKolo.push({ id: null, label: `Vitez ${faze === "ctvrtfinale" ? "CF" : faze === "semifinale" ? "SF" : "PL"} ${i/2 + 1}` });
+        if (jeFinaleKolo) {
+          // Odloz finale cela
+          finaleCela = {
+            faze: "finale",
+            entry: { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
+            umisteni: "Finale",
+            kolo,
+            nejdriveStart: kdyMuze,
+            povoleneKurty: allKurty,
+          };
+          noveKolo.push({ id: null, label: "Vitez" });
+        } else {
+          const z = naplanuj(faze, null, kolo,
+            { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
+            faze === "semifinale" ? `Semifinale ${i / 2 + 1}` :
+            faze === "ctvrtfinale" ? `Ctvrtfinale ${i / 2 + 1}` :
+            `Playoff K${kolo} #${i / 2 + 1}`,
+            kdyMuze, allKurty);
+          koloMatches.push(z);
+          noveKolo.push({ id: null, label: `Vitez ${faze === "ctvrtfinale" ? "CF" : faze === "semifinale" ? "SF" : "PL"} ${i / 2 + 1}` });
+        }
       }
-      kdyMuze = Math.max(...koloMatches.map(z => parseHM(z.casKonec))) + fmt.pauzaMin;
+      if (koloMatches.length > 0) {
+        kdyMuze = Math.max(...koloMatches.map(z => parseHM(z.casKonec))) + fmt.pauzaMin;
+      }
       participants = noveKolo;
       kolo++;
     }
   } else if (fmt.playoffMode === "umisteni") {
-    // Multi-tier: kazde pasmo 4 tymy -> mini-bracket (1v4, 2v3, finale, o 3.)
+    // Multi-tier: kazde pasmo 4 tymy -> mini-bracket. Pasma bezi PARALELNE
+    // na rozdelenych kurtech. Finale celniho pasma se ODLOZI jako posledni.
     const pocetPasem = Math.ceil(tymuCelkem / 4);
-    let kdyMuze = playoffStart();
+    const kurtyPerPasmo = rozdelKurty(fmt.pocetKurtu, pocetPasem);
+
     for (let p = 0; p < pocetPasem; p++) {
       const tymyPasma = Math.min(4, tymuCelkem - p * 4);
       if (tymyPasma < 2) continue;
       const labelPasma = pocetPasem === 1 ? "" : ` (${p * 4 + 1}.-${p * 4 + tymyPasma}.)`;
+      const kurty = kurtyPerPasmo[p];
+
       if (tymyPasma === 4) {
         const s1 = naplanuj("semifinale", null, p * 10 + 1,
           { tym1Id: null, tym2Id: null, tym1Label: `${p * 4 + 1}.`, tym2Label: `${p * 4 + 4}.` },
-          `Semi 1${labelPasma}`, kdyMuze);
+          `Semi 1${labelPasma}`, playoffStart, kurty);
         const s2 = naplanuj("semifinale", null, p * 10 + 1,
           { tym1Id: null, tym2Id: null, tym1Label: `${p * 4 + 2}.`, tym2Label: `${p * 4 + 3}.` },
-          `Semi 2${labelPasma}`, kdyMuze);
+          `Semi 2${labelPasma}`, playoffStart, kurty);
         const poSemi = Math.max(parseHM(s1.casKonec), parseHM(s2.casKonec)) + fmt.pauzaMin;
         naplanuj("o_3_misto", null, p * 10 + 2,
           { tym1Id: null, tym2Id: null, tym1Label: "Porazeny S1", tym2Label: "Porazeny S2" },
-          `O ${p * 4 + 3}. misto${labelPasma}`, poSemi);
-        const f = naplanuj("finale", null, p * 10 + 2,
-          { tym1Id: null, tym2Id: null, tym1Label: "Vitez S1", tym2Label: "Vitez S2" },
-          `Finale${labelPasma}`, poSemi);
-        kdyMuze = parseHM(f.casKonec) + fmt.pauzaMin;
-      } else if (tymuCelkem >= 2) {
+          `O ${p * 4 + 3}. misto${labelPasma}`, poSemi, kurty);
+        if (p === 0) {
+          // Finale cela — odlozit
+          finaleCela = {
+            faze: "finale",
+            entry: { tym1Id: null, tym2Id: null, tym1Label: "Vitez S1", tym2Label: "Vitez S2" },
+            umisteni: `Finale${labelPasma}`,
+            kolo: p * 10 + 2,
+            nejdriveStart: poSemi,
+            povoleneKurty: Array.from({ length: fmt.pocetKurtu }, (_, i) => i),
+          };
+        } else {
+          naplanuj("finale", null, p * 10 + 2,
+            { tym1Id: null, tym2Id: null, tym1Label: "Vitez S1", tym2Label: "Vitez S2" },
+            `Finale${labelPasma}`, poSemi, kurty);
+        }
+      } else if (tymyPasma === 3) {
+        // 3 tymy: round-robin v ramci pasma (3 zapasy) — uz odehrano ve skupine
+        // Tady jen jeden zapas o nejvyssi misto pasma
         const z = naplanuj("finale", null, p * 10 + 1,
           { tym1Id: null, tym2Id: null, tym1Label: `${p * 4 + 1}.`, tym2Label: `${p * 4 + 2}.` },
-          `O ${p * 4 + 1}. misto${labelPasma}`, kdyMuze);
-        kdyMuze = parseHM(z.casKonec) + fmt.pauzaMin;
+          `O ${p * 4 + 1}. misto${labelPasma}`, playoffStart, kurty);
+        if (p === 0) {
+          // Cele pasmo bylo "finale celo" — posledni zapas
+          // Drop poslední zápas, ulozit jako odlozene
+          zapasy.pop();
+          kurtVolnyOd[z.kurt - 1] = parseHM(z.casZacatek); // reset
+          finaleCela = {
+            faze: "finale",
+            entry: { tym1Id: null, tym2Id: null, tym1Label: `${p * 4 + 1}.`, tym2Label: `${p * 4 + 2}.` },
+            umisteni: `Finale${labelPasma}`,
+            kolo: p * 10 + 1,
+            nejdriveStart: playoffStart,
+            povoleneKurty: Array.from({ length: fmt.pocetKurtu }, (_, i) => i),
+          };
+        }
+      } else if (tymyPasma === 2) {
+        const z = naplanuj("finale", null, p * 10 + 1,
+          { tym1Id: null, tym2Id: null, tym1Label: `${p * 4 + 1}.`, tym2Label: `${p * 4 + 2}.` },
+          `O ${p * 4 + 1}. misto${labelPasma}`, playoffStart, kurty);
+        if (p === 0) {
+          zapasy.pop();
+          kurtVolnyOd[z.kurt - 1] = parseHM(z.casZacatek);
+          finaleCela = {
+            faze: "finale",
+            entry: { tym1Id: null, tym2Id: null, tym1Label: `${p * 4 + 1}.`, tym2Label: `${p * 4 + 2}.` },
+            umisteni: `Finale${labelPasma}`,
+            kolo: p * 10 + 1,
+            nejdriveStart: playoffStart,
+            povoleneKurty: Array.from({ length: fmt.pocetKurtu }, (_, i) => i),
+          };
+        }
       }
     }
   }
 
-  // ===== Utechovy pavouk =====
-  // Hraji ho porazeni z prvniho kola playoff (medaile/vitez) — paralelne s dalsim kolem.
+  // ===== Utechovy pavouk (paralelne s playoff) =====
   if (fmt.utechovyPavouk && (fmt.playoffMode === "medaile" || fmt.playoffMode === "vitez")) {
-    // Najdi poraze pavouka 1. kola
     const prvniKolo = zapasy.filter(z =>
       (z.faze === "semifinale" && fmt.playoffMode === "medaile") ||
       (z.faze === "ctvrtfinale" && fmt.playoffMode === "vitez") ||
@@ -342,23 +444,20 @@ export function generujRozvrh(
     );
     if (prvniKolo.length >= 2) {
       const start = Math.min(...prvniKolo.map(z => parseHM(z.casKonec))) + fmt.pauzaMin;
-      // Spary porazene: 1 vs 2, 3 vs 4 atd.
-      let kdyMuze = start;
+      const allKurty = Array.from({ length: fmt.pocetKurtu }, (_, i) => i);
       const porazene = prvniKolo.map((_, i) => `Porazeny ${i + 1}`);
-      // Prvni kolo utechoveho pavouka
       const utechMatches: GenZapas[] = [];
       const dalsi: string[] = [];
       for (let i = 0; i < porazene.length - 1; i += 2) {
         const z = naplanuj("utech_1", null, 1,
           { tym1Id: null, tym2Id: null, tym1Label: porazene[i], tym2Label: porazene[i + 1] },
-          `Utech 1. kolo`, kdyMuze);
+          `Utech 1. kolo`, start, allKurty);
         utechMatches.push(z);
         dalsi.push(`Vitez utech ${i / 2 + 1}`);
       }
-      if (utechMatches.length > 0) {
-        kdyMuze = Math.max(...utechMatches.map(z => parseHM(z.casKonec))) + fmt.pauzaMin;
-      }
-      // Dalsi kola utechoveho pavouka (pokud >=2 vitezove)
+      let kdyMuze = utechMatches.length > 0
+        ? Math.max(...utechMatches.map(z => parseHM(z.casKonec))) + fmt.pauzaMin
+        : start;
       let kolo = 2;
       let participants = dalsi;
       while (participants.length > 1) {
@@ -369,7 +468,7 @@ export function generujRozvrh(
           const z = naplanuj(faze, null, kolo,
             { tym1Id: null, tym2Id: null, tym1Label: participants[i], tym2Label: participants[i + 1] },
             faze === "utech_finale" ? "Utechove finale" : `Utech ${kolo}. kolo`,
-            kdyMuze);
+            kdyMuze, allKurty);
           koloMatches.push(z);
           next.push(`Vitez utech K${kolo} ${i / 2 + 1}`);
         }
@@ -379,6 +478,24 @@ export function generujRozvrh(
         kolo++;
       }
     }
+  }
+
+  // ===== Finale cela jako posledni zapas turnaje =====
+  if (finaleCela) {
+    const koncePadlsim = zapasy.length > 0
+      ? Math.max(...zapasy.map(z => parseHM(z.casKonec)))
+      : casOdMin;
+    const startFinale = Math.max(finaleCela.nejdriveStart, koncePadlsim + fmt.pauzaMin);
+    naplanuj(
+      finaleCela.faze,
+      null,
+      finaleCela.kolo,
+      finaleCela.entry,
+      finaleCela.umisteni,
+      startFinale,
+      finaleCela.povoleneKurty,
+      true, // jeFinaleCela
+    );
   }
 
   // ===== Vyhodnoceni =====
