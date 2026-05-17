@@ -47,6 +47,7 @@ function defaultFormat(over = {}) {
     playoffMode: "umisteni",
     vitezBracket: "auto",
     utechovyPavouk: false,
+    bezSkupin: false,
     pocetKurtu: 4,
     casOd: "16:00",
     casDo: "20:00",
@@ -159,9 +160,15 @@ function validujParaleliMultiTier(rozvrh, fmt, pocetPasem) {
   return [];
 }
 
-function validujOcekavanyPocetSkupin(rozvrh, tymy) {
-  // Pro round-robin skupin: kazda skupina ma n*(n-1)/2 zapasu
+function validujOcekavanyPocetSkupin(rozvrh, tymy, fmt) {
   const errors = [];
+  const skupinovych = rozvrh.zapasy.filter(z => z.faze === "skupina").length;
+  if (fmt.bezSkupin) {
+    if (skupinovych !== 0) {
+      errors.push(`bezSkupin=true ale skupinovych zapasu: ${skupinovych}`);
+    }
+    return errors;
+  }
   const skupinyMap = new Map();
   for (const t of tymy) {
     skupinyMap.set(t.skupina, (skupinyMap.get(t.skupina) ?? 0) + 1);
@@ -170,9 +177,8 @@ function validujOcekavanyPocetSkupin(rozvrh, tymy) {
   for (const [, count] of skupinyMap) {
     ocekavano += (count * (count - 1)) / 2;
   }
-  const skutecno = rozvrh.zapasy.filter(z => z.faze === "skupina").length;
-  if (skutecno !== ocekavano) {
-    errors.push(`Spatny pocet skupinovych zapasu: ${skutecno} != ocekavanych ${ocekavano}`);
+  if (skupinovych !== ocekavano) {
+    errors.push(`Spatny pocet skupinovych zapasu: ${skupinovych} != ocekavanych ${ocekavano}`);
   }
   return errors;
 }
@@ -265,6 +271,16 @@ pridejScenar("40t 6 kurtu", 40, 10, { pocetKurtu: 6, playoffMode: "umisteni", ca
 // Velmi tesny cas — nemusi sedet ale nesmi crashnout / mit konflikty
 pridejScenar("8t velmi tesny cas", 8, 2, { casOd: "16:00", casDo: "16:45" });
 
+// === bezSkupin (jen playoff) ===
+pridejScenar("bezSkupin 4t medaile", 4, 1, { bezSkupin: true, playoffMode: "medaile" });
+pridejScenar("bezSkupin 8t medaile + utech", 8, 2, { bezSkupin: true, playoffMode: "medaile", utechovyPavouk: true });
+pridejScenar("bezSkupin 8t vitez top8", 8, 2, { bezSkupin: true, playoffMode: "vitez", vitezBracket: "top8" });
+pridejScenar("bezSkupin 16t vitez top16 + utech", 16, 4, { bezSkupin: true, playoffMode: "vitez", vitezBracket: "top16", utechovyPavouk: true });
+pridejScenar("bezSkupin 8t umisteni 2 pasma", 8, 2, { bezSkupin: true, playoffMode: "umisteni" });
+pridejScenar("bezSkupin 12t umisteni 3 pasma 3 kurty", 12, 3, { bezSkupin: true, pocetKurtu: 3, playoffMode: "umisteni" });
+pridejScenar("bezSkupin 4t vitez na 1 kurtu", 4, 1, { bezSkupin: true, pocetKurtu: 1, playoffMode: "vitez", vitezBracket: "top4" });
+pridejScenar("bezSkupin 16t medaile + utech 4 kurty", 16, 4, { bezSkupin: true, playoffMode: "medaile", utechovyPavouk: true });
+
 // ===== Spousteni =====
 
 console.log(`Spoustim ${SCENARE.length} scenaru...\n`);
@@ -282,7 +298,7 @@ for (const sc of SCENARE) {
     ...validujKonfliktyTymu(rozvrh, sc.fmt),
     ...validujFinalePosledni(rozvrh, sc.fmt),
     ...validujParaleliMultiTier(rozvrh, sc.fmt, pocetPasem),
-    ...validujOcekavanyPocetSkupin(rozvrh, tymy),
+    ...validujOcekavanyPocetSkupin(rozvrh, tymy, sc.fmt),
   ];
 
   if (errors.length === 0) {

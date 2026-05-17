@@ -324,6 +324,7 @@ export default function NovaHraPage() {
   const [vitezBracket,       setVitezBracket]       = useState<"auto" | "top4" | "top8" | "top16">("auto");
   const [rezimKurtu,         setRezimKurtu]         = useState<"auto" | "1-1" | "2-1">("auto");
   const [utechovyPavouk,     setUtechovyPavouk]     = useState(false);
+  const [bezSkupin,          setBezSkupin]          = useState(false);
   const [vlastniDelky,       setVlastniDelky]       = useState(false);
   const [delkaSkupinaMin,    setDelkaSkupinaMin]    = useState<number | "">(20);
   const [delkaSemiMin,       setDelkaSemiMin]       = useState<number | "">(20);
@@ -610,6 +611,7 @@ export default function NovaHraPage() {
     playoffMode,
     vitezBracket,
     utechovyPavouk,
+    bezSkupin,
     pocetKurtu: typeof pocetKurtu === "number" ? pocetKurtu : 2,
     casOd,
     casDo,
@@ -617,7 +619,7 @@ export default function NovaHraPage() {
     delkaSemiMin: vlastniDelky && typeof delkaSemiMin === "number" ? delkaSemiMin : null,
     delkaFinaleMin: vlastniDelky && typeof delkaFinaleMin === "number" ? delkaFinaleMin : null,
     pauzaMin: typeof pauzaMin === "number" ? pauzaMin : 1,
-  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin]);
+  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin]);
 
   // Preview rozvrhu — z formularovych poli (s placeholder ID)
   const previewRozvrh = useMemo<Rozvrh | null>(() => {
@@ -773,13 +775,14 @@ export default function NovaHraPage() {
       nasazeni: t.nasazeni ?? 1,
     }));
     const rozvrh = generujRozvrh(turnajFormat, tymyVeSkupinach);
-    // Vlozime pouze skupinove zapasy (s casy a kurty). Playoff se generuje
-    // az po dohrani skupin existujici logikou v TurnajView, aby se neduplikovalo.
-    const skupinoveZapasy = rozvrh.zapasy.filter(z => z.faze === "skupina");
-    if (skupinoveZapasy.length > 0) {
-      const zapasyInsert = skupinoveZapasy.map(z => ({
+    // Vlozime zapasy s realnymi ID (skupinove + 1. kolo playoff u "bezSkupin").
+    // Placeholder zapasy (vitez semi, …) se vlozi az auto-generaci v TurnajView,
+    // ne by se zde duplikovaly.
+    const zapasySNymID = rozvrh.zapasy.filter(z => z.tym1Id != null && z.tym2Id != null);
+    if (zapasySNymID.length > 0) {
+      const zapasyInsert = zapasySNymID.map(z => ({
         hra_id: hra.id,
-        faze: "skupina",
+        faze: z.faze === "skupina" ? "skupina" : "playoff",
         skupina: z.skupina,
         kolo: z.kolo,
         tym1_id: z.tym1Id,
@@ -1128,6 +1131,23 @@ export default function NovaHraPage() {
                         )}
                       </div>
 
+                      {/* Skupinova faze */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium" style={{ color: "#374151" }}>Skupinová fáze</label>
+                        <div className="flex gap-2">
+                          <button onClick={() => setBezSkupin(false)}
+                            className={`flex-1 rounded-xl py-2.5 px-3 border-2 text-left transition-all ${!bezSkupin ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}>
+                            <p className="text-sm font-semibold" style={{ color: !bezSkupin ? "#801A28" : "#374151" }}>Ano — skupiny + playoff</p>
+                            <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>Tým si zahraje s každým ve skupině, pak playoff dle umístění.</p>
+                          </button>
+                          <button onClick={() => setBezSkupin(true)}
+                            className={`flex-1 rounded-xl py-2.5 px-3 border-2 text-left transition-all ${bezSkupin ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}>
+                            <p className="text-sm font-semibold" style={{ color: bezSkupin ? "#801A28" : "#374151" }}>Ne — rovnou playoff</p>
+                            <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>Bez skupin. Týmy jdou rovnou do pavouka podle nasazení.</p>
+                          </button>
+                        </div>
+                      </div>
+
                       {/* Playoff mod */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-medium" style={{ color: "#374151" }}>Playoff</label>
@@ -1163,6 +1183,21 @@ export default function NovaHraPage() {
                               ))}
                             </div>
                           </div>
+                        )}
+
+                        {/* Utechovy pavouk — jen pro medaile/vitez */}
+                        {(playoffMode === "medaile" || playoffMode === "vitez") && (
+                          <label className="mt-3 flex items-start gap-2 cursor-pointer rounded-lg border border-zinc-200 p-3 hover:border-[#801A28]">
+                            <input type="checkbox" checked={utechovyPavouk}
+                              onChange={e => setUtechovyPavouk(e.target.checked)}
+                              className="mt-0.5" />
+                            <span className="text-sm" style={{ color: "#374151" }}>
+                              <strong>Útěchový pavouk</strong> (Turnaj druhé šance)
+                              <span className="block text-xs mt-0.5" style={{ color: "#9ca3af" }}>
+                                Poražení z prvního kola playoff hrají paralelní bracket — všichni si zahrajou víc zápasů.
+                              </span>
+                            </span>
+                          </label>
                         )}
                       </div>
 
@@ -1484,22 +1519,9 @@ export default function NovaHraPage() {
                 )}
               </div>
 
-              {/* Doplnkova nastaveni */}
+              {/* Doplnkova nastaveni — bez utechu, ten je v kroku 3 */}
               <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col gap-4">
                 <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>Doplnkova nastaveni</p>
-
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <input type="checkbox" checked={utechovyPavouk} onChange={e => setUtechovyPavouk(e.target.checked)}
-                    className="mt-0.5" disabled={playoffMode === "bez" || playoffMode === "umisteni"} />
-                  <span className="text-sm" style={{ color: playoffMode === "bez" || playoffMode === "umisteni" ? "#9ca3af" : "#374151" }}>
-                    Utechovy pavouk (Turnaj druhe sance) — porazeni z prvniho kola hraji paralelni bracket
-                    {(playoffMode === "bez" || playoffMode === "umisteni") && (
-                      <span className="block text-xs" style={{ color: "#9ca3af" }}>
-                        Dostupne jen pro Final Four nebo single elim playoff.
-                      </span>
-                    )}
-                  </span>
-                </label>
 
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input type="checkbox" checked={vlastniDelky} onChange={e => setVlastniDelky(e.target.checked)} className="mt-0.5" />

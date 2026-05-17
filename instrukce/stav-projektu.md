@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.8.4  
+**Aktuální:** v0.8.5  
 **Poslední změna:** 17. 5. 2026  
-**Git tag:** v0.8.4
+**Git tag:** v0.8.5
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.8.5 | 17. 5. 2026 | **Turnaj bez skupin (jen playoff)**. Engine podporuje `bezSkupin: true` — přeskočí skupinovou fázi, týmy jdou rovnou do playoff podle nasazení (1v4/2v3 u Final Four, 1vN/2v(N-1) u single elim, multi-tier po pásmech). Pro bezSkupin se 1. kolo playoff vkládá do DB s reálnými ID rovnou. Krok 3 wizardu má novou sekci "Skupinová fáze" (Ano / Ne) na začátku. Útěchový pavouk přesunut z kroku 4 do kroku 3 k playoff. Test runner 69 scénářů (8 nových bezSkupin variant) |
 | v0.8.4 | 17. 5. 2026 | **Wizard reálnější vstupy.** Místo "Čas od/do" zadává uživatel **délku turnaje (hodiny + minuty)** + quick presety (1.5h / 2h / 3h / 4h / 5h / 6h). Nový vstup **Max kurtů** (default 4) — wizard nenabízí varianty s víc kurty než má klub k dispozici. Nový **Playoff** přepínač (Je mi to jedno / S playoff / Bez playoff). Po výběru se `cas_do` v hlavním formuláři přepočte z `cas_od + délka` (zachovává čas zahájení) |
 | v0.8.3 | 17. 5. 2026 | **Wizard "Doporuč variantu" — flexibilnější**. Body odebrány z navrhovaných formátů (turnaje nejsou na body), wizard navrhuje jen **gamy nebo čas**. Přepínač "Způsob počítání" (Je mi to jedno / Na gamy / Na čas). Místo 3 návrhů wizard ukáže **6 variant** (interleaving optimální / max zápasů / s rezervou), tlačítko "Zobrazit další varianty" zpřístupní až 12. U časových variant info "≈ X gamů za zápas" pro představu |
 | v0.8.2 | 17. 5. 2026 | **Tab Rozlosování přepsaný na časovou tabulku** — všechny zápasy seřazené podle `poradi_fronta`/`cas_zacatek`. Sloupce: Čas / Kurt / Fáze / Zápas / Stav. Inline zadání skóre, inline změna kurtu přes dropdown (klik na "Kx ⌄"), spuštění zápasu, úprava výsledku. Stejný look jako preview ve wizardu. Funkce `zmenitKurt(zapasId, novyKurt)` v TurnajView |
