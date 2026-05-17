@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.7.16  
-**Poslední změna:** 16. 5. 2026  
-**Git tag:** v0.7.16
+**Aktuální:** v0.7.17  
+**Poslední změna:** 17. 5. 2026  
+**Git tag:** v0.7.17
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.7.17 | 17. 5. 2026 | **Mazání všech typů her** — `lib/hry.ts` se sdílenou funkcí `smazatHru()` mažící podle FK pořadí pro turnaj i americano/mexicano/mixano (včetně `hra_skupiny`, `hra_skupiny_ucastnici`, `hra_editatori`). Detail hry: tlačítko "Smazat trvale" vždy pro editora (mimo zrušený turnaj — tam stále v banneru), modal ukazuje počet účastníků a zápasů + povinný checkbox potvrzení. Seznam `/hry`: ikonka koše vedle stavu pro editora, stejný modal |
 | v0.7.16 | 16. 5. 2026 | **Mexicano persistence** — kola se ukládají do `hra_zapasy` (předtím vše v `useState`, F5 ztratilo data). Init kola 1 vloží do DB, výsledky a nové kola se ukládají. `kola` se odvozuje z DB přes useMemo |
 | v0.7.15 | 16. 5. 2026 | **Oprava advantage gamy**: 7:5 (win by 2 po 5:5→6:5→7:5) je teď validní. Tři možné výsledky pro advantage: normalWin (6:0–6:4), winByTwo (7:5), tiebreakWin (7:6) |
 | v0.7.14 | 16. 5. 2026 | **Pravidla her** ([instrukce/pravidla/](pravidla/)) PADEL/AMERICANO/MEXICANO/TURNAJ. Gamy tiebreak validace (sudden_death/advantage), audit fixes: finalniPoradi pro vitez s víc kolama, auto-gen pro malá pásma, `hra.stav=ukonceno` po dokončení |

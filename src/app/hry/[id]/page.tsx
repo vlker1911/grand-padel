@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { spocitejTabulku } from "@/lib/americano";
+import { smazatHru as smazatHruDb, nactiPoctyMazani, type HraTyp } from "@/lib/hry";
 
 type Hra = {
   id: string;
@@ -1133,7 +1134,7 @@ function generujPlayoff(
 
 const SKUPINY_NAZVY_LOCAL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
+function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: boolean; onSmazatRequest: () => void }) {
   const supabase = createClient();
   const settings = (hra.settings ?? {}) as TurnajSettings;
   const scoringTyp = settings.scoring_typ ?? "gamy";
@@ -1167,15 +1168,11 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
   const [zrusitModal, setZrusitModal] = useState(false);
   const [zrusitDuvod, setZrusitDuvod] = useState("");
   const [zrusujem, setZrusujem]   = useState(false);
-  const [smazatModal, setSmazatModal] = useState(false);
-  const [mazem, setMazem] = useState(false);
   const [kurtModal, setKurtModal] = useState<string | null>(null);
   const [editHraciTymId, setEditHraciTymId] = useState<string | null>(null);
   const [editHrac1, setEditHrac1] = useState("");
   const [editHrac2, setEditHrac2] = useState("");
   const [ukladamHrace, setUkladamHrace] = useState(false);
-
-  const router = useRouter();
 
   const jeZruseno = hra.settings?.zruseno === true;
 
@@ -1519,21 +1516,6 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
     window.location.reload();
   }
 
-  async function smazatTurnaj() {
-    setMazem(true);
-    // Smazat zavisle zaznamy v poradi dle FK constraints
-    const e1 = await supabase.from("turnaj_zapasy").delete().eq("hra_id", hra.id);
-    if (e1.error) { alert("Chyba pri mazani zapasu: " + e1.error.message); setMazem(false); return; }
-    const e2 = await supabase.from("turnaj_tymy").delete().eq("hra_id", hra.id);
-    if (e2.error) { alert("Chyba pri mazani tymu: " + e2.error.message); setMazem(false); return; }
-    const e3 = await supabase.from("hra_ucastnici").delete().eq("hra_id", hra.id);
-    if (e3.error) { alert("Chyba pri mazani ucastniku: " + e3.error.message); setMazem(false); return; }
-    const e4 = await supabase.from("hry").delete().eq("id", hra.id);
-    if (e4.error) { alert("Chyba pri mazani hry: " + e4.error.message); setMazem(false); return; }
-    setMazem(false);
-    router.push("/hry");
-  }
-
   async function zrusitSpusteni(zapasId: string) {
     await supabase.from("turnaj_zapasy").update({ stav: "ceka", kurt: null, cas_zacatek: null }).eq("id", zapasId);
     nactiTurnaj();
@@ -1686,7 +1668,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
               )}
             </div>
             {jeEditor && (
-              <button onClick={() => setSmazatModal(true)}
+              <button onClick={onSmazatRequest}
                 className="shrink-0 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium hover:bg-red-50"
                 style={{ color: "#801A28" }}>
                 Smazat trvale
@@ -1736,30 +1718,6 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
           </div>
         );
       })()}
-
-      {/* Smazat modal */}
-      {smazatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => !mazem && setSmazatModal(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold mb-2" style={{ color: "#801A28" }}>Trvale smazat turnaj?</h3>
-            <p className="text-sm mb-4" style={{ color: "#6b7280" }}>
-              Vsechny tymy, zapasy a vysledky budou trvale odstraneny z databaze. Tato akce je <strong>nevratna</strong>.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setSmazatModal(false)} disabled={mazem}
-                className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 hover:bg-zinc-50"
-                style={{ color: "#374151" }}>
-                Ponechat
-              </button>
-              <button onClick={smazatTurnaj} disabled={mazem}
-                className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-                style={{ backgroundColor: "#801A28" }}>
-                {mazem ? "Mazu..." : "Ano, smazat trvale"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Zruseni modal */}
       {zrusitModal && (
@@ -2553,6 +2511,7 @@ function TurnajView({ hra, jeEditor }: { hra: Hra; jeEditor: boolean }) {
 
 export default function HraDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const supabase = createClient();
 
   const [hra, setHra] = useState<Hra | null>(null);
@@ -2560,6 +2519,32 @@ export default function HraDetailPage() {
   const [zapasy, setZapasy] = useState<Zapas[]>([]);
   const [jeEditor, setJeEditor] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [smazatModal, setSmazatModal] = useState(false);
+  const [mazem, setMazem] = useState(false);
+  const [pocty, setPocty] = useState<{ pocetZapasu: number; pocetUcastniku: number } | null>(null);
+  const [potvrzeni, setPotvrzeni] = useState(false);
+
+  async function otevriSmazatModal() {
+    if (!hra) return;
+    setPotvrzeni(false);
+    setPocty(null);
+    setSmazatModal(true);
+    const p = await nactiPoctyMazani(supabase, hra.id, hra.typ as HraTyp);
+    setPocty(p);
+  }
+
+  async function provedSmazani() {
+    if (!hra) return;
+    setMazem(true);
+    const { error } = await smazatHruDb(supabase, hra.id, hra.typ as HraTyp);
+    if (error) {
+      alert(error);
+      setMazem(false);
+      return;
+    }
+    setMazem(false);
+    router.push("/hry");
+  }
 
   const nactiData = useCallback(async () => {
     const [{ data: hraData }, { data: ucastData }, { data: zapasyData }, { data: { user } }] = await Promise.all([
@@ -2634,7 +2619,58 @@ export default function HraDetailPage() {
             <MexicanoView hra={hra} ucastnici={ucastnici} zapasy={zapasy} jeEditor={jeEditor} nactiData={nactiData} />
           )}
           {hra.typ === "turnaj" && (
-            <TurnajView hra={hra} jeEditor={jeEditor} />
+            <TurnajView hra={hra} jeEditor={jeEditor} onSmazatRequest={otevriSmazatModal} />
+          )}
+
+          {jeEditor && !(hra.typ === "turnaj" && hra.settings?.zruseno) && (
+            <div className="mt-10 pt-6 border-t border-zinc-200">
+              <p className="text-xs mb-2" style={{ color: "#9ca3af" }}>Nebezpecna zona</p>
+              <button onClick={otevriSmazatModal}
+                className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium hover:bg-red-50"
+                style={{ color: "#801A28" }}>
+                Smazat trvale
+              </button>
+            </div>
+          )}
+
+          {smazatModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => !mazem && setSmazatModal(false)}>
+              <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-bold mb-2" style={{ color: "#801A28" }}>Trvale smazat hru?</h3>
+                <p className="text-sm mb-3" style={{ color: "#6b7280" }}>
+                  Tato akce je <strong>nevratna</strong>. Smaze vsechny zapasy, ucastniky i nastaveni hry.
+                </p>
+                <div className="rounded-lg bg-zinc-50 px-4 py-3 mb-4 text-sm" style={{ color: "#374151" }}>
+                  <p><strong>{hra.nazev}</strong></p>
+                  {pocty ? (
+                    <p className="text-xs mt-1" style={{ color: "#6b7280" }}>
+                      {pocty.pocetUcastniku} ucastniku &middot; {pocty.pocetZapasu} zapasu
+                    </p>
+                  ) : (
+                    <p className="text-xs mt-1" style={{ color: "#9ca3af" }}>Pocitam zaznamy...</p>
+                  )}
+                </div>
+                <label className="flex items-start gap-2 mb-4 cursor-pointer">
+                  <input type="checkbox" checked={potvrzeni} onChange={e => setPotvrzeni(e.target.checked)}
+                    className="mt-0.5" />
+                  <span className="text-sm" style={{ color: "#374151" }}>
+                    Rozumim, ze data nepujdou obnovit.
+                  </span>
+                </label>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setSmazatModal(false)} disabled={mazem}
+                    className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200 hover:bg-zinc-50"
+                    style={{ color: "#374151" }}>
+                    Ponechat
+                  </button>
+                  <button onClick={provedSmazani} disabled={mazem || !potvrzeni}
+                    className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                    style={{ backgroundColor: "#801A28" }}>
+                    {mazem ? "Mazu..." : "Ano, smazat trvale"}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
         </div>
