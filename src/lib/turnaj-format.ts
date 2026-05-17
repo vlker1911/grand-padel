@@ -12,6 +12,11 @@
 export type PlayoffMode = "bez" | "medaile" | "vitez" | "umisteni" | "skupiny_o_umisteni";
 export type ScoringTyp = "gamy" | "body" | "cas";
 export type VitezBracket = "auto" | "top4" | "top8" | "top16";
+// Pravidlo na 40:40 v game:
+//   golden — Golden Point, jeden rozhodujici mic. Default (rychly).
+//   star   — Star Point, returner si vybira stranu. ~4 min delsi/zapas.
+//   advantage — Klasicka vyhoda (jako v tenisu). Nejdelsi.
+export type PointRule = "golden" | "star" | "advantage";
 
 export type TurnajFormat = {
   scoringTyp: ScoringTyp;
@@ -21,6 +26,7 @@ export type TurnajFormat = {
   vitezBracket: VitezBracket;
   utechovyPavouk: boolean;
   bezSkupin: boolean;     // true = preskoc skupinovou fazi, hraj rovnou playoff (nasazeni = poradi)
+  pointRule: PointRule;   // pravidlo na 40:40 v game; ovlivnuje prumernou delku zapasu
   pocetKurtu: number;
   casOd: string;          // "HH:MM"
   casDo: string;          // "HH:MM"
@@ -77,9 +83,14 @@ function formatHM(min: number): string {
 }
 
 function delkaZapasu(faze: GenZapas["faze"], fmt: TurnajFormat): number {
+  // Pravidlo na 40:40: golden = bez prirustku, star ~ +4 min, advantage ~ +6 min na zapas
+  const pointBonus = fmt.scoringTyp === "cas" ? 0
+    : fmt.pointRule === "advantage" ? 6
+    : fmt.pointRule === "star" ? 4
+    : 0;
   function odvozPodleSkore(limit: number): number {
     if (fmt.scoringTyp === "cas") return limit;
-    if (fmt.scoringTyp === "gamy") return limit * 3 + 5;
+    if (fmt.scoringTyp === "gamy") return limit * 3 + 5 + pointBonus;
     return Math.round(limit * 0.45) + 5;
   }
   if (faze === "skupina" || faze === "skupina_o_umisteni") {
@@ -387,22 +398,28 @@ export function generujRozvrh(
       kolo++;
     }
   } else if (fmt.playoffMode === "skupiny_o_umisteni" && !fmt.bezSkupin) {
-    // Druha faze: rozdelit tymy do horni a dolni poloviny podle umisteni ve skupine.
-    // Round-robin v ramci nove skupiny.
+    // Druha faze: nove skupiny zachovavaji puvodni velikost (V).
+    // Pocet novych skupin = ceil(N / V).
+    // Distribuce: globalni ranking [1A, 1B, ..., 2A, 2B, ..., 3A, ...]
+    // -> rozdeleny po V tymech do novych skupin.
     type NovyTym = { tymId: string | null; label: string };
-    const horni: NovyTym[] = [];
-    const dolni: NovyTym[] = [];
-    for (const sk of skupinyKlice) {
-      const tymyVeSk = skupinyMap.get(sk)!;
-      const velikost = tymyVeSk.length;
-      const pulka = Math.ceil(velikost / 2);
-      for (let i = 0; i < velikost; i++) {
-        const entry: NovyTym = { tymId: null, label: `${i + 1}.${sk}` };
-        if (i < pulka) horni.push(entry);
-        else dolni.push(entry);
+    const maxVel = Math.max(0, ...skupinyKlice.map(sk => skupinyMap.get(sk)!.length));
+    const novaVelikost = Math.max(2, maxVel);
+    const ranking: NovyTym[] = [];
+    for (let pozice = 1; pozice <= maxVel; pozice++) {
+      for (const sk of skupinyKlice) {
+        const tymyVeSk = skupinyMap.get(sk)!;
+        if (tymyVeSk.length >= pozice) {
+          ranking.push({ tymId: null, label: `${pozice}.${sk}` });
+        }
       }
     }
-    const kurtyPerPasmo = rozdelKurty(fmt.pocetKurtu, 2);
+    const noveSkupiny: NovyTym[][] = [];
+    for (let i = 0; i < ranking.length; i += novaVelikost) {
+      noveSkupiny.push(ranking.slice(i, i + novaVelikost));
+    }
+    const pocetNovych = noveSkupiny.length;
+    const kurtyPerPasmo = rozdelKurty(fmt.pocetKurtu, pocetNovych);
     function rrPary<T>(items: T[]): Array<[T, T]> {
       const pary: Array<[T, T]> = [];
       for (let i = 0; i < items.length; i++) {
@@ -410,19 +427,20 @@ export function generujRozvrh(
       }
       return pary;
     }
-    const labelH = horni.length > 1 ? `Skupina o 1.-${horni.length}. místo` : "";
-    const labelD = dolni.length > 1 ? `Skupina o ${horni.length + 1}.-${tymuCelkem}. místo` : "";
-    function naplanujRR(tymy: NovyTym[], label: string, kurty: number[], skupinaKey: string) {
-      if (tymy.length < 2) return;
-      const pary = rrPary(tymy);
+    noveSkupiny.forEach((novaSkupina, ni) => {
+      if (novaSkupina.length < 2) return;
+      const od = ni * novaVelikost + 1;
+      const doMisto = od + novaSkupina.length - 1;
+      const label = `Skupina o ${od}.-${doMisto}. místo`;
+      const skupinaKey = `o-${ni + 1}`;
+      const pary = rrPary(novaSkupina);
+      const kurty = kurtyPerPasmo[ni];
       pary.forEach((p, idx) => {
         naplanuj("skupina_o_umisteni", skupinaKey, idx + 1,
           { tym1Id: p[0].tymId, tym2Id: p[1].tymId, tym1Label: p[0].label, tym2Label: p[1].label },
           `${label} - kolo ${idx + 1}`, playoffStart, kurty);
       });
-    }
-    naplanujRR(horni, labelH, kurtyPerPasmo[0], "H");
-    naplanujRR(dolni, labelD, kurtyPerPasmo[1], "D");
+    });
   } else if (fmt.playoffMode === "umisteni") {
     // Multi-tier: kazde pasmo 4 tymy -> mini-bracket. Pasma bezi PARALELNE
     // na rozdelenych kurtech. Finale celniho pasma se ODLOZI jako posledni.

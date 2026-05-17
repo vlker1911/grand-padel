@@ -346,6 +346,7 @@ export default function NovaHraPage() {
   const [rezimKurtu,         setRezimKurtu]         = useState<"auto" | "1-1" | "2-1">("auto");
   const [utechovyPavouk,     setUtechovyPavouk]     = useState(false);
   const [bezSkupin,          setBezSkupin]          = useState(false);
+  const [pointRule,          setPointRule]          = useState<"golden" | "star" | "advantage">("golden");
   const [vlastniDelky,       setVlastniDelky]       = useState(false);
   const [delkaSkupinaMin,    setDelkaSkupinaMin]    = useState<number | "">(20);
   const [delkaSemiMin,       setDelkaSemiMin]       = useState<number | "">(20);
@@ -543,6 +544,13 @@ export default function NovaHraPage() {
     }
   }, [scoringTyp, autoKolo, scoringLimit]);
 
+  // Auto-default tiebreak podle limitu gamu: do 4/5 -> sudden_death, do 6+ -> advantage
+  useEffect(() => {
+    if (scoringTyp !== "gamy") return;
+    const novy = scoringLimit >= 6 ? "advantage" : "sudden_death";
+    if (gamyTiebreak !== novy) setGamyTiebreak(novy);
+  }, [scoringTyp, scoringLimit, gamyTiebreak]);
+
   const odhadTurnaje = useMemo(() => {
     if (pocetTymuPredikovany < 2) return null;
     const kurty = typeof pocetKurtu === "number" ? pocetKurtu : 2;
@@ -642,6 +650,9 @@ export default function NovaHraPage() {
     if (typeof s.rezim_kurtu === "string") setRezimKurtu(s.rezim_kurtu as "auto" | "1-1" | "2-1");
     if (typeof s.utech_pavouk === "boolean") setUtechovyPavouk(s.utech_pavouk);
     if (typeof s.bez_skupin === "boolean") setBezSkupin(s.bez_skupin);
+    if (s.point_rule === "golden" || s.point_rule === "star" || s.point_rule === "advantage") {
+      setPointRule(s.point_rule);
+    }
     const tf = s.turnaj_format as Record<string, unknown> | undefined;
     if (tf) {
       const ds = tf.delka_skupina_min, dse = tf.delka_semi_min, df = tf.delka_finale_min, pm = tf.pauza_min;
@@ -722,6 +733,7 @@ export default function NovaHraPage() {
     vitezBracket,
     utechovyPavouk,
     bezSkupin,
+    pointRule,
     pocetKurtu: typeof pocetKurtu === "number" ? pocetKurtu : 2,
     casOd,
     casDo,
@@ -729,7 +741,7 @@ export default function NovaHraPage() {
     delkaSemiMin: vlastniDelky && typeof delkaSemiMin === "number" ? delkaSemiMin : null,
     delkaFinaleMin: vlastniDelky && typeof delkaFinaleMin === "number" ? delkaFinaleMin : null,
     pauzaMin: typeof pauzaMin === "number" ? pauzaMin : 1,
-  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin]);
+  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, pointRule, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin]);
 
   // Preview rozvrhu — z formularovych poli (s placeholder ID)
   const previewRozvrh = useMemo<Rozvrh | null>(() => {
@@ -830,6 +842,7 @@ export default function NovaHraPage() {
         rezim_kurtu: rezimKurtu,
         utech_pavouk: utechovyPavouk,
         bez_skupin: bezSkupin,
+        point_rule: pointRule,
         turnaj_format: {
           delka_skupina_min: turnajFormat.delkaSkupinaMin,
           delka_semi_min: turnajFormat.delkaSemiMin,
@@ -1179,26 +1192,27 @@ export default function NovaHraPage() {
                                 {scoringTyp === "gamy" ? "gamy na zapas" : "bodu na zapas"}
                               </span>
                             </div>
+                            {/* Tiebreak pravidlo je skryto — defaultuje se podle limitu gamu:
+                                limit 4 a 5 -> sudden_death (vitez na limit), limit 6 -> advantage (klasika).
+                                Lze prepnout v rozsirenem nastaveni v budoucnu. */}
+
+                            {/* Point Rule: golden / star / advantage (ovlivnuje delku zapasu) */}
                             {scoringTyp === "gamy" && (
-                              <div className="flex flex-col gap-1 mt-1">
-                                <p className="text-xs" style={{ color: "#6b7280" }}>Co když je stav nerozhodný?</p>
+                              <div className="flex flex-col gap-1 mt-2">
+                                <p className="text-xs" style={{ color: "#6b7280" }}>Pravidlo na 40:40 v gamu:</p>
                                 <div className="flex gap-2">
-                                  <button onClick={() => setGamyTiebreak("sudden_death")}
-                                    className={`flex-1 text-left rounded-lg py-2 px-3 border-2 transition-all ${gamyTiebreak === "sudden_death" ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}
-                                    style={{ color: gamyTiebreak === "sudden_death" ? "#801A28" : "#374151" }}>
-                                    <div className="text-xs font-semibold">Krátký (1 rozhodující game)</div>
-                                    <div className="text-xs font-normal mt-0.5" style={{ color: "#9ca3af" }}>
-                                      Za stavu {scoringLimit-1}:{scoringLimit-1} rozhodne 1 další game → vítěz {scoringLimit}:{scoringLimit-1}
-                                    </div>
-                                  </button>
-                                  <button onClick={() => setGamyTiebreak("advantage")}
-                                    className={`flex-1 text-left rounded-lg py-2 px-3 border-2 transition-all ${gamyTiebreak === "advantage" ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}
-                                    style={{ color: gamyTiebreak === "advantage" ? "#801A28" : "#374151" }}>
-                                    <div className="text-xs font-semibold">Klasický (musíš o 2 gamy)</div>
-                                    <div className="text-xs font-normal mt-0.5" style={{ color: "#9ca3af" }}>
-                                      Vyhraj o 2: {scoringLimit+1}:{scoringLimit-1}. Při {scoringLimit}:{scoringLimit} tiebreak → {scoringLimit+1}:{scoringLimit}
-                                    </div>
-                                  </button>
+                                  {([
+                                    { v: "golden",    l: "Golden Point",  p: "1 rozhodující míč. Nejrychlejší." },
+                                    { v: "star",      l: "Star Point",    p: "1 míč, returner volí stranu. ~4 min delší zápas." },
+                                    { v: "advantage", l: "Klasické výhody", p: "Hraje se na 2 míče. Nejdelší." },
+                                  ] as const).map(p => (
+                                    <button key={p.v} onClick={() => setPointRule(p.v)}
+                                      className={`flex-1 text-left rounded-lg py-2 px-3 border-2 transition-all ${pointRule === p.v ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}
+                                      style={{ color: pointRule === p.v ? "#801A28" : "#374151" }}>
+                                      <div className="text-xs font-semibold">{p.l}</div>
+                                      <div className="text-xs font-normal mt-0.5" style={{ color: "#9ca3af" }}>{p.p}</div>
+                                    </button>
+                                  ))}
                                 </div>
                               </div>
                             )}

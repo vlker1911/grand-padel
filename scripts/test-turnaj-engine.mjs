@@ -48,6 +48,7 @@ function defaultFormat(over = {}) {
     vitezBracket: "auto",
     utechovyPavouk: false,
     bezSkupin: false,
+    pointRule: "golden",
     pocetKurtu: 4,
     casOd: "16:00",
     casDo: "20:00",
