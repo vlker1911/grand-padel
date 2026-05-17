@@ -346,7 +346,7 @@ export default function NovaHraPage() {
   const [rezimKurtu,         setRezimKurtu]         = useState<"auto" | "1-1" | "2-1">("auto");
   const [utechovyPavouk,     setUtechovyPavouk]     = useState(false);
   const [bezSkupin,          setBezSkupin]          = useState(false);
-  const [pointRule,          setPointRule]          = useState<"golden" | "star" | "advantage">("golden");
+  const [pointRule,          setPointRule]          = useState<"golden" | "star" | "advantage">("star");
   const [vlastniDelky,       setVlastniDelky]       = useState(false);
   const [delkaSkupinaMin,    setDelkaSkupinaMin]    = useState<number | "">(20);
   const [delkaSemiMin,       setDelkaSemiMin]       = useState<number | "">(20);
@@ -1202,9 +1202,9 @@ export default function NovaHraPage() {
                                 <p className="text-xs" style={{ color: "#6b7280" }}>Pravidlo na 40:40 v gamu:</p>
                                 <div className="flex gap-2">
                                   {([
-                                    { v: "golden",    l: "Golden Point",  p: "1 rozhodující míč. Nejrychlejší." },
-                                    { v: "star",      l: "Star Point",    p: "1 míč, returner volí stranu. ~4 min delší zápas." },
-                                    { v: "advantage", l: "Klasické výhody", p: "Hraje se na 2 míče. Nejdelší." },
+                                    { v: "star",      l: "Star Point",    p: "3 shody (klasická výhoda), poté Golden Point. ~3–5 min navíc / zápas." },
+                                    { v: "golden",    l: "Golden Point",  p: "Hned na 40:40 rozhoduje 1 míč. Nejrychlejší." },
+                                    { v: "advantage", l: "Klasické výhody", p: "Bez limitu shod. Nejdelší." },
                                   ] as const).map(p => (
                                     <button key={p.v} onClick={() => setPointRule(p.v)}
                                       className={`flex-1 text-left rounded-lg py-2 px-3 border-2 transition-all ${pointRule === p.v ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}

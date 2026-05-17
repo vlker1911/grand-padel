@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.9.4  
+**Aktuální:** v0.9.5  
 **Poslední změna:** 17. 5. 2026  
-**Git tag:** v0.9.4
+**Git tag:** v0.9.5
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.9.5 | 17. 5. 2026 | **Star Point = default** (3 shody klasické výhody → Golden Point). Popis opraven, řazení tlačítek (Star / Golden / Klasické výhody) |
 | v0.9.4 | 17. 5. 2026 | **Skupiny o umístění — lepší distribuce + Point Rule.** Druhá fáze zachovává velikost první (8t/2×4 → 2×4, 12t/3×4 → 3×4, 16t/4×4 → 4×4). Distribuce přes globální ranking: nasazení 1-V → top, V+1..2V → 2. atd. Méně zápasů ve velkých turnajích. Tiebreak volba schována — auto: do 4/5 gamů → krátký (vítěz na limit), do 6 → klasický. Nová volba **Pravidlo na 40:40**: Golden Point (default, rychlý) / Star Point (+4 min/zápas) / Klasické výhody (+6 min/zápas). Engine zohledňuje v délce zápasu |
 | v0.9.3 | 17. 5. 2026 | **Skupiny o umístění + české tiebreak**. Nový playoffMode `skupiny_o_umisteni` — po skupinách druhá fáze ROUND-ROBIN: horní polovina týmů hraje skupinu o 1.-X. místo, dolní o (X+1).-N. (žádný pavouk). Engine + 5 nových test scénářů (74/74). Wizard zahrnuje tuto variantu. Tiebreak v UI přejmenován z "Sudden death" → **"Krátký (1 rozhodující game)"** a "Advantage" → **"Klasický (musíš o 2 gamy)"** s konkrétními příklady stavů |
 | v0.9.2 | 17. 5. 2026 | **Sdílecí odkaz funguje bez přihlášení** (vyžaduje migraci `2026-05-17-public-select-her.sql` — SELECT pro public role na `hry`, `hra_ucastnici`, `hra_zapasy`; `turnaj_*` to už měly). **Wizard rozšířen**: výběr "Do kolika gamů" (4/5/6/Je mi to jedno) — viditelný jen pokud způsob počítání zahrnuje gamy. Playoff má 4. volbu "O všechna umístění" (= multi-tier umisteni). localStorage pamatuje i `gamyLimit` |
