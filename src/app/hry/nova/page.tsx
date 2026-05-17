@@ -142,13 +142,21 @@ function calculateWizardVariant(input: WizardInput): WizardVariant {
 
 // Generuje varianty. Wizard navrhuje jen gamy a cas (body nikdy — neni typicke pro turnaje).
 // scoringFilter: "gamy" = jen gamy, "cas" = jen cas, "vse" = obojí.
+// maxKurtu: omezi navrhovane varianty na <= max kurtu (default 10).
+// playoffFilter: "ano" = jen s playoff, "ne" = jen bez playoff, "vse" = obojí.
 function generateWizardVariants(
   baseInput: { pocetTymu: number; casOdMin: number; casDoMin: number },
   scoringFilter: "gamy" | "cas" | "vse" = "vse",
+  maxKurtu: number = 10,
+  playoffFilter: "vse" | "ano" | "ne" = "vse",
 ): WizardVariant[] {
   const variants: WizardVariant[] = [];
-  const kurtyOptions = [1, 2, 3, 4, 5, 6, 8, 10];
-  const playoffModes: WizardPlayoffMode[] = ["umisteni", "vitez", "medaile", "bez"];
+  const kurtyOptions = [1, 2, 3, 4, 5, 6, 8, 10].filter(k => k <= maxKurtu);
+  const allModes: WizardPlayoffMode[] = ["umisteni", "vitez", "medaile", "bez"];
+  const playoffModes: WizardPlayoffMode[] =
+    playoffFilter === "ano" ? allModes.filter(m => m !== "bez") :
+    playoffFilter === "ne"  ? ["bez"] :
+    allModes;
   const vitezBrackets: WizardVitezBracket[] = ["auto", "top4", "top8", "top16"];
   const gamyLimits = [4, 5, 6];
 
@@ -332,10 +340,11 @@ export default function NovaHraPage() {
   const [losovaneTymy,       setLosovaneTymy]       = useState<ParEntry[] | null>(null);
   const [wizardOpen,         setWizardOpen]         = useState(false);
   const [wizardTymu,         setWizardTymu]         = useState<number | "">(8);
-  const [wizardKurtu,        setWizardKurtu]        = useState<number | "">(3);
-  const [wizardCasOd,        setWizardCasOd]        = useState("16:00");
-  const [wizardCasDo,        setWizardCasDo]        = useState("18:00");
+  const [wizardMaxKurtu,     setWizardMaxKurtu]     = useState<number | "">(4);
+  const [wizardDelkaH,       setWizardDelkaH]       = useState<number | "">(3);
+  const [wizardDelkaM,       setWizardDelkaM]       = useState<number | "">(0);
   const [wizardScoring,      setWizardScoring]      = useState<"gamy" | "cas" | "vse">("vse");
+  const [wizardPlayoff,      setWizardPlayoff]      = useState<"vse" | "ano" | "ne">("vse");
   const [wizardZobrazVse,    setWizardZobrazVse]    = useState(false);
 
   const [nazev, setNazev] = useState("");
@@ -514,16 +523,22 @@ export default function NovaHraPage() {
   }, [pocetTymuPredikovany, pocetKurtu, scoringTyp, scoringLimit, pocetZapasu, pocetZapasuDetail]);
 
   // Wizard: doporuceni
+  const wizardDelkaMin = useMemo(() => {
+    const h = typeof wizardDelkaH === "number" ? wizardDelkaH : 0;
+    const m = typeof wizardDelkaM === "number" ? wizardDelkaM : 0;
+    return h * 60 + m;
+  }, [wizardDelkaH, wizardDelkaM]);
+
   const wizardVarianty = useMemo(() => {
     const tymu = typeof wizardTymu === "number" ? wizardTymu : 0;
     if (tymu < 2) return [];
-    const [hOd, mOd] = wizardCasOd.split(":").map(Number);
-    const [hDo, mDo] = wizardCasDo.split(":").map(Number);
-    const od = hOd * 60 + mOd;
-    const dod = hDo * 60 + mDo;
-    if (dod - od <= 0) return [];
-    return generateWizardVariants({ pocetTymu: tymu, casOdMin: od, casDoMin: dod }, wizardScoring);
-  }, [wizardTymu, wizardCasOd, wizardCasDo, wizardScoring]);
+    if (wizardDelkaMin <= 0) return [];
+    const maxK = typeof wizardMaxKurtu === "number" ? wizardMaxKurtu : 10;
+    return generateWizardVariants(
+      { pocetTymu: tymu, casOdMin: 0, casDoMin: wizardDelkaMin },
+      wizardScoring, maxK, wizardPlayoff,
+    );
+  }, [wizardTymu, wizardDelkaMin, wizardMaxKurtu, wizardScoring, wizardPlayoff]);
 
   const wizardDoporuceni = useMemo(
     () => pickWizardRecommendations(wizardVarianty, wizardZobrazVse ? 12 : 6),
@@ -570,8 +585,12 @@ export default function NovaHraPage() {
   function pouzitWizardVariantu(v: WizardVariant) {
     setTyp("turnaj");
     setPocetKurtu(v.pocetKurtu);
-    setCasOd(wizardCasOd);
-    setCasDo(wizardCasDo);
+    // Zachovej cas_od z hlavniho formulare, jen posun cas_do podle wizardu.
+    const [hOd, mOd] = casOd.split(":").map(Number);
+    const totalMin = (hOd * 60 + mOd) + wizardDelkaMin;
+    const hDo = Math.floor((totalMin % (24 * 60)) / 60);
+    const mDo = totalMin % 60;
+    setCasDo(`${String(hDo).padStart(2, "0")}:${String(mDo).padStart(2, "0")}`);
     setScoringTyp(v.scoringTyp);
     if (v.scoringTyp !== "cas") {
       setScoringLimit(v.scoringLimit);
@@ -579,7 +598,6 @@ export default function NovaHraPage() {
     }
     setPlayoffMode(v.playoffMode);
     if (v.vitezBracket) setVitezBracket(v.vitezBracket);
-    // Synchronizuj pocet tymu — predpokladame pary mode
     nastavPocetTymu(v.pocetTymu);
     setWizardOpen(false);
   }
@@ -1657,7 +1675,7 @@ export default function NovaHraPage() {
               <p className="text-sm mb-4" style={{ color: "#6b7280" }}>
                 Zadej kolik máš týmů a kolik času — najdu pro tebe nejlepší kombinace.
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Počet týmů</label>
                   <input type="number" min={2} max={128} value={wizardTymu}
@@ -1665,18 +1683,44 @@ export default function NovaHraPage() {
                     className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Čas od</label>
-                  <input type="time" value={wizardCasOd} onChange={e => setWizardCasOd(e.target.value)}
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Max kurtů</label>
+                  <input type="number" min={1} max={20} value={wizardMaxKurtu}
+                    onChange={e => { const n = parseInt(e.target.value); setWizardMaxKurtu(isNaN(n) ? "" : n); }}
                     className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Čas do</label>
-                  <input type="time" value={wizardCasDo} onChange={e => setWizardCasDo(e.target.value)}
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Hodiny</label>
+                  <input type="number" min={0} max={12} value={wizardDelkaH}
+                    onChange={e => { const n = parseInt(e.target.value); setWizardDelkaH(isNaN(n) ? "" : n); }}
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Minuty</label>
+                  <input type="number" min={0} max={59} step={5} value={wizardDelkaM}
+                    onChange={e => { const n = parseInt(e.target.value); setWizardDelkaM(isNaN(n) ? "" : n); }}
                     className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
                 </div>
               </div>
 
-              <div className="mb-4">
+              <div className="mb-3 flex gap-1.5 flex-wrap">
+                {[
+                  { h: 1, m: 30, label: "1.5h" },
+                  { h: 2, m: 0, label: "2h" },
+                  { h: 3, m: 0, label: "3h" },
+                  { h: 4, m: 0, label: "4h" },
+                  { h: 5, m: 0, label: "5h" },
+                  { h: 6, m: 0, label: "6h" },
+                ].map(p => (
+                  <button key={p.label}
+                    onClick={() => { setWizardDelkaH(p.h); setWizardDelkaM(p.m); }}
+                    className="rounded-full px-3 py-1 text-xs font-medium border border-zinc-200 hover:border-[#801A28] hover:text-[#801A28]"
+                    style={{ color: "#6b7280", backgroundColor: "white" }}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-3">
                 <label className="text-xs font-medium block mb-1.5" style={{ color: "#374151" }}>Způsob počítání</label>
                 <div className="flex gap-2 flex-wrap">
                   {([
@@ -1687,6 +1731,25 @@ export default function NovaHraPage() {
                     <button key={k} onClick={() => setWizardScoring(k)}
                       className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
                       style={wizardScoring === k
+                        ? { backgroundColor: "#801A28", color: "white", borderColor: "#801A28" }
+                        : { color: "#374151", borderColor: "#e5e7eb", backgroundColor: "white" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="text-xs font-medium block mb-1.5" style={{ color: "#374151" }}>Playoff</label>
+                <div className="flex gap-2 flex-wrap">
+                  {([
+                    ["vse", "Je mi to jedno"],
+                    ["ano", "S playoff"],
+                    ["ne", "Bez playoff"],
+                  ] as Array<["vse" | "ano" | "ne", string]>).map(([k, label]) => (
+                    <button key={k} onClick={() => setWizardPlayoff(k)}
+                      className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
+                      style={wizardPlayoff === k
                         ? { backgroundColor: "#801A28", color: "white", borderColor: "#801A28" }
                         : { color: "#374151", borderColor: "#e5e7eb", backgroundColor: "white" }}>
                       {label}
