@@ -43,6 +43,7 @@ type WizardInput = {
   scoringLimit: number;  // pro cas se predpoklada autoKolo (0 = spocti)
   playoffMode: WizardPlayoffMode;
   vitezBracket?: WizardVitezBracket;
+  bezSkupin?: boolean;   // pokud true, preskoci skupinovou fazi
 };
 
 type WizardVariant = WizardInput & {
@@ -61,14 +62,15 @@ type WizardVariant = WizardInput & {
 
 function calculateWizardVariant(input: WizardInput): WizardVariant {
   const n = input.pocetTymu;
-  const pocetSkupin = vypocitejPocetSkupin(n);
-  // Skupinove zapasy
-  const baseSize = Math.floor(n / pocetSkupin);
-  const extra = n % pocetSkupin;
+  const pocetSkupin = input.bezSkupin ? 0 : vypocitejPocetSkupin(n);
   let zapasuSkupiny = 0;
-  for (let i = 0; i < pocetSkupin; i++) {
-    const size = baseSize + (i < extra ? 1 : 0);
-    zapasuSkupiny += (size * (size - 1)) / 2;
+  if (!input.bezSkupin) {
+    const baseSize = Math.floor(n / pocetSkupin);
+    const extra = n % pocetSkupin;
+    for (let i = 0; i < pocetSkupin; i++) {
+      const size = baseSize + (i < extra ? 1 : 0);
+      zapasuSkupiny += (size * (size - 1)) / 2;
+    }
   }
   // Playoff zapasy
   let zapasuPlayoff = 0;
@@ -144,11 +146,13 @@ function calculateWizardVariant(input: WizardInput): WizardVariant {
 // scoringFilter: "gamy" = jen gamy, "cas" = jen cas, "vse" = obojí.
 // maxKurtu: omezi navrhovane varianty na <= max kurtu (default 10).
 // playoffFilter: "ano" = jen s playoff, "ne" = jen bez playoff, "vse" = obojí.
+// strukturaFilter: "vse" / "skupiny" (jen se skupinami) / "bezSkupin" (jen playoff).
 function generateWizardVariants(
   baseInput: { pocetTymu: number; casOdMin: number; casDoMin: number },
   scoringFilter: "gamy" | "cas" | "vse" = "vse",
   maxKurtu: number = 10,
   playoffFilter: "vse" | "ano" | "ne" = "vse",
+  strukturaFilter: "vse" | "skupiny" | "bezSkupin" = "vse",
 ): WizardVariant[] {
   const variants: WizardVariant[] = [];
   const kurtyOptions = [1, 2, 3, 4, 5, 6, 8, 10].filter(k => k <= maxKurtu);
@@ -159,27 +163,35 @@ function generateWizardVariants(
     allModes;
   const vitezBrackets: WizardVitezBracket[] = ["auto", "top4", "top8", "top16"];
   const gamyLimits = [4, 5, 6];
+  const strukturyKZkouseni: boolean[] =
+    strukturaFilter === "skupiny"   ? [false] :
+    strukturaFilter === "bezSkupin" ? [true] :
+    [false, true];
 
-  for (const kurty of kurtyOptions) {
-    for (const playoffMode of playoffModes) {
-      const bracketsToTry: (WizardVitezBracket | undefined)[] = playoffMode === "vitez" ? vitezBrackets : [undefined];
-      for (const vb of bracketsToTry) {
-        if (scoringFilter === "cas" || scoringFilter === "vse") {
-          variants.push(calculateWizardVariant({
-            pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
-            casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
-            scoringTyp: "cas", scoringLimit: 0,
-            playoffMode, vitezBracket: vb,
-          }));
-        }
-        if (scoringFilter === "gamy" || scoringFilter === "vse") {
-          for (const lim of gamyLimits) {
+  for (const bezSk of strukturyKZkouseni) {
+    for (const kurty of kurtyOptions) {
+      for (const playoffMode of playoffModes) {
+        // Bez skupin a bez playoff = nulovy turnaj — preskocime
+        if (bezSk && playoffMode === "bez") continue;
+        const bracketsToTry: (WizardVitezBracket | undefined)[] = playoffMode === "vitez" ? vitezBrackets : [undefined];
+        for (const vb of bracketsToTry) {
+          if (scoringFilter === "cas" || scoringFilter === "vse") {
             variants.push(calculateWizardVariant({
               pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
               casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
-              scoringTyp: "gamy", scoringLimit: lim,
-              playoffMode, vitezBracket: vb,
+              scoringTyp: "cas", scoringLimit: 0,
+              playoffMode, vitezBracket: vb, bezSkupin: bezSk,
             }));
+          }
+          if (scoringFilter === "gamy" || scoringFilter === "vse") {
+            for (const lim of gamyLimits) {
+              variants.push(calculateWizardVariant({
+                pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
+                casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
+                scoringTyp: "gamy", scoringLimit: lim,
+                playoffMode, vitezBracket: vb, bezSkupin: bezSk,
+              }));
+            }
           }
         }
       }
@@ -207,9 +219,9 @@ function pickWizardRecommendations(variants: WizardVariant[], limit: number = 6)
     b.rezerva - a.rezerva || a.totalZapasu - b.totalZapasu,
   );
 
-  // Klic pro unikatnost: scoring + limit + playoffMode + bracket + pocetKurtu
+  // Klic pro unikatnost: scoring + limit + playoffMode + bracket + pocetKurtu + bezSkupin
   const klic = (v: WizardVariant) =>
-    `${v.scoringTyp}-${v.scoringLimit}-${v.playoffMode}-${v.vitezBracket ?? ""}-${v.pocetKurtu}`;
+    `${v.scoringTyp}-${v.scoringLimit}-${v.playoffMode}-${v.vitezBracket ?? ""}-${v.pocetKurtu}-${v.bezSkupin ? "ns" : "s"}`;
 
   const vysledek: WizardVariant[] = [];
   const seen = new Set<string>();
@@ -346,7 +358,34 @@ export default function NovaHraPage() {
   const [wizardDelkaM,       setWizardDelkaM]       = useState<number | "">(0);
   const [wizardScoring,      setWizardScoring]      = useState<"gamy" | "cas" | "vse">("vse");
   const [wizardPlayoff,      setWizardPlayoff]      = useState<"vse" | "ano" | "ne">("vse");
+  const [wizardStruktura,    setWizardStruktura]    = useState<"vse" | "skupiny" | "bezSkupin">("vse");
   const [wizardZobrazVse,    setWizardZobrazVse]    = useState(false);
+
+  // localStorage: pamatovat posledni wizard nastaveni
+  const WIZARD_LS_KEY = "grand-padel-wizard-v1";
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(WIZARD_LS_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (typeof s.tymu === "number") setWizardTymu(s.tymu);
+      if (typeof s.maxKurtu === "number") setWizardMaxKurtu(s.maxKurtu);
+      if (typeof s.delkaH === "number") setWizardDelkaH(s.delkaH);
+      if (typeof s.delkaM === "number") setWizardDelkaM(s.delkaM);
+      if (typeof s.scoring === "string") setWizardScoring(s.scoring);
+      if (typeof s.playoff === "string") setWizardPlayoff(s.playoff);
+      if (typeof s.struktura === "string") setWizardStruktura(s.struktura);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(WIZARD_LS_KEY, JSON.stringify({
+        tymu: wizardTymu, maxKurtu: wizardMaxKurtu,
+        delkaH: wizardDelkaH, delkaM: wizardDelkaM,
+        scoring: wizardScoring, playoff: wizardPlayoff, struktura: wizardStruktura,
+      }));
+    } catch { /* ignore */ }
+  }, [wizardTymu, wizardMaxKurtu, wizardDelkaH, wizardDelkaM, wizardScoring, wizardPlayoff, wizardStruktura]);
 
   const [nazev, setNazev] = useState("");
   const [stav,  setStav]  = useState<"idle" | "loading" | "chyba">("idle");
@@ -537,9 +576,9 @@ export default function NovaHraPage() {
     const maxK = typeof wizardMaxKurtu === "number" ? wizardMaxKurtu : 10;
     return generateWizardVariants(
       { pocetTymu: tymu, casOdMin: 0, casDoMin: wizardDelkaMin },
-      wizardScoring, maxK, wizardPlayoff,
+      wizardScoring, maxK, wizardPlayoff, wizardStruktura,
     );
-  }, [wizardTymu, wizardDelkaMin, wizardMaxKurtu, wizardScoring, wizardPlayoff]);
+  }, [wizardTymu, wizardDelkaMin, wizardMaxKurtu, wizardScoring, wizardPlayoff, wizardStruktura]);
 
   const wizardDoporuceni = useMemo(
     () => pickWizardRecommendations(wizardVarianty, wizardZobrazVse ? 12 : 6),
@@ -586,7 +625,6 @@ export default function NovaHraPage() {
   function pouzitWizardVariantu(v: WizardVariant) {
     setTyp("turnaj");
     setPocetKurtu(v.pocetKurtu);
-    // Zachovej cas_od z hlavniho formulare, jen posun cas_do podle wizardu.
     const [hOd, mOd] = casOd.split(":").map(Number);
     const totalMin = (hOd * 60 + mOd) + wizardDelkaMin;
     const hDo = Math.floor((totalMin % (24 * 60)) / 60);
@@ -599,6 +637,7 @@ export default function NovaHraPage() {
     }
     setPlayoffMode(v.playoffMode);
     if (v.vitezBracket) setVitezBracket(v.vitezBracket);
+    setBezSkupin(v.bezSkupin === true);
     nastavPocetTymu(v.pocetTymu);
     setWizardOpen(false);
   }
@@ -1677,9 +1716,10 @@ export default function NovaHraPage() {
               <p className="text-xs font-bold mb-2" style={{ color }}>{label}</p>
               <p className="text-sm font-semibold mb-1" style={{ color: "#0A0A0A" }}>
                 {v.pocetKurtu} {v.pocetKurtu === 1 ? "kurt" : v.pocetKurtu < 5 ? "kurty" : "kurtů"}, {popisFormat(v)}, {popisPlayoff(v.playoffMode, v.vitezBracket)}
+                {v.bezSkupin && <span className="ml-1" style={{ color: "#0f766e" }}>· bez skupin</span>}
               </p>
               <div className="text-xs space-y-0.5" style={{ color: "#6b7280" }}>
-                <p>{v.zapasuSkupiny + v.zapasuPlayoff} zápasů ({v.zapasuSkupiny} skupin + {v.zapasuPlayoff} playoff)</p>
+                <p>{v.zapasuSkupiny + v.zapasuPlayoff} zápasů {v.bezSkupin ? `(jen playoff)` : `(${v.zapasuSkupiny} skupin + ${v.zapasuPlayoff} playoff)`}</p>
                 <p>Potřeba {formatMin(v.totalMin)}, rezerva <strong>{formatMin(v.rezerva)}</strong></p>
               </div>
               <button onClick={() => pouzitWizardVariantu(v)}
@@ -1761,7 +1801,7 @@ export default function NovaHraPage() {
                 </div>
               </div>
 
-              <div className="mb-4">
+              <div className="mb-3">
                 <label className="text-xs font-medium block mb-1.5" style={{ color: "#374151" }}>Playoff</label>
                 <div className="flex gap-2 flex-wrap">
                   {([
@@ -1772,6 +1812,25 @@ export default function NovaHraPage() {
                     <button key={k} onClick={() => setWizardPlayoff(k)}
                       className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
                       style={wizardPlayoff === k
+                        ? { backgroundColor: "#801A28", color: "white", borderColor: "#801A28" }
+                        : { color: "#374151", borderColor: "#e5e7eb", backgroundColor: "white" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="text-xs font-medium block mb-1.5" style={{ color: "#374151" }}>Struktura</label>
+                <div className="flex gap-2 flex-wrap">
+                  {([
+                    ["vse", "Je mi to jedno"],
+                    ["skupiny", "Skupiny + playoff"],
+                    ["bezSkupin", "Jen playoff (bez skupin)"],
+                  ] as Array<["vse" | "skupiny" | "bezSkupin", string]>).map(([k, label]) => (
+                    <button key={k} onClick={() => setWizardStruktura(k)}
+                      className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
+                      style={wizardStruktura === k
                         ? { backgroundColor: "#801A28", color: "white", borderColor: "#801A28" }
                         : { color: "#374151", borderColor: "#e5e7eb", backgroundColor: "white" }}>
                       {label}
