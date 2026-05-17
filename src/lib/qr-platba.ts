@@ -33,9 +33,8 @@ export function cisloUctuNaIBAN(prefix: string, cislo: string, banka: string): s
   const b = banka.padStart(4, "0");
   // BBAN = banka(4) + prefix(6) + cislo(10)
   const bban = b + p + c;
-  // IBAN check: presun "CZ00" na konec, pismena na cisla (C=12, Z=35)
-  const tmp = bban + "122300"; // C=12, Z=35, 00 placeholder
-  // Mod 97 (po jednotlivych cislech kvuli velkym cislum)
+  // IBAN check: BBAN + "CZ00" prevedeno na cisla. C='C'-55=12, Z='Z'-55=35 -> "1235", + "00" placeholder
+  const tmp = bban + "123500";
   let rem = 0;
   for (const ch of tmp) {
     rem = (rem * 10 + parseInt(ch, 10)) % 97;

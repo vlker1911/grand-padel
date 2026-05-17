@@ -2614,6 +2614,31 @@ export default function HraDetailPage() {
   const [mazem, setMazem] = useState(false);
   const [pocty, setPocty] = useState<{ pocetZapasu: number; pocetUcastniku: number } | null>(null);
   const [potvrzeni, setPotvrzeni] = useState(false);
+  // Top-level tab pro americano/mexicano (turnaj ma vlastni)
+  const [topTab, setTopTab] = useState<"hra" | "startovne">("hra");
+  const [zkopirovano, setZkopirovano] = useState(false);
+
+  async function sdilet() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    if (!url) return;
+    // Web Share API pokud existuje
+    type WindowWithShare = Window & { navigator: Navigator & { share?: (d: ShareData) => Promise<void> } };
+    const win = window as WindowWithShare;
+    if (win.navigator.share) {
+      try {
+        await win.navigator.share({ title: hra?.nazev ?? "Hra", url });
+        return;
+      } catch { /* user cancel */ }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setZkopirovano(true);
+      setTimeout(() => setZkopirovano(false), 2000);
+    } catch {
+      // fallback
+      prompt("Zkopíruj odkaz:", url);
+    }
+  }
 
   async function otevriSmazatModal() {
     if (!hra) return;
@@ -2684,7 +2709,7 @@ export default function HraDetailPage() {
           <div className="mb-8">
             <a href="/hry" className="text-sm hover:underline" style={{ color: "#801A28" }}>Zpet na hry</a>
             <div className="flex items-start justify-between gap-4 mt-3">
-              <div>
+              <div className="flex-1 min-w-0">
                 <h1 className="text-2xl font-bold" style={{ color: "#801A28" }}>{hra.nazev}</h1>
                 <p className="text-sm mt-1" style={{ color: "#6b7280" }}>
                   {hra.typ.charAt(0).toUpperCase() + hra.typ.slice(1)}
@@ -2696,33 +2721,68 @@ export default function HraDetailPage() {
                     : ""}
                 </p>
               </div>
-              <span className="text-xs font-medium px-3 py-1.5 rounded-full shrink-0"
-                style={{ backgroundColor: hra.stav === "probiha" ? "#dcfce7" : "#f3f4f6", color: hra.stav === "probiha" ? "#16a34a" : "#6b7280" }}>
-                {hra.stav === "probiha" ? "Probiha" : "Ukonceno"}
-              </span>
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const startovne = (hra.settings as { startovne?: { castka?: number } } | null)?.startovne;
+                    if (!startovne?.castka) return null;
+                    if (hra.typ === "turnaj") {
+                      return (
+                        <span className="text-xs font-medium px-2.5 py-1 rounded-full"
+                          style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>
+                          Startovné {startovne.castka.toLocaleString("cs-CZ")} Kč
+                        </span>
+                      );
+                    }
+                    return (
+                      <button onClick={() => setTopTab("startovne")}
+                        className="text-xs font-medium px-2.5 py-1 rounded-full hover:opacity-80"
+                        style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>
+                        Startovné {startovne.castka.toLocaleString("cs-CZ")} Kč
+                      </button>
+                    );
+                  })()}
+                  <span className="text-xs font-medium px-3 py-1.5 rounded-full"
+                    style={{ backgroundColor: hra.stav === "probiha" ? "#dcfce7" : "#f3f4f6", color: hra.stav === "probiha" ? "#16a34a" : "#6b7280" }}>
+                    {hra.stav === "probiha" ? "Probiha" : "Ukonceno"}
+                  </span>
+                </div>
+                <button onClick={sdilet}
+                  className="text-xs underline hover:no-underline"
+                  style={{ color: "#801A28" }}>
+                  {zkopirovano ? "Zkopírováno ✓" : "Sdílet odkaz"}
+                </button>
+              </div>
             </div>
           </div>
 
-          {hra.typ === "americano" && (
+          {/* Top tab pro americano/mexicano */}
+          {hra.typ !== "turnaj" && (
+            <div className="flex gap-1 border-b border-zinc-200 mb-6">
+              {([
+                ["hra", "Hra"],
+                ["startovne", "Startovné"],
+              ] as Array<["hra" | "startovne", string]>).map(([k, l]) => (
+                <button key={k} onClick={() => setTopTab(k)}
+                  className="px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px"
+                  style={{ borderColor: topTab === k ? "#801A28" : "transparent", color: topTab === k ? "#801A28" : "#6b7280" }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {hra.typ === "americano" && topTab === "hra" && (
             <AmericanoView hra={hra} ucastnici={ucastnici} zapasy={zapasy} jeEditor={jeEditor} nactiData={nactiData} />
           )}
-          {hra.typ === "mexicano" && (
+          {hra.typ === "mexicano" && topTab === "hra" && (
             <MexicanoView hra={hra} ucastnici={ucastnici} zapasy={zapasy} jeEditor={jeEditor} nactiData={nactiData} />
+          )}
+          {hra.typ !== "turnaj" && topTab === "startovne" && (
+            <StartovneTab hra={hra} jeEditor={jeEditor} />
           )}
           {hra.typ === "turnaj" && (
             <TurnajView hra={hra} jeEditor={jeEditor} onSmazatRequest={otevriSmazatModal} />
-          )}
-
-          {hra.typ !== "turnaj" && (
-            <details className="mt-6 bg-white rounded-2xl border border-zinc-100 group">
-              <summary className="px-5 py-3 cursor-pointer text-sm font-semibold list-none flex items-center justify-between" style={{ color: "#0A0A0A" }}>
-                <span>Startovné</span>
-                <span className="text-xs group-open:rotate-90 transition-transform" style={{ color: "#9ca3af" }}>▶</span>
-              </summary>
-              <div className="px-5 pb-5 pt-2 border-t border-zinc-100">
-                <StartovneTab hra={hra} jeEditor={jeEditor} />
-              </div>
-            </details>
           )}
 
           {jeEditor && !(hra.typ === "turnaj" && hra.settings?.zruseno) && (

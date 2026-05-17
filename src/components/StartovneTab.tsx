@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  validujCisloUctu, cisloUctuNaIBAN, validujIBAN, vytvorSPAYD,
+  validujCisloUctu, cisloUctuNaIBAN, vytvorSPAYD,
 } from "@/lib/qr-platba";
 
 type StartovneData = {
@@ -36,7 +36,8 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
   const [vs,       setVs]       = useState(s.vs ?? "");
   const [zprava,   setZprava]   = useState(s.zprava ?? `Startovne ${hra.nazev}`.slice(0, 60));
   const [poznamka, setPoznamka] = useState(s.poznamka ?? "");
-  const [editovat, setEditovat] = useState(!s.iban);
+  const maUlozeneNastaveni = !!(s.cislo && s.banka);
+  const [editovat, setEditovat] = useState(!maUlozeneNastaveni);
   const [ukladam,  setUkladam]  = useState(false);
   const [chyba,    setChyba]    = useState("");
 
@@ -47,15 +48,14 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
   }, [prefix, cislo, banka, validUcet]);
 
   const spayd = useMemo(() => {
-    const aktualniIban = iban || (s.iban && validujIBAN(s.iban) ? s.iban : "");
-    if (!aktualniIban) return "";
+    if (!iban) return "";
     return vytvorSPAYD({
-      iban: aktualniIban,
+      iban,
       castka: typeof castka === "number" ? castka : null,
       vs: vs.trim() || undefined,
       zprava: zprava.trim() || undefined,
     });
-  }, [iban, s.iban, castka, vs, zprava]);
+  }, [iban, castka, vs, zprava]);
 
   async function uloz() {
     setUkladam(true);
@@ -115,8 +115,11 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
     img.src = url;
   }
 
-  // Zobrazeni hracum (read-only): cislo uctu z DB
-  const ulozenyIban = s.iban && validujIBAN(s.iban) ? s.iban : "";
+  // Zobrazeni hracum (read-only): cislo uctu z DB. IBAN regenerujeme
+  // z cisla uctu (drive se ukladal spatne — bug fix v0.9.1).
+  const ulozenyIban = s.cislo && s.banka && validujCisloUctu(s.prefix ?? "", s.cislo, s.banka)
+    ? cisloUctuNaIBAN(s.prefix ?? "", s.cislo, s.banka)
+    : "";
   const ulozenyCisloUctuText = s.prefix || s.cislo || s.banka
     ? `${s.prefix ? s.prefix + "-" : ""}${s.cislo ?? ""}/${s.banka ?? ""}`
     : ulozenyIban;
@@ -268,7 +271,7 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
           {chyba && <p className="text-sm" style={{ color: "#801A28" }}>{chyba}</p>}
 
           <div className="flex gap-2 justify-end">
-            {s.iban && (
+            {maUlozeneNastaveni && (
               <button onClick={() => setEditovat(false)} disabled={ukladam}
                 className="rounded-lg px-4 py-2 text-sm font-medium border border-zinc-200">
                 Zrušit
