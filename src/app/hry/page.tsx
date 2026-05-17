@@ -38,6 +38,8 @@ const STAV_LABEL: Record<string, string> = {
   ukonceno: "Ukončeno",
 };
 
+type Filtr = "vse" | "aktivni" | "ukoncene" | "zrusene";
+
 export default function HryPage() {
   const [hry, setHry] = useState<Hra[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,7 @@ export default function HryPage() {
   const [pocty, setPocty] = useState<{ pocetZapasu: number; pocetUcastniku: number } | null>(null);
   const [mazem, setMazem] = useState(false);
   const [potvrzeni, setPotvrzeni] = useState(false);
+  const [filtr, setFiltr] = useState<Filtr>("aktivni");
   const supabase = createClient();
 
   async function nactiHry() {
@@ -69,6 +72,23 @@ export default function HryPage() {
     if (!userId) return false;
     return hra.created_by === userId || editorHry.has(hra.id);
   }
+
+  function projdeFiltrem(hra: Hra): boolean {
+    const zruseno = hra.settings?.zruseno === true;
+    if (filtr === "vse") return true;
+    if (filtr === "zrusene") return zruseno;
+    if (filtr === "ukoncene") return !zruseno && hra.stav === "ukonceno";
+    // aktivni
+    return !zruseno && (hra.stav === "priprava" || hra.stav === "probiha");
+  }
+
+  const filtrovane = hry.filter(projdeFiltrem);
+  const pocty_filtru: Record<Filtr, number> = {
+    vse: hry.length,
+    aktivni: hry.filter(h => !h.settings?.zruseno && (h.stav === "priprava" || h.stav === "probiha")).length,
+    ukoncene: hry.filter(h => !h.settings?.zruseno && h.stav === "ukonceno").length,
+    zrusene: hry.filter(h => h.settings?.zruseno).length,
+  };
 
   async function otevriSmazat(hra: Hra, e: React.MouseEvent) {
     e.preventDefault();
@@ -112,6 +132,25 @@ export default function HryPage() {
             </Link>
           </div>
 
+          {!loading && hry.length > 0 && (
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {([
+                ["aktivni", "Aktivní"],
+                ["ukoncene", "Ukončené"],
+                ["zrusene", "Zrušené"],
+                ["vse", "Vše"],
+              ] as Array<[Filtr, string]>).map(([k, label]) => (
+                <button key={k} onClick={() => setFiltr(k)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                    filtr === k ? "text-white" : "bg-white border border-zinc-200 hover:bg-zinc-50"
+                  }`}
+                  style={filtr === k ? { backgroundColor: "#801A28" } : { color: "#374151" }}>
+                  {label} <span className={filtr === k ? "opacity-70" : "text-zinc-400"}>({pocty_filtru[k]})</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {loading && (
             <div className="text-center py-20 text-sm" style={{ color: "#9ca3af" }}>Načítám hry…</div>
           )}
@@ -128,9 +167,15 @@ export default function HryPage() {
             </div>
           )}
 
-          {!loading && hry.length > 0 && (
+          {!loading && hry.length > 0 && filtrovane.length === 0 && (
+            <div className="text-center py-12 text-sm" style={{ color: "#9ca3af" }}>
+              V této kategorii nejsou žádné hry.
+            </div>
+          )}
+
+          {!loading && filtrovane.length > 0 && (
             <div className="flex flex-col gap-4">
-              {hry.map((hra) => (
+              {filtrovane.map((hra) => (
                 <div key={hra.id} className="bg-white rounded-2xl border border-zinc-100 p-5 hover:shadow-md transition-shadow flex items-center justify-between gap-4">
                   <Link href={`/hry/${hra.id}`} className="flex items-center gap-4 flex-1 min-w-0">
                     <span className="rounded-xl px-3 py-1 text-xs font-bold text-white shrink-0"
