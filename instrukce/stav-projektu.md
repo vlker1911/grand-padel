@@ -144,30 +144,36 @@
 7. ⏳ Resend domain verification — po přístupu k DNS grandpadel.cz
 8. ⏳ Apple login — srpen/září 2026
 
-### Herní centrum — co dál (po v0.7.16)
+### Herní centrum — co dál (po v0.8.0)
 
-**🔴 Vysoká priorita:**
-- **Veřejný read-only pohled** (v0.7.17?) — sdílecí URL pro hráče bez přihlášení, schovat editor controls
-- **Implementace režimu kurtů** (auto/1-1/2-1) v plánování — setting se ukládá, ale harmonogram pořád běží v auto
-- **Obnovit zrušený turnaj** — tlačítko v UI chybí
-- **Odebrat tým** z turnaje — UI chybí
+**🔴 Vysoká priorita — bezprostředně po testu v0.8.0:**
+- **Otestovat v0.8.0 v prohlížeči** — vytvořit šablonou turnaj, projít wizard, ověřit preview, zkontrolovat že do `turnaj_zapasy` se uloží skupinové zápasy s časy a kurty
+- **Spustit RLS migraci** `instrukce/migrace/2026-05-17-rls-delete-policies-her.sql` v Supabase SQL Editor (MCP je read-only, manuální krok)
+- **Playoff zápasy v DB s časy + auto-propagace vítězů** — engine `lib/turnaj-format.ts` je už generuje, ale vkládáme do DB jen skupinové, aby se neduplikovaly s existující generací v `TurnajView`. Refaktor: vložit playoff hned (s `tym1_id=null` placeholdery), a po dohrání semi automaticky doplnit `tym1_id`/`tym2_id` ve finále. Vyžaduje úpravu `TurnajView` (řádky 1359-1400).
+- **Útěchový pavouk do DB** — stejný princip jako playoff (engine to umí, UI v preview ukáže, ale do DB se nevkládá)
+- **`TurnajView` zobrazení nových fází** — engine vrací `semifinale`, `finale`, `o_3_misto`, `ctvrtfinale`, `utech_*`; současný kód má hardcoded `faze === "playoff"` na několika místech (1948, 1982, 2052, 2389)
 
 **🟠 Střední:**
+- **Veřejný read-only pohled** — sdílecí URL pro hráče bez přihlášení, schovat editor controls
+- **Implementace režimu kurtů** (auto/1-1/2-1) v plánování — setting se ukládá, engine ho zatím nepoužívá
+- **Obnovit zrušený turnaj** — tlačítko v UI chybí
+- **Odebrat tým** z turnaje — UI chybí
 - **`window.location.reload()`** → `nactiTurnaj()` (ztrácí state)
 - **Editace formátu/scoring** po vytvoření turnaje
-- **Dead vars cleanup** (`playoff`, `multiTier`, `typPlayoff` redundantní s `playoffMode`)
+- **Dead vars cleanup** (`playoff`, `multiTier`, `typPlayoff` redundantní s `playoffMode`; `wizardKurtu`)
 - **Mexicano `body_na_zapas` rename** na `minut_na_kolo` (kolize sémantiky)
 - **Mexicano tabulka individuálních výsledků** (kdo má kolik vítězství)
-- **Garance odpočinku** (15 min mezi zápasy téhož týmu)
+- **Garance odpočinku** (15 min mezi zápasy téhož týmu) — engine to zatím neřeší
+- **Pre-existing lint errors** `react-hooks/set-state-in-effect` v `[id]/page.tsx:1191,2569` a `nova/page.tsx:443` — můžou rozbít `next build` v CI
 
 **🟢 Budoucí:**
 - **Export PDF** kompletního turnaje
 - **QR kód** pro sdílecí URL
-- **Šablony turnajů** ("Klubový open 8 týmů" → klik → vyplnit formulář)
 - **Hromadný import týmů** (CSV/paste)
 - **Notifikace hráčům** ("Tvůj zápas za 10 min")
 - **Statistiky hráčů** (win rate, ranking)
 - **Live timer** pro Čas formát
+- **Křížový playoff jako samostatná volba** (dnes "medaile" v engine dělá 1A vs 2B / 1B vs 2A pro 2 skupiny, jinak 1v4/2v3 — sjednotit do explicitního přepínače "klasický pavouk vs křížový")
 
 ### Známé bugy / TODO
 
