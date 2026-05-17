@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { generujAmericano } from "@/lib/americano";
+import { generujRozvrh, type TurnajFormat, type TymVeSkupine, type Rozvrh } from "@/lib/turnaj-format";
 
 type Typ = "americano" | "mexicano" | "turnaj";
 
@@ -288,6 +289,12 @@ export default function NovaHraPage() {
   const [playoffMode,        setPlayoffMode]        = useState<"bez" | "medaile" | "vitez" | "umisteni">("umisteni");
   const [vitezBracket,       setVitezBracket]       = useState<"auto" | "top4" | "top8" | "top16">("auto");
   const [rezimKurtu,         setRezimKurtu]         = useState<"auto" | "1-1" | "2-1">("auto");
+  const [utechovyPavouk,     setUtechovyPavouk]     = useState(false);
+  const [vlastniDelky,       setVlastniDelky]       = useState(false);
+  const [delkaSkupinaMin,    setDelkaSkupinaMin]    = useState<number | "">(20);
+  const [delkaSemiMin,       setDelkaSemiMin]       = useState<number | "">(20);
+  const [delkaFinaleMin,     setDelkaFinaleMin]     = useState<number | "">(25);
+  const [pauzaMin,           setPauzaMin]           = useState<number | "">(1);
   // Backwards compat — pro vytvoreniHru
   const playoff = playoffMode !== "bez";
   const multiTier = playoffMode === "umisteni";
@@ -492,6 +499,43 @@ export default function NovaHraPage() {
 
   const wizardDoporuceni = useMemo(() => pickWizardRecommendations(wizardVarianty), [wizardVarianty]);
 
+  function aplikujSablonu(id: string) {
+    setTyp("turnaj");
+    setOdlisnyScoring(false);
+    setVlastniDelky(false);
+    setPauzaMin(1);
+    setRezimKurtu("auto");
+    setTypParovani("pary");
+    setPouzitNazvyTymu(false);
+    setUtechovyPavouk(false);
+    if (id === "classic4") {
+      nastavPocetTymu(4);
+      setPocetKurtu(2);
+      setCasOd("16:00"); setCasDo("18:00");
+      setScoringTyp("gamy"); setScoringLimit(4);
+      setPlayoffMode("medaile"); // Final Four = krizovy 1v4, 2v3
+    } else if (id === "big6") {
+      nastavPocetTymu(6);
+      setPocetKurtu(2);
+      setCasOd("16:00"); setCasDo("19:00");
+      setScoringTyp("gamy"); setScoringLimit(4);
+      setPlayoffMode("medaile");
+    } else if (id === "single8") {
+      nastavPocetTymu(8);
+      setPocetKurtu(2);
+      setCasOd("16:00"); setCasDo("19:00");
+      setScoringTyp("gamy"); setScoringLimit(4);
+      setPlayoffMode("vitez"); setVitezBracket("top8");
+    } else if (id === "social") {
+      nastavPocetTymu(6);
+      setPocetKurtu(2);
+      setCasOd("16:00"); setCasDo("18:30");
+      setScoringTyp("cas"); setScoringLimit(15);
+      setPlayoffMode("bez");
+    }
+    setKrok(1);
+  }
+
   function pouzitWizardVariantu(v: WizardVariant) {
     setTyp("turnaj");
     setPocetKurtu(v.pocetKurtu);
@@ -508,6 +552,44 @@ export default function NovaHraPage() {
     nastavPocetTymu(v.pocetTymu);
     setWizardOpen(false);
   }
+
+  // Format turnaje pro engine
+  const turnajFormat = useMemo<TurnajFormat>(() => ({
+    scoringTyp,
+    scoringLimit,
+    scoringLimitPlayoff: odlisnyScoring ? scoringLimitPlayoff : scoringLimit,
+    playoffMode,
+    vitezBracket,
+    utechovyPavouk,
+    pocetKurtu: typeof pocetKurtu === "number" ? pocetKurtu : 2,
+    casOd,
+    casDo,
+    delkaSkupinaMin: vlastniDelky && typeof delkaSkupinaMin === "number" ? delkaSkupinaMin : null,
+    delkaSemiMin: vlastniDelky && typeof delkaSemiMin === "number" ? delkaSemiMin : null,
+    delkaFinaleMin: vlastniDelky && typeof delkaFinaleMin === "number" ? delkaFinaleMin : null,
+    pauzaMin: typeof pauzaMin === "number" ? pauzaMin : 1,
+  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin]);
+
+  // Preview rozvrhu — z formularovych poli (s placeholder ID)
+  const previewRozvrh = useMemo<Rozvrh | null>(() => {
+    if (typ !== "turnaj") return null;
+    const tymyList = losovaneTymy ?? efektivniTymy;
+    if (tymyList.length < 2) return null;
+    const skupinyData = rozdelDoSkupin(tymyList, pocetSkupin);
+    const tymyVeSkupinach: TymVeSkupine[] = skupinyData.flatMap((skupina, si) =>
+      skupina.map((tym, ti) => ({
+        tymId: `preview-${si}-${ti}`,
+        nazev: pouzitNazvyTymu && tym.nazevTymu.trim()
+          ? tym.nazevTymu.trim()
+          : tym.jmeno1.trim() || tym.jmeno2.trim()
+            ? `${tym.jmeno1} / ${tym.jmeno2}`.trim()
+            : `Tym ${si * 10 + ti + 1}`,
+        skupina: SKUPINY_NAZVY[si],
+        nasazeni: ti + 1,
+      })),
+    );
+    return generujRozvrh(turnajFormat, tymyVeSkupinach);
+  }, [typ, losovaneTymy, efektivniTymy, pocetSkupin, pouzitNazvyTymu, turnajFormat]);
 
   // Varovani: turnaj se nevejde do casu (gamy/body)
   const turnajSeNevejde = useMemo(() => {
@@ -585,6 +667,13 @@ export default function NovaHraPage() {
         gamy_tiebreak: gamyTiebreak,
         typ_parovani: typParovani,
         rezim_kurtu: rezimKurtu,
+        utech_pavouk: utechovyPavouk,
+        turnaj_format: {
+          delka_skupina_min: turnajFormat.delkaSkupinaMin,
+          delka_semi_min: turnajFormat.delkaSemiMin,
+          delka_finale_min: turnajFormat.delkaFinaleMin,
+          pauza_min: turnajFormat.pauzaMin,
+        },
       },
     }).select().single();
 
@@ -627,25 +716,40 @@ export default function NovaHraPage() {
     const { data: createdTymy, error: tymyErr } = await supabase.from("turnaj_tymy").insert(tymyInsert).select();
     if (tymyErr || !createdTymy) { setChyba("Nepodarilo se vytvorit tymy: " + (tymyErr?.message ?? "")); setStav("chyba"); return; }
 
-    // Zapasy skupin (vsechny kombinace uvnitr skupiny)
-    const zapasy = skupinyData.flatMap((skupina, si) => {
-      const sName = SKUPINY_NAZVY[si];
-      const sTymy = createdTymy.filter(t => t.skupina === sName);
-      const matches = [];
-      for (let i = 0; i < sTymy.length; i++) {
-        for (let j = i + 1; j < sTymy.length; j++) {
-          matches.push({ hra_id: hra.id, faze: "skupina", skupina: sName, kolo: null, tym1_id: sTymy[i].id, tym2_id: sTymy[j].id, stav: "ceka" });
-        }
-      }
-      return matches;
-    });
-
-    if (zapasy.length > 0) await supabase.from("turnaj_zapasy").insert(zapasy);
+    // Engine: vygeneruj kompletni rozvrh s casy a kurty
+    const tymyVeSkupinach: TymVeSkupine[] = createdTymy.map(t => ({
+      tymId: t.id,
+      nazev: t.nazev,
+      skupina: t.skupina ?? "A",
+      nasazeni: t.nasazeni ?? 1,
+    }));
+    const rozvrh = generujRozvrh(turnajFormat, tymyVeSkupinach);
+    // Vlozime pouze skupinove zapasy (s casy a kurty). Playoff se generuje
+    // az po dohrani skupin existujici logikou v TurnajView, aby se neduplikovalo.
+    const skupinoveZapasy = rozvrh.zapasy.filter(z => z.faze === "skupina");
+    if (skupinoveZapasy.length > 0) {
+      const zapasyInsert = skupinoveZapasy.map(z => ({
+        hra_id: hra.id,
+        faze: "skupina",
+        skupina: z.skupina,
+        kolo: z.kolo,
+        tym1_id: z.tym1Id,
+        tym2_id: z.tym2Id,
+        cas_zacatek: z.casZacatek,
+        cas_konec: z.casKonec,
+        kurt: z.kurt,
+        poradi_fronta: z.poradiFronta,
+        umisteni: z.umisteni,
+        stav: "ceka",
+      }));
+      const { error: zapasyErr } = await supabase.from("turnaj_zapasy").insert(zapasyInsert);
+      if (zapasyErr) { setChyba("Nepodarilo se vlozit rozvrh: " + zapasyErr.message); setStav("chyba"); return; }
+    }
 
     router.push(`/hry/${hra.id}`);
   }
 
-  const maxKrok = typ === "turnaj" ? 4 : 3;
+  const maxKrok = typ === "turnaj" ? 5 : 3;
 
   if (authStav !== "auth") {
     return (
@@ -697,6 +801,29 @@ export default function NovaHraPage() {
                   ))}
                 </div>
               </div>
+
+              {typ === "turnaj" && (
+                <div>
+                  <p className="text-sm font-medium mb-2" style={{ color: "#374151" }}>Sablony rychleho startu</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: "classic4", label: "Klasicky 4-tymovy" },
+                      { id: "big6", label: "Big 6 tymu, 2 skupiny" },
+                      { id: "single8", label: "Drabinka 8 tymu" },
+                      { id: "social", label: "Socialni round robin" },
+                    ].map(s => (
+                      <button key={s.id} onClick={() => aplikujSablonu(s.id)}
+                        className="text-left rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-xs font-medium hover:border-[#801A28] transition-colors"
+                        style={{ color: "#374151" }}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs mt-2" style={{ color: "#9ca3af" }}>
+                    Sablony predvyplni krok 1-4. Mezery muzes upravit.
+                  </p>
+                </div>
+              )}
 
               {typ && (
                 <div className="bg-white rounded-2xl border border-zinc-100 p-6 flex flex-col gap-5">
@@ -1308,11 +1435,132 @@ export default function NovaHraPage() {
                 )}
               </div>
 
+              {/* Doplnkova nastaveni */}
+              <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col gap-4">
+                <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>Doplnkova nastaveni</p>
+
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" checked={utechovyPavouk} onChange={e => setUtechovyPavouk(e.target.checked)}
+                    className="mt-0.5" disabled={playoffMode === "bez" || playoffMode === "umisteni"} />
+                  <span className="text-sm" style={{ color: playoffMode === "bez" || playoffMode === "umisteni" ? "#9ca3af" : "#374151" }}>
+                    Utechovy pavouk (Turnaj druhe sance) — porazeni z prvniho kola hraji paralelni bracket
+                    {(playoffMode === "bez" || playoffMode === "umisteni") && (
+                      <span className="block text-xs" style={{ color: "#9ca3af" }}>
+                        Dostupne jen pro Final Four nebo single elim playoff.
+                      </span>
+                    )}
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" checked={vlastniDelky} onChange={e => setVlastniDelky(e.target.checked)} className="mt-0.5" />
+                  <span className="text-sm" style={{ color: "#374151" }}>
+                    Vlastni delky zapasu (jinak odvozeno z formatu)
+                  </span>
+                </label>
+
+                {vlastniDelky && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pl-6">
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: "#6b7280" }}>Skupina (min)</label>
+                      <input type="number" min={5} max={120} value={delkaSkupinaMin}
+                        onChange={e => setDelkaSkupinaMin(e.target.value === "" ? "" : parseInt(e.target.value))}
+                        className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: "#6b7280" }}>Semi (min)</label>
+                      <input type="number" min={5} max={120} value={delkaSemiMin}
+                        onChange={e => setDelkaSemiMin(e.target.value === "" ? "" : parseInt(e.target.value))}
+                        className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: "#6b7280" }}>Finale (min)</label>
+                      <input type="number" min={5} max={120} value={delkaFinaleMin}
+                        onChange={e => setDelkaFinaleMin(e.target.value === "" ? "" : parseInt(e.target.value))}
+                        className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: "#6b7280" }}>Pauza (min)</label>
+                      <input type="number" min={0} max={30} value={pauzaMin}
+                        onChange={e => setPauzaMin(e.target.value === "" ? "" : parseInt(e.target.value))}
+                        className="w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-sm" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {chyba && <p className="text-sm text-center" style={{ color: "#801A28" }}>{chyba}</p>}
 
               <div className="flex gap-3">
                 <button onClick={() => { setKrok(3); setLosovaneTymy(null); }} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
-                <button onClick={vytvorHru} disabled={stav === "loading"}
+                <button onClick={() => setKrok(5)}
+                  className="flex-1 rounded-full py-3 text-sm font-semibold text-white"
+                  style={{ backgroundColor: "#801A28" }}>
+                  Pokracovat na preview
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ===== KROK 5 — Preview rozvrhu (turnaj) ===== */}
+          {krok === 5 && typ === "turnaj" && (
+            <div className="flex flex-col gap-5">
+              <div>
+                <h2 className="text-base font-semibold mb-1" style={{ color: "#0A0A0A" }}>Preview rozvrhu</h2>
+                <p className="text-sm" style={{ color: "#6b7280" }}>
+                  {previewRozvrh
+                    ? `${previewRozvrh.zapasy.length} zapasu · zacatek ${casOd} · odhadovany konec ${previewRozvrh.zapasy.length > 0 ? previewRozvrh.zapasy[previewRozvrh.zapasy.length - 1].casKonec : casOd}`
+                    : "Zatim neni dost dat pro preview."}
+                </p>
+              </div>
+
+              {previewRozvrh && previewRozvrh.varovani.length > 0 && (
+                <div className="rounded-2xl border px-5 py-4"
+                  style={{ backgroundColor: previewRozvrh.vejdeSe ? "#fefce8" : "#fef2f2",
+                           borderColor: previewRozvrh.vejdeSe ? "#fde047" : "#fecaca" }}>
+                  {previewRozvrh.varovani.map((v, i) => (
+                    <p key={i} className="text-sm" style={{ color: previewRozvrh.vejdeSe ? "#854d0e" : "#7f1d1d" }}>{v}</p>
+                  ))}
+                  {!previewRozvrh.vejdeSe && (
+                    <p className="text-xs mt-2" style={{ color: "#7f1d1d" }}>
+                      Doporuceni: zkrat delku zapasu, pridej kurt, zmen format na &quot;Cas&quot; nebo posun konec turnaje.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {previewRozvrh && previewRozvrh.zapasy.length > 0 && (
+                <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-zinc-50 text-xs" style={{ color: "#6b7280" }}>
+                      <tr>
+                        <th className="text-left px-3 py-2">Cas</th>
+                        <th className="text-left px-3 py-2">Kurt</th>
+                        <th className="text-left px-3 py-2">Faze</th>
+                        <th className="text-left px-3 py-2">Zapas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewRozvrh.zapasy.map(z => (
+                        <tr key={z.poradiFronta} className="border-t border-zinc-100">
+                          <td className="px-3 py-2 whitespace-nowrap" style={{ color: "#374151" }}>{z.casZacatek}-{z.casKonec}</td>
+                          <td className="px-3 py-2" style={{ color: "#374151" }}>K{z.kurt}</td>
+                          <td className="px-3 py-2 text-xs" style={{ color: "#9ca3af" }}>{z.umisteni ?? z.faze}</td>
+                          <td className="px-3 py-2" style={{ color: "#0A0A0A" }}>
+                            {z.tym1Label} <span style={{ color: "#9ca3af" }}>vs</span> {z.tym2Label}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {chyba && <p className="text-sm text-center" style={{ color: "#801A28" }}>{chyba}</p>}
+
+              <div className="flex gap-3">
+                <button onClick={() => setKrok(4)} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
+                <button onClick={vytvorHru} disabled={stav === "loading" || !previewRozvrh}
                   className="flex-1 rounded-full py-3 text-sm font-semibold text-white disabled:opacity-60"
                   style={{ backgroundColor: "#801A28" }}>
                   {stav === "loading" ? "Vytvarim..." : "Spustit turnaj"}

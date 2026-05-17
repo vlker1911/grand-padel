@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.7.18  
+**Aktuální:** v0.8.0  
 **Poslední změna:** 17. 5. 2026  
-**Git tag:** v0.7.18
+**Git tag:** v0.8.0
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.8.0 | 17. 5. 2026 | **Konfigurovatelný turnaj + auto-rozplánovač.** Nový `lib/turnaj-format.ts` engine: round-robin (circle method), playoff (medaile/single elim/multi-tier), útěchový pavouk, kalkulátor časů s podporou různých délek skupina/semi/finále. Po vytvoření turnaje se rozvrh **skupinových zápasů** ukládá do `turnaj_zapasy` rovnou s `cas_zacatek`, `cas_konec`, `kurt`, `kolo` (playoff se dál generuje po dohrání skupin). Wizard rozšířen o krok 5 **Preview** (kompletní tabulka rozvrhu vč. playoff s placeholdery), toggle útěchového pavouka a vlastní délky zápasů. Šablony rychlého startu v kroku 1: Klasický 4-týmový, Big 6 týmů, Drabinka 8 týmů, Sociální round robin |
 | v0.7.18 | 17. 5. 2026 | **Filtr na /hry** — přepínač Aktivní / Ukončené / Zrušené / Vše s počty. Defaultně "Aktivní" (priprava + probiha bez zrušení) |
 | v0.7.17 | 17. 5. 2026 | **Mazání všech typů her** — `lib/hry.ts` se sdílenou funkcí `smazatHru()` mažící podle FK pořadí pro turnaj i americano/mexicano/mixano (včetně `hra_skupiny`, `hra_skupiny_ucastnici`, `hra_editatori`). Detail hry: tlačítko "Smazat trvale" vždy pro editora (mimo zrušený turnaj — tam stále v banneru), modal ukazuje počet účastníků a zápasů + povinný checkbox potvrzení. Seznam `/hry`: ikonka koše vedle stavu pro editora, stejný modal |
 | v0.7.16 | 16. 5. 2026 | **Mexicano persistence** — kola se ukládají do `hra_zapasy` (předtím vše v `useState`, F5 ztratilo data). Init kola 1 vloží do DB, výsledky a nové kola se ukládají. `kola` se odvozuje z DB přes useMemo |
