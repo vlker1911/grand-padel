@@ -9,7 +9,7 @@
 //   3. Finale cela (1.-4.) je VZDY posledni zapas turnaje.
 //   4. Zadny tym nehraje 2 zapasy zaroven (pauza mezi zapasy >= pauzaMin).
 
-export type PlayoffMode = "bez" | "medaile" | "vitez" | "umisteni";
+export type PlayoffMode = "bez" | "medaile" | "vitez" | "umisteni" | "skupiny_o_umisteni";
 export type ScoringTyp = "gamy" | "body" | "cas";
 export type VitezBracket = "auto" | "top4" | "top8" | "top16";
 
@@ -38,7 +38,7 @@ export type TymVeSkupine = {
 };
 
 export type GenZapas = {
-  faze: "skupina" | "ctvrtfinale" | "semifinale" | "finale" | "o_3_misto" |
+  faze: "skupina" | "skupina_o_umisteni" | "ctvrtfinale" | "semifinale" | "finale" | "o_3_misto" |
         "playoff" | "utech_1" | "utech_2" | "utech_finale";
   skupina: string | null;
   kolo: number | null;
@@ -82,7 +82,7 @@ function delkaZapasu(faze: GenZapas["faze"], fmt: TurnajFormat): number {
     if (fmt.scoringTyp === "gamy") return limit * 3 + 5;
     return Math.round(limit * 0.45) + 5;
   }
-  if (faze === "skupina") {
+  if (faze === "skupina" || faze === "skupina_o_umisteni") {
     return fmt.delkaSkupinaMin ?? odvozPodleSkore(fmt.scoringLimit);
   }
   if (faze === "finale" || faze === "o_3_misto" || faze === "utech_finale") {
@@ -386,6 +386,43 @@ export function generujRozvrh(
       participants = noveKolo;
       kolo++;
     }
+  } else if (fmt.playoffMode === "skupiny_o_umisteni" && !fmt.bezSkupin) {
+    // Druha faze: rozdelit tymy do horni a dolni poloviny podle umisteni ve skupine.
+    // Round-robin v ramci nove skupiny.
+    type NovyTym = { tymId: string | null; label: string };
+    const horni: NovyTym[] = [];
+    const dolni: NovyTym[] = [];
+    for (const sk of skupinyKlice) {
+      const tymyVeSk = skupinyMap.get(sk)!;
+      const velikost = tymyVeSk.length;
+      const pulka = Math.ceil(velikost / 2);
+      for (let i = 0; i < velikost; i++) {
+        const entry: NovyTym = { tymId: null, label: `${i + 1}.${sk}` };
+        if (i < pulka) horni.push(entry);
+        else dolni.push(entry);
+      }
+    }
+    const kurtyPerPasmo = rozdelKurty(fmt.pocetKurtu, 2);
+    function rrPary<T>(items: T[]): Array<[T, T]> {
+      const pary: Array<[T, T]> = [];
+      for (let i = 0; i < items.length; i++) {
+        for (let j = i + 1; j < items.length; j++) pary.push([items[i], items[j]]);
+      }
+      return pary;
+    }
+    const labelH = horni.length > 1 ? `Skupina o 1.-${horni.length}. místo` : "";
+    const labelD = dolni.length > 1 ? `Skupina o ${horni.length + 1}.-${tymuCelkem}. místo` : "";
+    function naplanujRR(tymy: NovyTym[], label: string, kurty: number[], skupinaKey: string) {
+      if (tymy.length < 2) return;
+      const pary = rrPary(tymy);
+      pary.forEach((p, idx) => {
+        naplanuj("skupina_o_umisteni", skupinaKey, idx + 1,
+          { tym1Id: p[0].tymId, tym2Id: p[1].tymId, tym1Label: p[0].label, tym2Label: p[1].label },
+          `${label} - kolo ${idx + 1}`, playoffStart, kurty);
+      });
+    }
+    naplanujRR(horni, labelH, kurtyPerPasmo[0], "H");
+    naplanujRR(dolni, labelD, kurtyPerPasmo[1], "D");
   } else if (fmt.playoffMode === "umisteni") {
     // Multi-tier: kazde pasmo 4 tymy -> mini-bracket. Pasma bezi PARALELNE
     // na rozdelenych kurtech. Finale celniho pasma se ODLOZI jako posledni.

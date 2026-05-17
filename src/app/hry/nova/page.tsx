@@ -31,7 +31,7 @@ function odhadMinut(body: number) {
 // ===== Wizard / kalkulator variant =====
 
 type WizardScoringTyp = "gamy" | "body" | "cas";
-type WizardPlayoffMode = "bez" | "medaile" | "vitez" | "umisteni";
+type WizardPlayoffMode = "bez" | "medaile" | "vitez" | "umisteni" | "skupiny_o_umisteni";
 type WizardVitezBracket = "auto" | "top4" | "top8" | "top16";
 
 type WizardInput = {
@@ -93,6 +93,11 @@ function calculateWizardVariant(input: WizardInput): WizardVariant {
     zapasuPlayoff = bracketSize - 1;
   } else if (input.playoffMode === "medaile") {
     zapasuPlayoff = n >= 4 ? 4 : (n >= 2 ? 1 : 0);
+  } else if (input.playoffMode === "skupiny_o_umisteni" && !input.bezSkupin) {
+    // Druha faze: horni + dolni polovina, round-robin v kazde
+    const horniVel = Math.ceil(n / 2);
+    const dolniVel = n - horniVel;
+    zapasuPlayoff = (horniVel * (horniVel - 1)) / 2 + (dolniVel * (dolniVel - 1)) / 2;
   }
 
   const totalZapasu = zapasuSkupiny + zapasuPlayoff;
@@ -157,11 +162,11 @@ function generateWizardVariants(
 ): WizardVariant[] {
   const variants: WizardVariant[] = [];
   const kurtyOptions = [1, 2, 3, 4, 5, 6, 8, 10].filter(k => k <= maxKurtu);
-  const allModes: WizardPlayoffMode[] = ["umisteni", "vitez", "medaile", "bez"];
+  const allModes: WizardPlayoffMode[] = ["umisteni", "skupiny_o_umisteni", "vitez", "medaile", "bez"];
   const playoffModes: WizardPlayoffMode[] =
     playoffFilter === "ano"      ? allModes.filter(m => m !== "bez") :
     playoffFilter === "ne"       ? ["bez"] :
-    playoffFilter === "umisteni" ? ["umisteni"] :
+    playoffFilter === "umisteni" ? ["umisteni", "skupiny_o_umisteni"] :
     allModes;
   const vitezBrackets: WizardVitezBracket[] = ["auto", "top4", "top8", "top16"];
   const gamyLimits: number[] = gamyFilter === "vse" ? [4, 5, 6] : [gamyFilter];
@@ -175,6 +180,8 @@ function generateWizardVariants(
       for (const playoffMode of playoffModes) {
         // Bez skupin a bez playoff = nulovy turnaj — preskocime
         if (bezSk && playoffMode === "bez") continue;
+        // Skupiny o umisteni vyzaduji skupinovou fazi
+        if (bezSk && playoffMode === "skupiny_o_umisteni") continue;
         const bracketsToTry: (WizardVitezBracket | undefined)[] = playoffMode === "vitez" ? vitezBrackets : [undefined];
         for (const vb of bracketsToTry) {
           if (scoringFilter === "cas" || scoringFilter === "vse") {
@@ -334,7 +341,7 @@ export default function NovaHraPage() {
   const [gamyTiebreak,       setGamyTiebreak]       = useState<"sudden_death" | "advantage">("sudden_death");
   const [odlisnyScoring,     setOdlisnyScoring]     = useState(false);
   // playoffMode nahrazuje: playoff (bool), multiTier (bool), typPlayoff (krizovy/primy)
-  const [playoffMode,        setPlayoffMode]        = useState<"bez" | "medaile" | "vitez" | "umisteni">("umisteni");
+  const [playoffMode,        setPlayoffMode]        = useState<"bez" | "medaile" | "vitez" | "umisteni" | "skupiny_o_umisteni">("umisteni");
   const [vitezBracket,       setVitezBracket]       = useState<"auto" | "top4" | "top8" | "top16">("auto");
   const [rezimKurtu,         setRezimKurtu]         = useState<"auto" | "1-1" | "2-1">("auto");
   const [utechovyPavouk,     setUtechovyPavouk]     = useState(false);
@@ -628,7 +635,7 @@ export default function NovaHraPage() {
       setScoringLimitPlayoff(s.scoring_limit_playoff);
       setOdlisnyScoring(s.scoring_limit_playoff !== s.scoring_limit);
     }
-    if (typeof s.playoff_mode === "string") setPlayoffMode(s.playoff_mode as "bez" | "medaile" | "vitez" | "umisteni");
+    if (typeof s.playoff_mode === "string") setPlayoffMode(s.playoff_mode as "bez" | "medaile" | "vitez" | "umisteni" | "skupiny_o_umisteni");
     if (typeof s.vitez_bracket === "string") setVitezBracket(s.vitez_bracket as "auto" | "top4" | "top8" | "top16");
     if (typeof s.gamy_tiebreak === "string") setGamyTiebreak(s.gamy_tiebreak as "sudden_death" | "advantage");
     if (typeof s.typ_parovani === "string") setTypParovani(s.typ_parovani as "pary" | "singles" | "mix");
@@ -1174,17 +1181,23 @@ export default function NovaHraPage() {
                             </div>
                             {scoringTyp === "gamy" && (
                               <div className="flex flex-col gap-1 mt-1">
-                                <p className="text-xs" style={{ color: "#6b7280" }}>Tiebreak pravidlo:</p>
+                                <p className="text-xs" style={{ color: "#6b7280" }}>Co když je stav nerozhodný?</p>
                                 <div className="flex gap-2">
                                   <button onClick={() => setGamyTiebreak("sudden_death")}
-                                    className={`flex-1 rounded-lg py-2 px-2 text-xs font-semibold border-2 transition-all ${gamyTiebreak === "sudden_death" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                                    <div>Sudden death</div>
-                                    <div className="text-xs font-normal opacity-70 mt-0.5">max {scoringLimit}:{scoringLimit-1}</div>
+                                    className={`flex-1 text-left rounded-lg py-2 px-3 border-2 transition-all ${gamyTiebreak === "sudden_death" ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}
+                                    style={{ color: gamyTiebreak === "sudden_death" ? "#801A28" : "#374151" }}>
+                                    <div className="text-xs font-semibold">Krátký (1 rozhodující game)</div>
+                                    <div className="text-xs font-normal mt-0.5" style={{ color: "#9ca3af" }}>
+                                      Za stavu {scoringLimit-1}:{scoringLimit-1} rozhodne 1 další game → vítěz {scoringLimit}:{scoringLimit-1}
+                                    </div>
                                   </button>
                                   <button onClick={() => setGamyTiebreak("advantage")}
-                                    className={`flex-1 rounded-lg py-2 px-2 text-xs font-semibold border-2 transition-all ${gamyTiebreak === "advantage" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                                    <div>Advantage</div>
-                                    <div className="text-xs font-normal opacity-70 mt-0.5">max {scoringLimit+1}:{scoringLimit}</div>
+                                    className={`flex-1 text-left rounded-lg py-2 px-3 border-2 transition-all ${gamyTiebreak === "advantage" ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}
+                                    style={{ color: gamyTiebreak === "advantage" ? "#801A28" : "#374151" }}>
+                                    <div className="text-xs font-semibold">Klasický (musíš o 2 gamy)</div>
+                                    <div className="text-xs font-normal mt-0.5" style={{ color: "#9ca3af" }}>
+                                      Vyhraj o 2: {scoringLimit+1}:{scoringLimit-1}. Při {scoringLimit}:{scoringLimit} tiebreak → {scoringLimit+1}:{scoringLimit}
+                                    </div>
                                   </button>
                                 </div>
                               </div>
@@ -1262,10 +1275,11 @@ export default function NovaHraPage() {
                         <label className="text-sm font-medium" style={{ color: "#374151" }}>Playoff</label>
                         <div className="flex flex-col gap-2">
                           {([
-                            { v: "umisteni", l: "Dohravat o umisteni (Multi-tier)", p: "Vsechny tymy hraji dal o sve umisteni (1.-4., 5.-8., ...). Nejvice zapasu." },
-                            { v: "vitez",    l: "Hrat o viteze (Single elim)",     p: "Top X tymu vyrazovaci pavouk — po prvni prohre konec. Bez 3. mista." },
-                            { v: "medaile",  l: "Jen o medaile (Final Four)",      p: "Top 4 tymy → semifinale + finale + o 3. misto (4 zapasy)." },
-                            { v: "bez",      l: "Bez playoff",                     p: "Konecne poradi podle skupin." },
+                            { v: "umisteni", l: "Dohrávat o umístění (pavouk)", p: "Vyřazovací systém o všechna místa — 1A vs 2B, 1B vs 2A → finále + o 3. místo. Pro 8+ týmů paralelní pásma." },
+                            { v: "skupiny_o_umisteni", l: "Skupiny o umístění (bez vyřazování)", p: "Po skupinách druhá fáze ROUND-ROBIN — horní polovina hraje skupinu o 1.-X. místo, dolní o (X+1).-N. místo. Pro 8 týmů = 24 zápasů (žádná dramata vyřazení)." },
+                            { v: "vitez",    l: "Hrát o vítěze (single elim)",     p: "Top X týmů vyřazovací pavouk — po první prohře konec. Bez 3. místa." },
+                            { v: "medaile",  l: "Jen o medaile (Final Four)",      p: "Top 4 týmy → semifinále + finále + o 3. místo (4 zápasy)." },
+                            { v: "bez",      l: "Bez playoff",                     p: "Konečné pořadí podle skupin." },
                           ] as const).map(m => (
                             <button key={m.v} onClick={() => setPlayoffMode(m.v)}
                               className={`text-left rounded-xl py-2.5 px-3 border-2 transition-all ${playoffMode === m.v ? "border-[#801A28] bg-red-50" : "border-zinc-200 hover:border-zinc-300"}`}>
@@ -1802,7 +1816,8 @@ export default function NovaHraPage() {
           if (m === "bez") return "bez playoff";
           if (m === "medaile") return "Final Four (4 zápasy)";
           if (m === "vitez") return `single elim${vb && vb !== "auto" ? ` (${vb})` : ""}`;
-          return "Multi-tier (o umístění)";
+          if (m === "skupiny_o_umisteni") return "Skupiny o umístění";
+          return "Pavouk o umístění (multi-tier)";
         };
         const popisFormat = (v: WizardVariant) => {
           if (v.scoringTyp === "cas") {

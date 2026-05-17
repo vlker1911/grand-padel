@@ -110,6 +110,7 @@ function validujKonfliktyTymu(rozvrh, fmt) {
 
 function validujFinalePosledni(rozvrh, fmt) {
   if (fmt.playoffMode === "bez") return [];
+  if (fmt.playoffMode === "skupiny_o_umisteni") return [];
   const fin = rozvrh.zapasy.find(z => z.jeFinaleCela);
   if (!fin) return [`Chybi finale cela (playoffMode=${fmt.playoffMode})`];
   const finKonec = parseHM(fin.casKonec);
@@ -270,6 +271,13 @@ pridejScenar("40t 6 kurtu", 40, 10, { pocetKurtu: 6, playoffMode: "umisteni", ca
 
 // Velmi tesny cas — nemusi sedet ale nesmi crashnout / mit konflikty
 pridejScenar("8t velmi tesny cas", 8, 2, { casOd: "16:00", casDo: "16:45" });
+
+// === skupiny_o_umisteni ===
+pridejScenar("8t skupiny_o_umisteni 2 sk", 8, 2, { playoffMode: "skupiny_o_umisteni" });
+pridejScenar("12t skupiny_o_umisteni 3 sk", 12, 3, { playoffMode: "skupiny_o_umisteni", casOd: "08:00", casDo: "20:00" });
+pridejScenar("16t skupiny_o_umisteni 4 sk", 16, 4, { playoffMode: "skupiny_o_umisteni", casOd: "08:00", casDo: "22:00" });
+pridejScenar("4t skupiny_o_umisteni 1 sk", 4, 1, { playoffMode: "skupiny_o_umisteni" });
+pridejScenar("6t skupiny_o_umisteni 2 sk", 6, 2, { playoffMode: "skupiny_o_umisteni" });
 
 // === bezSkupin (jen playoff) ===
 pridejScenar("bezSkupin 4t medaile", 4, 1, { bezSkupin: true, playoffMode: "medaile" });
