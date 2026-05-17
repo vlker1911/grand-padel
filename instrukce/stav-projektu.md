@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.9.1  
+**Aktuální:** v0.9.2  
 **Poslední změna:** 17. 5. 2026  
-**Git tag:** v0.9.1
+**Git tag:** v0.9.2
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.9.2 | 17. 5. 2026 | **Sdílecí odkaz funguje bez přihlášení** (vyžaduje migraci `2026-05-17-public-select-her.sql` — SELECT pro public role na `hry`, `hra_ucastnici`, `hra_zapasy`; `turnaj_*` to už měly). **Wizard rozšířen**: výběr "Do kolika gamů" (4/5/6/Je mi to jedno) — viditelný jen pokud způsob počítání zahrnuje gamy. Playoff má 4. volbu "O všechna umístění" (= multi-tier umisteni). localStorage pamatuje i `gamyLimit` |
 | v0.9.1 | 17. 5. 2026 | **Startovné UX + sdílení + bug fix IBAN.** Bug fix: `cisloUctuNaIBAN` generoval špatnou kontrolní cifru (CZ→1235, ne 1223). `StartovneTab` regeneruje IBAN při čtení z čísla účtu (tj. staré špatné záznamy se opraví automaticky). Pro Americano/Mexicano top-level tab switcher **"Hra / Startovné"** místo `<details>` (Turnaj má vlastní tab uvnitř). V hlavičce detailu: žlutý chip **"Startovné 500 Kč"** (klik přepne na tab), tlačítko **"Sdílet odkaz"** (Web Share API + clipboard fallback) |
 | v0.9.0 | 17. 5. 2026 | **Startovné s QR platbou** (česká SPAYD norma). Sdílená komponenta `components/StartovneTab.tsx`. V turnaji je 7. tab "Startovné", v Americanu/Mexicanu rozbalitelná sekce `<details>`. Organizátor zadá předčíslí / číslo účtu / kód banky / částku / VS / zprávu / poznámku. `lib/qr-platba.ts` validuje číslo účtu (modulo 11) a konvertuje na IBAN, generuje SPAYD string. Knihovna `qrcode.react`. Tlačítko "Stáhnout PNG" exportuje QR jako obrázek |
 | v0.8.7 | 17. 5. 2026 | **Kopírovat z předchozího turnaje** — v kroku 1 nové tlačítko "Z předchozího turnaje". Modal načte posledních 20 vlastních turnajů (typ=turnaj, created_by=me) a kliknutím se nastaví celý formulář (kurty, časy, scoring, playoff, útěchový pavouk, bez skupin, vlastní délky). `bez_skupin` se nyní ukládá do `settings` |

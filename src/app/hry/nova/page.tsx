@@ -151,18 +151,20 @@ function generateWizardVariants(
   baseInput: { pocetTymu: number; casOdMin: number; casDoMin: number },
   scoringFilter: "gamy" | "cas" | "vse" = "vse",
   maxKurtu: number = 10,
-  playoffFilter: "vse" | "ano" | "ne" = "vse",
+  playoffFilter: "vse" | "ano" | "ne" | "umisteni" = "vse",
   strukturaFilter: "vse" | "skupiny" | "bezSkupin" = "vse",
+  gamyFilter: "vse" | 4 | 5 | 6 = "vse",
 ): WizardVariant[] {
   const variants: WizardVariant[] = [];
   const kurtyOptions = [1, 2, 3, 4, 5, 6, 8, 10].filter(k => k <= maxKurtu);
   const allModes: WizardPlayoffMode[] = ["umisteni", "vitez", "medaile", "bez"];
   const playoffModes: WizardPlayoffMode[] =
-    playoffFilter === "ano" ? allModes.filter(m => m !== "bez") :
-    playoffFilter === "ne"  ? ["bez"] :
+    playoffFilter === "ano"      ? allModes.filter(m => m !== "bez") :
+    playoffFilter === "ne"       ? ["bez"] :
+    playoffFilter === "umisteni" ? ["umisteni"] :
     allModes;
   const vitezBrackets: WizardVitezBracket[] = ["auto", "top4", "top8", "top16"];
-  const gamyLimits = [4, 5, 6];
+  const gamyLimits: number[] = gamyFilter === "vse" ? [4, 5, 6] : [gamyFilter];
   const strukturyKZkouseni: boolean[] =
     strukturaFilter === "skupiny"   ? [false] :
     strukturaFilter === "bezSkupin" ? [true] :
@@ -367,7 +369,8 @@ export default function NovaHraPage() {
   const [wizardDelkaH,       setWizardDelkaH]       = useState<number | "">(3);
   const [wizardDelkaM,       setWizardDelkaM]       = useState<number | "">(0);
   const [wizardScoring,      setWizardScoring]      = useState<"gamy" | "cas" | "vse">("vse");
-  const [wizardPlayoff,      setWizardPlayoff]      = useState<"vse" | "ano" | "ne">("vse");
+  const [wizardGamyLimit,    setWizardGamyLimit]    = useState<"vse" | 4 | 5 | 6>("vse");
+  const [wizardPlayoff,      setWizardPlayoff]      = useState<"vse" | "ano" | "ne" | "umisteni">("vse");
   const [wizardStruktura,    setWizardStruktura]    = useState<"vse" | "skupiny" | "bezSkupin">("vse");
   const [wizardZobrazVse,    setWizardZobrazVse]    = useState(false);
 
@@ -385,6 +388,7 @@ export default function NovaHraPage() {
       if (typeof s.scoring === "string") setWizardScoring(s.scoring);
       if (typeof s.playoff === "string") setWizardPlayoff(s.playoff);
       if (typeof s.struktura === "string") setWizardStruktura(s.struktura);
+      if (s.gamyLimit === "vse" || s.gamyLimit === 4 || s.gamyLimit === 5 || s.gamyLimit === 6) setWizardGamyLimit(s.gamyLimit);
     } catch { /* ignore */ }
   }, []);
   useEffect(() => {
@@ -393,9 +397,10 @@ export default function NovaHraPage() {
         tymu: wizardTymu, maxKurtu: wizardMaxKurtu,
         delkaH: wizardDelkaH, delkaM: wizardDelkaM,
         scoring: wizardScoring, playoff: wizardPlayoff, struktura: wizardStruktura,
+        gamyLimit: wizardGamyLimit,
       }));
     } catch { /* ignore */ }
-  }, [wizardTymu, wizardMaxKurtu, wizardDelkaH, wizardDelkaM, wizardScoring, wizardPlayoff, wizardStruktura]);
+  }, [wizardTymu, wizardMaxKurtu, wizardDelkaH, wizardDelkaM, wizardScoring, wizardPlayoff, wizardStruktura, wizardGamyLimit]);
 
   const [nazev, setNazev] = useState("");
   const [stav,  setStav]  = useState<"idle" | "loading" | "chyba">("idle");
@@ -586,9 +591,9 @@ export default function NovaHraPage() {
     const maxK = typeof wizardMaxKurtu === "number" ? wizardMaxKurtu : 10;
     return generateWizardVariants(
       { pocetTymu: tymu, casOdMin: 0, casDoMin: wizardDelkaMin },
-      wizardScoring, maxK, wizardPlayoff, wizardStruktura,
+      wizardScoring, maxK, wizardPlayoff, wizardStruktura, wizardGamyLimit,
     );
-  }, [wizardTymu, wizardDelkaMin, wizardMaxKurtu, wizardScoring, wizardPlayoff, wizardStruktura]);
+  }, [wizardTymu, wizardDelkaMin, wizardMaxKurtu, wizardScoring, wizardPlayoff, wizardStruktura, wizardGamyLimit]);
 
   const wizardDoporuceni = useMemo(
     () => pickWizardRecommendations(wizardVarianty, wizardZobrazVse ? 12 : 6),
@@ -1910,14 +1915,37 @@ export default function NovaHraPage() {
                 </div>
               </div>
 
+              {(wizardScoring === "gamy" || wizardScoring === "vse") && (
+                <div className="mb-3">
+                  <label className="text-xs font-medium block mb-1.5" style={{ color: "#374151" }}>Do kolika gamů</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {([
+                      ["vse", "Je mi to jedno"],
+                      [4, "Do 4"],
+                      [5, "Do 5"],
+                      [6, "Do 6"],
+                    ] as Array<["vse" | 4 | 5 | 6, string]>).map(([k, label]) => (
+                      <button key={String(k)} onClick={() => setWizardGamyLimit(k)}
+                        className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
+                        style={wizardGamyLimit === k
+                          ? { backgroundColor: "#801A28", color: "white", borderColor: "#801A28" }
+                          : { color: "#374151", borderColor: "#e5e7eb", backgroundColor: "white" }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="mb-3">
                 <label className="text-xs font-medium block mb-1.5" style={{ color: "#374151" }}>Playoff</label>
                 <div className="flex gap-2 flex-wrap">
                   {([
                     ["vse", "Je mi to jedno"],
                     ["ano", "S playoff"],
+                    ["umisteni", "O všechna umístění"],
                     ["ne", "Bez playoff"],
-                  ] as Array<["vse" | "ano" | "ne", string]>).map(([k, label]) => (
+                  ] as Array<["vse" | "ano" | "umisteni" | "ne", string]>).map(([k, label]) => (
                     <button key={k} onClick={() => setWizardPlayoff(k)}
                       className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
                       style={wizardPlayoff === k
