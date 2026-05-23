@@ -148,8 +148,9 @@ function delkaZapasu(faze: GenZapas["faze"], fmt: TurnajFormat): number {
       if (k.vitezne === 2 && k.superTiebreak) total -= odhadSetu * 0.3;
       return Math.round(total);
     }
-    // body
-    return Math.round(limit * 0.45) + 5;
+    // body: empiricky ~ 0.5 min/bod (overeno na realnych americano turnajich)
+    //   16 bodu = 8 min, 24 bodu = 12 min, 32 bodu = 16 min, 40 bodu = 20 min
+    return Math.round(limit * 0.5);
   }
   if (faze === "skupina" || faze === "skupina_o_umisteni") {
     return fmt.delkaSkupinaMin ?? odvozPodleSkore(fmt.scoringLimit);
