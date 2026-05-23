@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.15.0  
+**Aktuální:** v0.15.1  
 **Poslední změna:** 18. 5. 2026  
-**Git tag:** v0.15.0
+**Git tag:** v0.15.1
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.15.1 | 18. 5. 2026 | **UI volba pro N mod 4 = 1** (5, 9, 13, 17, 21t — poslední pásmo má 1 tým). Engine: `posledniSamotny: "automaticky" / "slouceni_pasem" / "bonus_zapas"`. UI panel se zobrazí v kroku 4 (doplňková nastavení) jen pro multi-tier a počet týmů kde N mod 4 = 1. Volby: (1) automaticky — nehraje, (2) sloučit poslední 5 týmů do RR, (3) bonus zápas s nejhorším z předchozího pásma |
 | v0.15.0 | 18. 5. 2026 | **Sety jako scoring typ** (standardní padel formát). Nový `scoringTyp: "sety"` v `TurnajFormat` + `setyKonfigurace: {vitezne, delkaSetu, setTiebreak, superTiebreak}`. Default: 2 vítězné, do 6 gamů, set tiebreak ZAP, super-tiebreak VYP. Pro 2 vítězné dostupná volba "Super-tiebreak místo 3. setu" (1:1 → STB do 10 bodů). Engine `delkaZapasu`: spočítá realistický čas (best-of-3 ~75 min, s STB ~65 min). UI 4. tlačítko "Sety" v kroku 1 + sub-konfigurace. Validace skóre: ukládá se počet vítězných setů (např. 2:0, 2:1) |
 | v0.14.2 | 18. 5. 2026 | **Mini-skupina pro 3-členná pásma** (multi-tier). Místo 1 zápasu o pásmový titul se hraje **round-robin** (3 zápasy: 1v2, 1v3, 2v3) — každý hraje a získá své umístění. Pro 7t: 1.-4. semi+finále + 5.-7. mini-RR. Pro 11t: + 9.-11. mini-RR. Pro 15t: + 13.-15. mini-RR. Pro 23t: + 21.-23. mini-RR. Generická logika `N mod 4 = 3`. Mini-skupiny běží paralelně s hlavními pásmy a skončí dříve než finále čela |
 | v0.14.1 | 18. 5. 2026 | **Bug fix postupový klíč — nerovnoměrné skupiny.** Engine generoval zápasy pro neexistující pozice (např. 4.C / 4.D když skupiny C a D mají jen 3 týmy). Fix: před sestavením bracketu se filtrují pozice podle `skupinyMap.get(sk).length` — jen existující se zahrnou. Velikost bracketu se zaokrouhlí dolu na nejbližší mocninu 2. Pro 14t (A=4,B=4,C=3,D=3) / top2+3-4 = 28 zápasů (před 32). Nový test runner `scripts/test-20-scenaru.mjs` (20 edge case scénářů, 20/20 OK). Verify-all 53/53 |

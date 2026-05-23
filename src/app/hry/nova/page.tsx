@@ -359,6 +359,8 @@ export default function NovaHraPage() {
   const [klicUtechOd,        setKlicUtechOd]        = useState<number>(0); // 0 = neaktivni
   const [klicUtechDo,        setKlicUtechDo]        = useState<number>(0);
   const [pointRule,          setPointRule]          = useState<"golden" | "star" | "advantage">("star");
+  // Pro N mod 4 = 1 (5, 9, 13, 17, 21t): jak resit posledni samotny tym
+  const [posledniSamotny,    setPosledniSamotny]    = useState<"automaticky" | "slouceni_pasem" | "bonus_zapas">("automaticky");
   // Konfigurace pro scoringTyp === "sety"
   const [setyVitezne,        setSetyVitezne]        = useState<1 | 2 | 3>(2);
   const [setyDelkaSetu,      setSetyDelkaSetu]      = useState<number>(6);
@@ -771,6 +773,7 @@ export default function NovaHraPage() {
     delkaSemiMin: vlastniDelky && typeof delkaSemiMin === "number" ? delkaSemiMin : null,
     delkaFinaleMin: vlastniDelky && typeof delkaFinaleMin === "number" ? delkaFinaleMin : null,
     pauzaMin: typeof pauzaMin === "number" ? pauzaMin : 1,
+    posledniSamotny,
     postupovyKlic: klicHlavniN > 0 ? {
       hlavniPocetZeSkupiny: klicHlavniN,
       utechovy: klicUtechOd > 0 && klicUtechDo >= klicUtechOd
@@ -783,7 +786,7 @@ export default function NovaHraPage() {
       setTiebreak: setyTiebreak,
       superTiebreak: setySuperTiebreak,
     } : undefined,
-  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, placementBracket, pointRule, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin, klicHlavniN, klicUtechOd, klicUtechDo, setyVitezne, setyDelkaSetu, setyTiebreak, setySuperTiebreak]);
+  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, placementBracket, pointRule, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin, klicHlavniN, klicUtechOd, klicUtechDo, setyVitezne, setyDelkaSetu, setyTiebreak, setySuperTiebreak, posledniSamotny]);
 
   // Preview rozvrhu — z formularovych poli (s placeholder ID)
   const previewRozvrh = useMemo<Rozvrh | null>(() => {
@@ -896,6 +899,7 @@ export default function NovaHraPage() {
           utechovy_do: klicUtechDo > 0 ? klicUtechDo : null,
         } : null,
         point_rule: pointRule,
+        posledni_samotny: posledniSamotny,
         sety_konfigurace: scoringTyp === "sety" ? {
           vitezne: setyVitezne,
           delka_setu: setyDelkaSetu,
@@ -1852,6 +1856,31 @@ export default function NovaHraPage() {
               {/* Doplnkova nastaveni — bez utechu, ten je v kroku 3 */}
               <div className="bg-white rounded-2xl border border-zinc-100 p-5 flex flex-col gap-4">
                 <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>Doplnkova nastaveni</p>
+
+                {/* Volba pro N mod 4 = 1 (5, 9, 13, ... týmů) — jen multi-tier */}
+                {playoffMode === "umisteni" && !bezSkupin && pocetTymuPredikovany % 4 === 1 && pocetTymuPredikovany >= 5 && (
+                  <div className="rounded-lg border border-amber-200 p-3" style={{ backgroundColor: "#fffbeb" }}>
+                    <p className="text-sm font-semibold mb-1" style={{ color: "#92400e" }}>
+                      Lichý počet týmů: poslední pásmo má jen 1 tým
+                    </p>
+                    <p className="text-xs mb-2" style={{ color: "#78350f" }}>
+                      Co s {pocetTymuPredikovany}. týmem?
+                    </p>
+                    <div className="flex flex-col gap-1.5">
+                      {([
+                        { v: "automaticky" as const, l: "Automaticky", p: "Poslední tým dostane své umístění bez hraní." },
+                        { v: "slouceni_pasem" as const, l: "Sloučit poslední pásma", p: "Posledních 5 týmů hraje round-robin (10 zápasů) o všechna místa." },
+                        { v: "bonus_zapas" as const, l: "Bonus zápas", p: "Poslední tým hraje s nejhorším z předchozího pásma o 1 místo." },
+                      ]).map(o => (
+                        <button key={o.v} onClick={() => setPosledniSamotny(o.v)}
+                          className={`text-left rounded-lg py-2 px-3 border-2 transition-all ${posledniSamotny === o.v ? "border-[#801A28] bg-white" : "border-zinc-200 bg-white hover:border-zinc-300"}`}>
+                          <p className="text-xs font-semibold" style={{ color: posledniSamotny === o.v ? "#801A28" : "#374151" }}>{o.l}</p>
+                          <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>{o.p}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input type="checkbox" checked={vlastniDelky} onChange={e => setVlastniDelky(e.target.checked)} className="mt-0.5" />

@@ -48,6 +48,11 @@ export type TurnajFormat = {
   utechovyPavouk: boolean;
   bezSkupin: boolean;     // true = preskoc skupinovou fazi, hraj rovnou playoff (nasazeni = poradi)
   placementBracket: boolean; // pro vitez mod: kazdy hraje az do konce o sve umisteni (full placement)
+  // Jak resit pasmo s 1 tymem (N mod 4 == 1: 5, 9, 13, 17, 21 tymu...).
+  //   "automaticky" (default): posledni tym nehraje, automaticky dostane sve umisteni
+  //   "slouceni_pasem": posledni dve pasma se slouci do RR (5-clenne mini-skupiny = 10 zapasu)
+  //   "bonus_zapas": posledni tym hraje s nejhorsim z predchoziho pasma o 1 misto
+  posledniSamotny?: "automaticky" | "slouceni_pasem" | "bonus_zapas";
   setyKonfigurace?: SetyKonfigurace; // pouze pro scoringTyp === "sety"
   postupovyKlic?: PostupovyKlic; // volitelne: rozdeleni do hlavni/utechovy podle umisteni ve skupinach
   pointRule: PointRule;   // pravidlo na 40:40 v game; ovlivnuje prumernou delku zapasu
@@ -651,14 +656,56 @@ export function generujRozvrh(
   } else if (fmt.playoffMode === "umisteni") {
     // Multi-tier: kazde pasmo 4 tymy -> mini-bracket. Pasma bezi PARALELNE
     // na rozdelenych kurtech. Finale celniho pasma se ODLOZI jako posledni.
-    const pocetPasem = Math.ceil(tymuCelkem / 4);
+    let pocetPasem = Math.ceil(tymuCelkem / 4);
+    // Resime "poslední pásmo s 1 týmem" (N mod 4 == 1: 5, 9, 13, 17, 21t).
+    // Pokud uzivatel zvolil "slouceni_pasem": misto 4+...+1 udelame 4+...+5
+    //   (posledni pasmo ma 5 tymu hraje RR 10 zapasu).
+    const sloucenoSPredchozim = fmt.posledniSamotny === "slouceni_pasem"
+      && tymuCelkem % 4 === 1
+      && pocetPasem >= 2;
+    if (sloucenoSPredchozim) pocetPasem -= 1; // posledni 5 tymu jako jedno pasmo
     const kurtyPerPasmo = rozdelKurty(fmt.pocetKurtu, pocetPasem);
 
     for (let p = 0; p < pocetPasem; p++) {
-      const tymyPasma = Math.min(4, tymuCelkem - p * 4);
-      if (tymyPasma < 2) continue;
-      const labelPasma = pocetPasem === 1 ? "" : ` (${p * 4 + 1}.-${p * 4 + tymyPasma}.)`;
+      // Pri slouceni posledni pasmo ma 5 tymu (4+1)
+      const jePosledniSlouceno = sloucenoSPredchozim && p === pocetPasem - 1;
+      const tymyPasma = jePosledniSlouceno ? 5 : Math.min(4, tymuCelkem - p * 4);
+      if (tymyPasma < 2) {
+        // Pasmo s 1 tymem: pokud "bonus_zapas", pridat zapas s nejhorsim z predchoziho
+        if (fmt.posledniSamotny === "bonus_zapas" && p > 0) {
+          const t1 = tymPro((p - 1) * 4 + 3); // 4. tym predchoziho pasma
+          const t2 = tymPro(p * 4 + 0);        // samotny tym
+          const kurty = kurtyPerPasmo[p - 1] ?? Array.from({ length: fmt.pocetKurtu }, (_, i) => i);
+          naplanuj("finale", null, p * 10 + 1,
+            { tym1Id: t1.id, tym2Id: t2.id, tym1Label: t1.label, tym2Label: t2.label },
+            `O ${(p - 1) * 4 + 4}.-${p * 4 + 1}. místo (bonus)`, playoffStart, kurty);
+        }
+        continue;
+      }
+      const od = p * 4 + 1;
+      const doMisto = od + tymyPasma - 1;
+      const labelPasma = pocetPasem === 1 ? "" : ` (${od}.-${doMisto}.)`;
       const kurty = kurtyPerPasmo[p];
+
+      // 5-clenne pasmo (slouceni): mini RR vsech proti vsem = 10 zapasu
+      if (tymyPasma === 5) {
+        const tymy5 = [
+          tymPro(p * 4 + 0), tymPro(p * 4 + 1), tymPro(p * 4 + 2),
+          tymPro(p * 4 + 3), tymPro(p * 4 + 4),
+        ];
+        const skupinaKey = `umisteni-${p + 1}`;
+        const pary: Array<[number, number]> = [];
+        for (let i = 0; i < 5; i++) {
+          for (let j = i + 1; j < 5; j++) pary.push([i, j]);
+        }
+        pary.forEach(([i, j], idx) => {
+          naplanuj("skupina_o_umisteni", skupinaKey, idx + 1,
+            { tym1Id: tymy5[i].id, tym2Id: tymy5[j].id, tym1Label: tymy5[i].label, tym2Label: tymy5[j].label },
+            `Mini-skupina o ${od}.-${doMisto}. místo - kolo ${idx + 1}`,
+            playoffStart, kurty);
+        });
+        continue;
+      }
 
       if (tymyPasma === 4) {
         const t1 = tymPro(p * 4 + 0), t4 = tymPro(p * 4 + 3);

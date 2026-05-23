@@ -1646,6 +1646,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
         utechovyPavouk: s.utech_pavouk === true,
         bezSkupin: s.bez_skupin === true,
         placementBracket: s.placement_bracket === true,
+        posledniSamotny: (s.posledni_samotny as "automaticky" | "slouceni_pasem" | "bonus_zapas" | undefined),
         postupovyKlic: (() => {
           const k = s.postupovy_klic as Record<string, unknown> | null | undefined;
           if (!k || typeof k.hlavni_pocet_ze_skupiny !== "number") return undefined;
