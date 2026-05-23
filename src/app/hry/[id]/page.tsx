@@ -1244,20 +1244,25 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
   //   - po dohrání semi se vloží finále + o 3. místo s reálnými ID.
   //   - po dohrání čtvrtfinále se vloží semifinále, atd.
   // Funkce aktualizujDruhouFazi je idempotentní (dedup) — bezpečně se volá vícekrát.
-  // Aby useEffect neběžel donekonečna, kontrolujeme změnu počtu zápasů.
-  const posledniPocetZapasu = useRef(0);
+  // Spouštíme když se změní (a) počet zápasů (přibyl nový kolo), nebo
+  // (b) počet dohraných zápasů (uložilo se skóre — možná je čas
+  // doplnit další kolo).
+  const pocetDohranych = useMemo(
+    () => zapasy.filter(z => z.skore_tym1 != null).length,
+    [zapasy],
+  );
+  const posledniTrigger = useRef("");
   useEffect(() => {
     if (jeZruseno || !jeEditor) return;
     if (!playoff) return;
     if (!vsechnySkupinyHotove) return;
     if (generujiPlayoff) return;
-    // Spouštíme jen pokud se počet zápasů změnil od poslední aktualizace
-    // (nebo poprvé). Pokud nic nepřibylo, není co dělat.
-    if (posledniPocetZapasu.current === zapasy.length && zapasy.length > 0) return;
-    posledniPocetZapasu.current = zapasy.length;
+    const trig = `${zapasy.length}|${pocetDohranych}`;
+    if (posledniTrigger.current === trig) return;
+    posledniTrigger.current = trig;
     aktualizujDruhouFazi();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vsechnySkupinyHotove, zapasy.length, jeZruseno, jeEditor, playoff, generujiPlayoff]);
+  }, [vsechnySkupinyHotove, zapasy.length, pocetDohranych, jeZruseno, jeEditor, playoff, generujiPlayoff]);
 
   const vsechnoHotove = useMemo(
     () => (!playoff && vsechnySkupinyHotove) || (playoff && vsechnyPlayoffHotove),
