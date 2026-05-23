@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.10.1  
+**Aktuální:** v0.10.2  
 **Poslední změna:** 18. 5. 2026  
-**Git tag:** v0.10.1
+**Git tag:** v0.10.2
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.10.2 | 18. 5. 2026 | **Bug fix konečné pořadí + multi-tier ranking.** `finalniPoradi` hledala `umisteni === "final"` (lowercase), engine od v0.8.0 dává `"Finale"` / `"Finale (1.-4.)"`. Plus pro multi-tier teď zahrnuje **všechna pásma** — vrátí 1.-4., 5.-8., atd. podle finále a o 3. míst |
 | v0.10.1 | 18. 5. 2026 | **Bug fix auto-generace:** `useEffect` reagoval jen na změnu počtu zápasů, ne na uložené skóre. Po dohrání semifinále se počet zápasů nezmění (jen update řádku) → finále/o 3. místo se neauto-vygenerovalo. Nový trigger sleduje i `pocetDohranych` (zápasy s nenull skóre) |
 | v0.10.0 | 18. 5. 2026 | **Auto-generace 2. fáze v DB.** Nový `lib/turnaj-postup.ts` (V/R/P tabulka skupin, `poradiSkupin()`, `globalniNasazeni()`). V `lib/turnaj-format.ts` přidán `dosadDoRozvrhu()` a `zapasy2Faze()`. V `TurnajView` idempotentní `aktualizujDruhouFazi()`: po dohrání skupin se automaticky vloží 1. kolo playoff (semi / final four / skupiny o umístění), po dohrání semi se doplní finále + o 3. místo s reálnými ID vítězů/poražených. `useEffect` to sleduje a opakovaně volá. Sjednocené labelování nových fází přes `fazeLabelGlobal()` (česky: Semifinále, Finále, O 3. místo, Čtvrtfinále, Útěchový pavouk…) |
 | v0.9.7 | 17. 5. 2026 | **Tab Pořadí zápasů fix.** (1) Bug: `spustitZapas` nyní kontroluje, že žádný z týmů nehraje na jiném kurtu — alert + zákaz. (2) Pořadí zápasů je **fixní podle `poradi_fronta`** (z engine) — žádné přesouvání po dohrání. (3) Inline zadání skóre přímo v řádku — pro probíhající a "upravit" se zobrazí inputy, tlačítko "Uložit skóre" |

@@ -1276,26 +1276,41 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
     if (!vsechnoHotove) return [];
     if (playoff && playoffExistuje) {
       const result: { nazev: string; skore: number }[] = [];
-      const fazePoradi = [...new Set(zapasyPlayoff.map(z => z.faze))].sort();
-      fazePoradi.forEach(faze => {
-        // Najdi zapas s umisteni="final" v jakemkoliv kole (pro vitez muze byt v kolo 2, 3 nebo 4)
-        const finale = zapasyPlayoff.find(z => z.faze === faze && z.umisteni === "final");
-        const o3 = zapasyPlayoff.find(z => z.faze === faze && z.umisteni === "o3misto");
-        if (finale && finale.skore_tym1 != null && finale.skore_tym2 != null) {
-          const s1 = finale.skore_tym1, s2 = finale.skore_tym2;
-          const winnerId = s1 > s2 ? finale.tym1_id : finale.tym2_id;
-          const loserId = s1 > s2 ? finale.tym2_id : finale.tym1_id;
-          result.push({ nazev: jmenoTymu(winnerId), skore: Math.max(s1, s2) });
-          result.push({ nazev: jmenoTymu(loserId),  skore: Math.min(s1, s2) });
-        }
+      // Najdi vsechna finale (stary format "final" i novy "Finale" / "Finale (1.-4.)")
+      const jeFin = (u: string | null) => {
+        const x = (u ?? "").toLowerCase();
+        return x === "final" || x.startsWith("finale");
+      };
+      const jeO3 = (u: string | null) => {
+        const x = (u ?? "");
+        return x === "o3misto" || /^o \d+\. misto/i.test(x);
+      };
+      // Pasmo z umisteni napr. "Finale (1.-4.)" -> "1.-4." (pro multi-tier).
+      // Bez pasma -> "".
+      const pasmo = (u: string | null) => {
+        const m = (u ?? "").match(/\(([^)]+)\)/);
+        return m ? m[1] : "";
+      };
+      const finaleZapasy = zapasyPlayoff.filter(z => jeFin(z.umisteni))
+        .sort((a, b) => (a.umisteni ?? "").localeCompare(b.umisteni ?? ""));
+      const o3Zapasy = zapasyPlayoff.filter(z => jeO3(z.umisteni));
+
+      for (const f of finaleZapasy) {
+        if (f.skore_tym1 == null || f.skore_tym2 == null) continue;
+        const win = f.skore_tym1 > f.skore_tym2 ? f.tym1_id : f.tym2_id;
+        const lose = f.skore_tym1 > f.skore_tym2 ? f.tym2_id : f.tym1_id;
+        result.push({ nazev: jmenoTymu(win), skore: Math.max(f.skore_tym1, f.skore_tym2) });
+        result.push({ nazev: jmenoTymu(lose), skore: Math.min(f.skore_tym1, f.skore_tym2) });
+        // Najdi odpovidajici O 3. misto pro stejne pasmo
+        const fP = pasmo(f.umisteni);
+        const o3 = o3Zapasy.find(o => pasmo(o.umisteni) === fP);
         if (o3 && o3.skore_tym1 != null && o3.skore_tym2 != null) {
-          const s1 = o3.skore_tym1, s2 = o3.skore_tym2;
-          const winnerId = s1 > s2 ? o3.tym1_id : o3.tym2_id;
-          const loserId = s1 > s2 ? o3.tym2_id : o3.tym1_id;
-          result.push({ nazev: jmenoTymu(winnerId), skore: Math.max(s1, s2) });
-          result.push({ nazev: jmenoTymu(loserId),  skore: Math.min(s1, s2) });
+          const w = o3.skore_tym1 > o3.skore_tym2 ? o3.tym1_id : o3.tym2_id;
+          const l = o3.skore_tym1 > o3.skore_tym2 ? o3.tym2_id : o3.tym1_id;
+          result.push({ nazev: jmenoTymu(w), skore: Math.max(o3.skore_tym1, o3.skore_tym2) });
+          result.push({ nazev: jmenoTymu(l), skore: Math.min(o3.skore_tym1, o3.skore_tym2) });
         }
-      });
+      }
       return result;
     }
     // Bez playoff — skupinova tabulka sloučená
