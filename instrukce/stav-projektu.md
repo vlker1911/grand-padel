@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.15.5  
+**Aktuální:** v0.15.6  
 **Poslední změna:** 23. 5. 2026  
-**Git tag:** v0.15.5
+**Git tag:** v0.15.6
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.15.6 | 23. 5. 2026 | **Obnovit zrušený turnaj.** V banneru "Turnaj byl zrušen" přibylo tlačítko **"Obnovit turnaj"** (vedle "Smazat trvale"). Funkce `obnovTurnaj()` smaže `settings.zruseno / duvod_zruseni / zruseno_at` a vrátí `stav` na `"priprava"` (pokud žádné zápasy) nebo `"probiha"`. Confirm dialog. Banner zmizí a turnaj se obnoví |
 | v0.15.5 | 23. 5. 2026 | **Open Graph + Twitter Card meta tagy.** Sdílení odkazů (WhatsApp, Facebook, LinkedIn, Twitter, iMessage) teď ukáže náhled s logem a fotkou. `layout.tsx` rozšířen: `metadataBase`, `title.template` (`%s | Grand Padel`), description o všech 3 lokalitách (Olomouc/Ostrava/Praha-Zličín), keywords, OG image (`/photos/hero-homepage.jpg` 1200×630), Twitter `summary_large_image`, ikony (monogram). Site URL z env `NEXT_PUBLIC_SITE_URL` (default `https://grandpadel.cz`) |
 | v0.15.4 | 23. 5. 2026 | **Middleware → Proxy** (Next.js 16 deprecation). Soubor `src/middleware.ts` přejmenován na `src/proxy.ts`, funkce `middleware()` → `proxy()`. Funkčnost beze změny (Supabase Auth cookies refresh). Build už nehlásí deprecation warning |
 | v0.15.3 | 23. 5. 2026 | **Lint errors fix — připraveno pro Vercel build.** 9 chyb v `hry/page.tsx`, `hry/[id]/page.tsx`, `hry/nova/page.tsx` (`react-hooks/set-state-in-effect` + nová React 19 `forward-reference` chyba v useEffect + `next/no-html-link-for-pages`). Fix: `<a href="/hry">` → `<Link>` (import `next/link`), eslint-disable komentáře pro datově načítací useEffecty (správný pattern). `npm run build` ✓ kompletní (14 routes generated) |

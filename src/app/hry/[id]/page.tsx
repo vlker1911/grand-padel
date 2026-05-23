@@ -1618,6 +1618,17 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
     window.location.reload();
   }
 
+  async function obnovTurnaj() {
+    if (!confirm("Obnovit zruseny turnaj? Banner zmizi a turnaj bude opet aktivni.")) return;
+    const noveSettings = { ...(hra.settings ?? {}) };
+    delete noveSettings.zruseno;
+    delete noveSettings.duvod_zruseni;
+    delete noveSettings.zruseno_at;
+    const novyStav: "priprava" | "probiha" = zapasy.length === 0 ? "priprava" : "probiha";
+    await supabase.from("hry").update({ stav: novyStav, settings: noveSettings }).eq("id", hra.id);
+    window.location.reload();
+  }
+
   async function zrusitSpusteni(zapasId: string) {
     await supabase.from("turnaj_zapasy").update({ stav: "ceka", kurt: null, cas_zacatek: null }).eq("id", zapasId);
     nactiTurnaj();
@@ -1898,11 +1909,18 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
               )}
             </div>
             {jeEditor && (
-              <button onClick={onSmazatRequest}
-                className="shrink-0 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium hover:bg-red-50"
-                style={{ color: "#801A28" }}>
-                Smazat trvale
-              </button>
+              <div className="shrink-0 flex flex-col gap-2">
+                <button onClick={obnovTurnaj}
+                  className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-white"
+                  style={{ color: "#065f46", borderColor: "#a7f3d0", backgroundColor: "#ecfdf5" }}>
+                  Obnovit turnaj
+                </button>
+                <button onClick={onSmazatRequest}
+                  className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium hover:bg-red-50"
+                  style={{ color: "#801A28" }}>
+                  Smazat trvale
+                </button>
+              </div>
             )}
           </div>
         </div>
