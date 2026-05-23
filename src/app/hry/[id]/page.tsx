@@ -1423,8 +1423,12 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
       vitez_id: vitez ?? null,
     }).eq("id", zapasId);
 
-    // Auto-generuj dalsi kolo playoff dle modu
-    if (zapas && zapas.faze.startsWith("playoff")) {
+    // Auto-generuj dalsi kolo playoff dle modu — POUZE pro stare turnaje (pred v0.8.0).
+    // Nove turnaje (s settings.turnaj_format) maji vlastni auto-gen pres aktualizujDruhouFazi(),
+    // ktery resi i placement bracket a multi-tier korektne. Stara logika by jen
+    // vytvarela duplicitni zapasy.
+    const jeStaryTurnaj = !((hra.settings as Record<string, unknown> | null)?.turnaj_format);
+    if (jeStaryTurnaj && zapas && zapas.faze.startsWith("playoff")) {
       const aktualniKoloZapasy = zapasy
         .filter(z => z.faze === zapas.faze && z.kolo === zapas.kolo);
       const ostatniHotove = aktualniKoloZapasy
