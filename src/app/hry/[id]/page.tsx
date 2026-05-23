@@ -30,7 +30,7 @@ type Hra = {
     zruseno?: boolean;
     duvod_zruseni?: string;
     zruseno_at?: string;
-    scoring_typ?: "gamy" | "body" | "cas";
+    scoring_typ?: "gamy" | "body" | "cas" | "sety";
     scoring_limit?: number;
     scoring_limit_playoff?: number;
     playoff?: boolean;
@@ -860,7 +860,7 @@ type TurnajZapas = {
 };
 
 type TurnajSettings = {
-  scoring_typ?: "gamy" | "body" | "cas";
+  scoring_typ?: "gamy" | "body" | "cas" | "sety";
   scoring_limit?: number;
   scoring_limit_playoff?: number;
   playoff?: boolean;
@@ -935,7 +935,7 @@ function spocitejHarmonogram(
   zapasy: TurnajZapas[],
   pocetKurtu: number,
   casOdStr: string | undefined,
-  scoringTyp: "gamy" | "body" | "cas",
+  scoringTyp: "gamy" | "body" | "cas" | "sety",
   scoringLimit: number,
   scoringLimitPlayoff: number,
 ): HarmonogramZaznam[] {
@@ -1410,6 +1410,12 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
       }
     }
     if (scoringTyp === "cas" && zapas.faze !== "skupina" && s1 === s2) return;
+    if (scoringTyp === "sety") {
+      // Skore = počet vyhraných setů. Musí být v rozsahu 0..vitezne a někdo musí vyhrát.
+      const setyVit = (hra.settings as { sety_konfigurace?: { vitezne?: number } } | null)?.sety_konfigurace?.vitezne ?? 2;
+      const w = Math.max(s1, s2), l = Math.min(s1, s2);
+      if (w !== setyVit || l > setyVit - 1 || s1 === s2) return;
+    }
     setUkladam(zapasId);
     const nyni = new Date();
     const hh = String(nyni.getHours()).padStart(2, "0");
@@ -1630,8 +1636,9 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
     try {
       const s = (hra.settings ?? {}) as Record<string, unknown>;
       const tf = (s.turnaj_format as Record<string, unknown> | undefined) ?? {};
+      const setyK = s.sety_konfigurace as Record<string, unknown> | null | undefined;
       const fmt: TurnajFormat = {
-        scoringTyp: (s.scoring_typ as "gamy" | "body" | "cas") ?? "gamy",
+        scoringTyp: (s.scoring_typ as "gamy" | "body" | "cas" | "sety") ?? "gamy",
         scoringLimit: (s.scoring_limit as number) ?? 4,
         scoringLimitPlayoff: (s.scoring_limit_playoff as number) ?? (s.scoring_limit as number) ?? 4,
         playoffMode: playoffMode,
@@ -1650,6 +1657,12 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
           };
         })(),
         pointRule: (s.point_rule as "golden" | "star" | "advantage") ?? "star",
+        setyKonfigurace: setyK && typeof setyK.vitezne === "number" ? {
+          vitezne: setyK.vitezne as 1 | 2 | 3,
+          delkaSetu: typeof setyK.delka_setu === "number" ? setyK.delka_setu : 6,
+          setTiebreak: setyK.set_tiebreak !== false,
+          superTiebreak: setyK.super_tiebreak === true,
+        } : undefined,
         pocetKurtu: hra.pocet_kurtu,
         casOd: (s.cas_od as string) ?? "16:00",
         casDo: (s.cas_do as string) ?? "20:00",
@@ -1818,6 +1831,14 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
             }
           }
           if (platne && scoringTyp === "cas" && z.faze !== "skupina" && n1 === n2) { platne = false; hint = "V playoff musi byt vitez"; }
+          if (platne && scoringTyp === "sety") {
+            const setyVit = (hra.settings as { sety_konfigurace?: { vitezne?: number } } | null)?.sety_konfigurace?.vitezne ?? 2;
+            const w = Math.max(n1, n2), l = Math.min(n1, n2);
+            if (w !== setyVit || l > setyVit - 1 || n1 === n2) {
+              platne = false;
+              hint = `Sety: výsledek musí být ${setyVit}:0 nebo ${setyVit}:1${setyVit >= 3 ? ` nebo ${setyVit}:2` : ""}`;
+            }
+          }
           return (
             <div className="mt-3 flex items-center justify-between gap-2">
               {hint && <span className="text-xs" style={{ color: "#801A28" }}>{hint}</span>}

@@ -31,7 +31,7 @@ function odhadMinut(body: number) {
 
 // ===== Wizard / kalkulator variant =====
 
-type WizardScoringTyp = "gamy" | "body" | "cas";
+type WizardScoringTyp = "gamy" | "body" | "cas" | "sety";
 type WizardPlayoffMode = "bez" | "medaile" | "vitez" | "umisteni" | "skupiny_o_umisteni";
 type WizardVitezBracket = "auto" | "top4" | "top8" | "top16";
 
@@ -342,7 +342,7 @@ export default function NovaHraPage() {
   const [pouzitNazvyTymu,    setPouzitNazvyTymu]    = useState(false);
   const [pocetTymu,          setPocetTymu]          = useState<number | "">(8);
   const [pocetSinglesHracu,  setPocetSinglesHracu]  = useState<number | "">(8);
-  const [scoringTyp,         setScoringTyp]         = useState<"gamy" | "body" | "cas">("gamy");
+  const [scoringTyp,         setScoringTyp]         = useState<"gamy" | "body" | "cas" | "sety">("gamy");
   const [scoringLimit,       setScoringLimit]       = useState(4);
   const [scoringLimitPlayoff,setScoringLimitPlayoff]= useState(6);
   const [gamyTiebreak,       setGamyTiebreak]       = useState<"sudden_death" | "advantage">("sudden_death");
@@ -359,6 +359,11 @@ export default function NovaHraPage() {
   const [klicUtechOd,        setKlicUtechOd]        = useState<number>(0); // 0 = neaktivni
   const [klicUtechDo,        setKlicUtechDo]        = useState<number>(0);
   const [pointRule,          setPointRule]          = useState<"golden" | "star" | "advantage">("star");
+  // Konfigurace pro scoringTyp === "sety"
+  const [setyVitezne,        setSetyVitezne]        = useState<1 | 2 | 3>(2);
+  const [setyDelkaSetu,      setSetyDelkaSetu]      = useState<number>(6);
+  const [setyTiebreak,       setSetyTiebreak]       = useState<boolean>(true);
+  const [setySuperTiebreak,  setSetySuperTiebreak]  = useState<boolean>(false);
   const [vlastniDelky,       setVlastniDelky]       = useState(false);
   const [delkaSkupinaMin,    setDelkaSkupinaMin]    = useState<number | "">(20);
   const [delkaSemiMin,       setDelkaSemiMin]       = useState<number | "">(20);
@@ -660,7 +665,7 @@ export default function NovaHraPage() {
     const s = (h.settings ?? {}) as Record<string, unknown>;
     if (typeof s.cas_od === "string") setCasOd(s.cas_od);
     if (typeof s.cas_do === "string") setCasDo(s.cas_do);
-    if (typeof s.scoring_typ === "string") setScoringTyp(s.scoring_typ as "gamy" | "body" | "cas");
+    if (typeof s.scoring_typ === "string") setScoringTyp(s.scoring_typ as "gamy" | "body" | "cas" | "sety");
     if (typeof s.scoring_limit === "number") setScoringLimit(s.scoring_limit);
     if (typeof s.scoring_limit_playoff === "number") {
       setScoringLimitPlayoff(s.scoring_limit_playoff);
@@ -772,7 +777,13 @@ export default function NovaHraPage() {
         ? { od: klicUtechOd, do: klicUtechDo }
         : undefined,
     } : undefined,
-  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, placementBracket, pointRule, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin, klicHlavniN, klicUtechOd, klicUtechDo]);
+    setyKonfigurace: scoringTyp === "sety" ? {
+      vitezne: setyVitezne,
+      delkaSetu: setyDelkaSetu,
+      setTiebreak: setyTiebreak,
+      superTiebreak: setySuperTiebreak,
+    } : undefined,
+  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, placementBracket, pointRule, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin, klicHlavniN, klicUtechOd, klicUtechDo, setyVitezne, setyDelkaSetu, setyTiebreak, setySuperTiebreak]);
 
   // Preview rozvrhu — z formularovych poli (s placeholder ID)
   const previewRozvrh = useMemo<Rozvrh | null>(() => {
@@ -885,6 +896,12 @@ export default function NovaHraPage() {
           utechovy_do: klicUtechDo > 0 ? klicUtechDo : null,
         } : null,
         point_rule: pointRule,
+        sety_konfigurace: scoringTyp === "sety" ? {
+          vitezne: setyVitezne,
+          delka_setu: setyDelkaSetu,
+          set_tiebreak: setyTiebreak,
+          super_tiebreak: setySuperTiebreak,
+        } : null,
         turnaj_format: {
           delka_skupina_min: turnajFormat.delkaSkupinaMin,
           delka_semi_min: turnajFormat.delkaSemiMin,
@@ -1208,13 +1225,55 @@ export default function NovaHraPage() {
                       <div className="flex flex-col gap-2">
                         <label className="text-sm font-medium" style={{ color: "#374151" }}>Format zapasu</label>
                         <div className="flex gap-2">
-                          {(["gamy", "body", "cas"] as const).map(t => (
-                            <button key={t} onClick={() => { setScoringTyp(t); setScoringLimit(t === "gamy" ? 6 : t === "body" ? 24 : 12); setScoringLimitPlayoff(t === "gamy" ? 6 : t === "body" ? 24 : 12); }}
+                          {(["gamy", "sety", "body", "cas"] as const).map(t => (
+                            <button key={t} onClick={() => { setScoringTyp(t); setScoringLimit(t === "gamy" ? 6 : t === "body" ? 24 : t === "cas" ? 12 : 6); setScoringLimitPlayoff(t === "gamy" ? 6 : t === "body" ? 24 : t === "cas" ? 12 : 6); }}
                               className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${scoringTyp === t ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
-                              {t === "gamy" ? "Gamy" : t === "body" ? "Body" : "Cas"}
+                              {t === "gamy" ? "Gamy" : t === "body" ? "Body" : t === "cas" ? "Čas" : "Sety"}
                             </button>
                           ))}
                         </div>
+
+                        {/* Sub-konfigurace pro SETY */}
+                        {scoringTyp === "sety" && (
+                          <div className="rounded-xl border border-zinc-200 p-3 mt-1 flex flex-col gap-3">
+                            <div>
+                              <p className="text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>Počet vítězných setů</p>
+                              <div className="flex gap-2">
+                                {([1, 2, 3] as const).map(n => (
+                                  <button key={n} onClick={() => setSetyVitezne(n)}
+                                    className={`flex-1 rounded-lg py-1.5 text-xs font-semibold border transition-all ${setyVitezne === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                    {n === 1 ? "1 set" : n === 2 ? "2 vítězné" : "3 vítězné"}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold mb-1.5" style={{ color: "#374151" }}>Délka setu (gamy)</p>
+                              <div className="flex gap-2">
+                                {[4, 5, 6].map(g => (
+                                  <button key={g} onClick={() => setSetyDelkaSetu(g)}
+                                    className={`flex-1 rounded-lg py-1.5 text-xs font-semibold border transition-all ${setyDelkaSetu === g ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                    do {g}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <label className="flex items-start gap-2 text-xs cursor-pointer" style={{ color: "#374151" }}>
+                              <input type="checkbox" checked={setyTiebreak} onChange={e => setSetyTiebreak(e.target.checked)} className="mt-0.5" />
+                              <span>
+                                <strong>Set tiebreak</strong> (při 6:6 hrát tiebreak do 7 bodů)
+                              </span>
+                            </label>
+                            {setyVitezne === 2 && (
+                              <label className="flex items-start gap-2 text-xs cursor-pointer" style={{ color: "#374151" }}>
+                                <input type="checkbox" checked={setySuperTiebreak} onChange={e => setSetySuperTiebreak(e.target.checked)} className="mt-0.5" />
+                                <span>
+                                  <strong>Super-tiebreak místo 3. setu</strong> (1:1 → STB do 10 bodů, kratší zápas)
+                                </span>
+                              </label>
+                            )}
+                          </div>
+                        )}
                         {scoringTyp === "cas" ? (
                           <div className="rounded-xl p-3 mt-1" style={{ backgroundColor: "#F2EDE4" }}>
                             {!autoKolo ? (

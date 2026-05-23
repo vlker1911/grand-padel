@@ -10,7 +10,16 @@
 //   4. Zadny tym nehraje 2 zapasy zaroven (pauza mezi zapasy >= pauzaMin).
 
 export type PlayoffMode = "bez" | "medaile" | "vitez" | "umisteni" | "skupiny_o_umisteni";
-export type ScoringTyp = "gamy" | "body" | "cas";
+export type ScoringTyp = "gamy" | "body" | "cas" | "sety";
+
+// Konfigurace pro scoringTyp === "sety".
+// Padel se obvykle hraje na 2 vítězné sety (best of 3).
+export type SetyKonfigurace = {
+  vitezne: 1 | 2 | 3;          // počet vítězných setů (na 2 = best of 3)
+  delkaSetu: number;            // do kolika gamů set (4, 5, 6)
+  setTiebreak: boolean;         // po 6:6 → tiebreak do 7
+  superTiebreak: boolean;       // jen pro vitezne=2: pri 1:1 hraj STB do 10 misto 3. setu
+};
 export type VitezBracket = "auto" | "top4" | "top8" | "top16";
 // Pravidlo na 40:40 v game:
 //   golden — Golden Point, jeden rozhodujici mic. Default (rychly).
@@ -39,6 +48,7 @@ export type TurnajFormat = {
   utechovyPavouk: boolean;
   bezSkupin: boolean;     // true = preskoc skupinovou fazi, hraj rovnou playoff (nasazeni = poradi)
   placementBracket: boolean; // pro vitez mod: kazdy hraje az do konce o sve umisteni (full placement)
+  setyKonfigurace?: SetyKonfigurace; // pouze pro scoringTyp === "sety"
   postupovyKlic?: PostupovyKlic; // volitelne: rozdeleni do hlavni/utechovy podle umisteni ve skupinach
   pointRule: PointRule;   // pravidlo na 40:40 v game; ovlivnuje prumernou delku zapasu
   pocetKurtu: number;
@@ -119,6 +129,21 @@ function delkaZapasu(faze: GenZapas["faze"], fmt: TurnajFormat): number {
   function odvozPodleSkore(limit: number): number {
     if (fmt.scoringTyp === "cas") return limit;
     if (fmt.scoringTyp === "gamy") return limit * 3 + 5 + pointBonus;
+    if (fmt.scoringTyp === "sety") {
+      const k = fmt.setyKonfigurace ?? { vitezne: 2, delkaSetu: 6, setTiebreak: true, superTiebreak: true };
+      // Odhad délky 1 setu: delkaSetu * ~3 min/gamů + setTiebreak (+3 min)
+      const odhadSetu = k.delkaSetu * 3 + 5 + (k.setTiebreak ? 3 : 0) + pointBonus;
+      // Best of (2N-1): průměrně se hraje 1.5×N setů (občas 2:0, občas plný)
+      let prumernePocet: number;
+      if (k.vitezne === 1) prumernePocet = 1;
+      else if (k.vitezne === 2) prumernePocet = 2.5;
+      else prumernePocet = 4;
+      let total = odhadSetu * prumernePocet;
+      // Super-tiebreak místo 3. setu je rychlejší (~10 min místo plného setu)
+      if (k.vitezne === 2 && k.superTiebreak) total -= odhadSetu * 0.3;
+      return Math.round(total);
+    }
+    // body
     return Math.round(limit * 0.45) + 5;
   }
   if (faze === "skupina" || faze === "skupina_o_umisteni") {
