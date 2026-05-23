@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.15.3  
+**Aktuální:** v0.15.4  
 **Poslední změna:** 23. 5. 2026  
-**Git tag:** v0.15.3
+**Git tag:** v0.15.4
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.15.4 | 23. 5. 2026 | **Middleware → Proxy** (Next.js 16 deprecation). Soubor `src/middleware.ts` přejmenován na `src/proxy.ts`, funkce `middleware()` → `proxy()`. Funkčnost beze změny (Supabase Auth cookies refresh). Build už nehlásí deprecation warning |
 | v0.15.3 | 23. 5. 2026 | **Lint errors fix — připraveno pro Vercel build.** 9 chyb v `hry/page.tsx`, `hry/[id]/page.tsx`, `hry/nova/page.tsx` (`react-hooks/set-state-in-effect` + nová React 19 `forward-reference` chyba v useEffect + `next/no-html-link-for-pages`). Fix: `<a href="/hry">` → `<Link>` (import `next/link`), eslint-disable komentáře pro datově načítací useEffecty (správný pattern). `npm run build` ✓ kompletní (14 routes generated) |
 | v0.15.2 | 18. 5. 2026 | **Přepočet délky zápasů na body** podle reálné Americano statistiky. Vzorec `limit × 0.5` (předtím `0.45 + 5`). 16 bodů = 8 min, 24 bodů = 12 min, 32 bodů = 16 min. Pro Americano 8 hráčů / 7 zápasů / 32 bodů s 2 min pauzou se vejde do 2 hodin (16×7 + 2×6 = 124 min) |
 | v0.15.1 | 18. 5. 2026 | **UI volba pro N mod 4 = 1** (5, 9, 13, 17, 21t — poslední pásmo má 1 tým). Engine: `posledniSamotny: "automaticky" / "slouceni_pasem" / "bonus_zapas"`. UI panel se zobrazí v kroku 4 (doplňková nastavení) jen pro multi-tier a počet týmů kde N mod 4 = 1. Volby: (1) automaticky — nehraje, (2) sloučit poslední 5 týmů do RR, (3) bonus zápas s nejhorším z předchozího pásma |
