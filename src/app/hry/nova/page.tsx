@@ -346,6 +346,7 @@ export default function NovaHraPage() {
   const [rezimKurtu,         setRezimKurtu]         = useState<"auto" | "1-1" | "2-1">("auto");
   const [utechovyPavouk,     setUtechovyPavouk]     = useState(false);
   const [bezSkupin,          setBezSkupin]          = useState(false);
+  const [placementBracket,   setPlacementBracket]   = useState(false);
   const [pointRule,          setPointRule]          = useState<"golden" | "star" | "advantage">("star");
   const [vlastniDelky,       setVlastniDelky]       = useState(false);
   const [delkaSkupinaMin,    setDelkaSkupinaMin]    = useState<number | "">(20);
@@ -650,6 +651,7 @@ export default function NovaHraPage() {
     if (typeof s.rezim_kurtu === "string") setRezimKurtu(s.rezim_kurtu as "auto" | "1-1" | "2-1");
     if (typeof s.utech_pavouk === "boolean") setUtechovyPavouk(s.utech_pavouk);
     if (typeof s.bez_skupin === "boolean") setBezSkupin(s.bez_skupin);
+    if (typeof s.placement_bracket === "boolean") setPlacementBracket(s.placement_bracket);
     if (s.point_rule === "golden" || s.point_rule === "star" || s.point_rule === "advantage") {
       setPointRule(s.point_rule);
     }
@@ -733,6 +735,7 @@ export default function NovaHraPage() {
     vitezBracket,
     utechovyPavouk,
     bezSkupin,
+    placementBracket,
     pointRule,
     pocetKurtu: typeof pocetKurtu === "number" ? pocetKurtu : 2,
     casOd,
@@ -741,7 +744,7 @@ export default function NovaHraPage() {
     delkaSemiMin: vlastniDelky && typeof delkaSemiMin === "number" ? delkaSemiMin : null,
     delkaFinaleMin: vlastniDelky && typeof delkaFinaleMin === "number" ? delkaFinaleMin : null,
     pauzaMin: typeof pauzaMin === "number" ? pauzaMin : 1,
-  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, pointRule, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin]);
+  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, placementBracket, pointRule, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin]);
 
   // Preview rozvrhu — z formularovych poli (s placeholder ID)
   const previewRozvrh = useMemo<Rozvrh | null>(() => {
@@ -842,6 +845,7 @@ export default function NovaHraPage() {
         rezim_kurtu: rezimKurtu,
         utech_pavouk: utechovyPavouk,
         bez_skupin: bezSkupin,
+        placement_bracket: placementBracket,
         point_rule: pointRule,
         turnaj_format: {
           delka_skupina_min: turnajFormat.delkaSkupinaMin,
@@ -1319,10 +1323,21 @@ export default function NovaHraPage() {
                                 </button>
                               ))}
                             </div>
+                            <label className="flex items-start gap-2 mt-2 cursor-pointer rounded-lg border border-zinc-200 p-3 hover:border-[#801A28]">
+                              <input type="checkbox" checked={placementBracket}
+                                onChange={e => setPlacementBracket(e.target.checked)}
+                                className="mt-0.5" />
+                              <span className="text-sm" style={{ color: "#374151" }}>
+                                <strong>Hrát o všechna umístění</strong> (placement bracket)
+                                <span className="block text-xs mt-0.5" style={{ color: "#9ca3af" }}>
+                                  Každý tým hraje až do konce o své umístění. 8t = 12 zápasů (3 kola), 16t = 32, 32t = 80, 64t = 192. Poražení nekončí — pokračují ve svém pásmu.
+                                </span>
+                              </span>
+                            </label>
                           </div>
                         )}
 
-                        {/* Utechovy pavouk — jen pro medaile/vitez */}
+                        {/* Utechovy pavouk — jen pro medaile/vitez (placement uz pokryva poražené) */}
                         {(playoffMode === "medaile" || playoffMode === "vitez") && (
                           <label className="mt-3 flex items-start gap-2 cursor-pointer rounded-lg border border-zinc-200 p-3 hover:border-[#801A28]">
                             <input type="checkbox" checked={utechovyPavouk}

@@ -26,6 +26,7 @@ export type TurnajFormat = {
   vitezBracket: VitezBracket;
   utechovyPavouk: boolean;
   bezSkupin: boolean;     // true = preskoc skupinovou fazi, hraj rovnou playoff (nasazeni = poradi)
+  placementBracket: boolean; // pro vitez mod: kazdy hraje az do konce o sve umisteni (full placement)
   pointRule: PointRule;   // pravidlo na 40:40 v game; ovlivnuje prumernou delku zapasu
   pocetKurtu: number;
   casOd: string;          // "HH:MM"
@@ -45,7 +46,8 @@ export type TymVeSkupine = {
 
 export type GenZapas = {
   faze: "skupina" | "skupina_o_umisteni" | "ctvrtfinale" | "semifinale" | "finale" | "o_3_misto" |
-        "playoff" | "utech_1" | "utech_2" | "utech_finale";
+        "playoff" | "utech_1" | "utech_2" | "utech_finale" |
+        "placement";  // generic placement bracket zapas (umisteni v `umisteni`)
   skupina: string | null;
   kolo: number | null;
   tym1Id: string | null;
@@ -333,19 +335,24 @@ export function generujRozvrh(
       povoleneKurty: allKurty,
     };
   } else if (fmt.playoffMode === "vitez") {
-    // Single elim bracket
+    // Single elim bracket (s volitelnym full placement: kazdy hraje az do konce).
     let bs: number;
     if (fmt.vitezBracket === "top4") bs = 4;
     else if (fmt.vitezBracket === "top8") bs = 8;
     else if (fmt.vitezBracket === "top16") bs = 16;
-    else { bs = 2; while (bs * 2 <= tymuCelkem && bs < 16) bs *= 2; }
+    else {
+      // Auto: pro placement bs = nejvetsi mocnina 2 <= n (vc. 32, 64).
+      // Pro single elim drzime puvodni limit 16.
+      bs = 2;
+      const max = fmt.placementBracket ? 128 : 16;
+      while (bs * 2 <= tymuCelkem && bs < max) bs *= 2;
+    }
     while (bs > tymuCelkem && bs > 2) bs /= 2;
     const allKurty = Array.from({ length: fmt.pocetKurtu }, (_, i) => i);
 
     let participants: Array<{ id: string | null; label: string }> = [];
     if (fmt.bezSkupin) {
       // Standardni single elim parovani: 1 vs bs, 2 vs bs-1, 3 vs bs-2 atd.
-      // Tym s vyssim nasazenim hraje s tymem s nizsim.
       for (let i = 0; i < bs / 2; i++) {
         participants.push(tymPro(i));
         participants.push(tymPro(bs - 1 - i));
@@ -357,45 +364,118 @@ export function generujRozvrh(
         participants.push({ id: null, label: `${poradi}.${sk}` });
       }
     }
-    const fazePodleVelikosti: Record<number, GenZapas["faze"]> = {
-      2: "finale", 4: "semifinale", 8: "ctvrtfinale", 16: "playoff",
-    };
-    let kolo = 1;
-    let kdyMuze = playoffStart;
-    while (participants.length > 1) {
-      const faze = fazePodleVelikosti[participants.length] ?? "playoff";
-      const noveKolo: Array<{ id: string | null; label: string }> = [];
-      const koloMatches: GenZapas[] = [];
-      const jeFinaleKolo = participants.length === 2;
-      for (let i = 0; i < participants.length; i += 2) {
-        const a = participants[i], b = participants[i + 1];
-        if (jeFinaleKolo) {
-          // Odloz finale cela
-          finaleCela = {
-            faze: "finale",
-            entry: { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
-            umisteni: "Finale",
-            kolo,
-            nejdriveStart: kdyMuze,
-            povoleneKurty: allKurty,
-          };
-          noveKolo.push({ id: null, label: "Vitez" });
-        } else {
-          const z = naplanuj(faze, null, kolo,
-            { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
-            faze === "semifinale" ? `Semifinale ${i / 2 + 1}` :
-            faze === "ctvrtfinale" ? `Ctvrtfinale ${i / 2 + 1}` :
-            `Playoff K${kolo} #${i / 2 + 1}`,
-            kdyMuze, allKurty);
-          koloMatches.push(z);
-          noveKolo.push({ id: null, label: `Vitez ${faze === "ctvrtfinale" ? "CF" : faze === "semifinale" ? "SF" : "PL"} ${i / 2 + 1}` });
+
+    if (fmt.placementBracket) {
+      // ===== PLNY PLACEMENT BRACKET =====
+      // Po kazdem kole se bucket rozdeli na vitezove (vyssi poradi) a porazene.
+      // Kazdy hraje az do urceni sveho konecneho umisteni.
+      type Bucket = {
+        participants: Array<{ id: string | null; label: string }>;
+        rankFrom: number;
+        rankTo: number;
+      };
+      let buckets: Bucket[] = [{ participants, rankFrom: 1, rankTo: bs }];
+      let kolo = 1;
+      let kdyMuze = playoffStart;
+      while (buckets.some(b => b.participants.length > 1)) {
+        const newBuckets: Bucket[] = [];
+        const koloMatches: GenZapas[] = [];
+        for (const bucket of buckets) {
+          const n = bucket.participants.length;
+          if (n <= 1) { newBuckets.push(bucket); continue; }
+          if (n === 2) {
+            // Finalni zapas tohoto pasma (urcuje rankFrom a rankFrom+1)
+            const [a, b] = bucket.participants;
+            const jeFinaleCela = bucket.rankFrom === 1;
+            const um = jeFinaleCela
+              ? "Finale"
+              : bucket.rankFrom === 3
+                ? "O 3. místo"
+                : `O ${bucket.rankFrom}.-${bucket.rankTo}. místo`;
+            if (jeFinaleCela) {
+              finaleCela = {
+                faze: "finale",
+                entry: { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
+                umisteni: um,
+                kolo,
+                nejdriveStart: kdyMuze,
+                povoleneKurty: allKurty,
+              };
+            } else {
+              const z = naplanuj("placement", null, kolo,
+                { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
+                um, kdyMuze, allKurty);
+              koloMatches.push(z);
+            }
+            // Po dohrani je bucket uzavren — zadne nove buckety.
+          } else {
+            // n > 2: parovani 1 vs n, 2 vs (n-1), ... a rozdeleni na W/L
+            const winners: Array<{ id: string | null; label: string }> = [];
+            const losers: Array<{ id: string | null; label: string }> = [];
+            for (let i = 0; i < n / 2; i++) {
+              const a = bucket.participants[i];
+              const b = bucket.participants[n - 1 - i];
+              // Unikatni umisteni label slouzi i jako klic pro labelMap propagaci.
+              const um = `K${kolo} ${bucket.rankFrom}.-${bucket.rankTo}. #${i + 1}`;
+              const z = naplanuj("placement", null, kolo,
+                { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
+                um, kdyMuze, allKurty);
+              koloMatches.push(z);
+              winners.push({ id: null, label: `Vitez ${um}` });
+              losers.push({ id: null, label: `Porazeny ${um}` });
+            }
+            const midRank = bucket.rankFrom + Math.floor(n / 2) - 1;
+            newBuckets.push({ participants: winners, rankFrom: bucket.rankFrom, rankTo: midRank });
+            newBuckets.push({ participants: losers, rankFrom: midRank + 1, rankTo: bucket.rankTo });
+          }
         }
+        if (koloMatches.length > 0) {
+          kdyMuze = Math.max(...koloMatches.map(z => parseHM(z.casKonec))) + fmt.pauzaMin;
+        }
+        buckets = newBuckets;
+        kolo++;
       }
-      if (koloMatches.length > 0) {
-        kdyMuze = Math.max(...koloMatches.map(z => parseHM(z.casKonec))) + fmt.pauzaMin;
+    } else {
+      // ===== STANDARDNI SINGLE ELIM (bez placement) =====
+      const fazePodleVelikosti: Record<number, GenZapas["faze"]> = {
+        2: "finale", 4: "semifinale", 8: "ctvrtfinale", 16: "playoff",
+      };
+      let kolo = 1;
+      let kdyMuze = playoffStart;
+      while (participants.length > 1) {
+        const faze = fazePodleVelikosti[participants.length] ?? "playoff";
+        const noveKolo: Array<{ id: string | null; label: string }> = [];
+        const koloMatches: GenZapas[] = [];
+        const jeFinaleKolo = participants.length === 2;
+        for (let i = 0; i < participants.length; i += 2) {
+          const a = participants[i], b = participants[i + 1];
+          if (jeFinaleKolo) {
+            finaleCela = {
+              faze: "finale",
+              entry: { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
+              umisteni: "Finale",
+              kolo,
+              nejdriveStart: kdyMuze,
+              povoleneKurty: allKurty,
+            };
+            noveKolo.push({ id: null, label: "Vitez" });
+          } else {
+            const z = naplanuj(faze, null, kolo,
+              { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
+              faze === "semifinale" ? `Semifinale ${i / 2 + 1}` :
+              faze === "ctvrtfinale" ? `Ctvrtfinale ${i / 2 + 1}` :
+              `Playoff K${kolo} #${i / 2 + 1}`,
+              kdyMuze, allKurty);
+            koloMatches.push(z);
+            noveKolo.push({ id: null, label: `Vitez ${faze === "ctvrtfinale" ? "CF" : faze === "semifinale" ? "SF" : "PL"} ${i / 2 + 1}` });
+          }
+        }
+        if (koloMatches.length > 0) {
+          kdyMuze = Math.max(...koloMatches.map(z => parseHM(z.casKonec))) + fmt.pauzaMin;
+        }
+        participants = noveKolo;
+        kolo++;
       }
-      participants = noveKolo;
-      kolo++;
     }
   } else if (fmt.playoffMode === "skupiny_o_umisteni" && !fmt.bezSkupin) {
     // Druha faze: nove skupiny zachovavaji puvodni velikost (V).

@@ -48,6 +48,7 @@ function defaultFormat(over = {}) {
     vitezBracket: "auto",
     utechovyPavouk: false,
     bezSkupin: false,
+    placementBracket: false,
     pointRule: "golden",
     pocetKurtu: 4,
     casOd: "16:00",
@@ -274,6 +275,15 @@ pridejScenar("12t skupiny_o_umisteni 3 sk", 12, 3, { playoffMode: "skupiny_o_umi
 pridejScenar("16t skupiny_o_umisteni 4 sk", 16, 4, { playoffMode: "skupiny_o_umisteni", casOd: "08:00", casDo: "22:00" });
 pridejScenar("4t skupiny_o_umisteni 1 sk", 4, 1, { playoffMode: "skupiny_o_umisteni" });
 pridejScenar("6t skupiny_o_umisteni 2 sk", 6, 2, { playoffMode: "skupiny_o_umisteni" });
+
+// === Plný placement bracket ===
+pridejScenar("placement 4t", 4, 1, { bezSkupin: true, playoffMode: "vitez", vitezBracket: "top4", placementBracket: true });
+pridejScenar("placement 8t 4 kurty", 8, 2, { bezSkupin: true, playoffMode: "vitez", vitezBracket: "top8", placementBracket: true });
+pridejScenar("placement 8t 2 kurty", 8, 2, { pocetKurtu: 2, bezSkupin: true, playoffMode: "vitez", vitezBracket: "top8", placementBracket: true, casDo: "20:00" });
+pridejScenar("placement 16t 4 kurty", 16, 4, { bezSkupin: true, playoffMode: "vitez", vitezBracket: "top16", placementBracket: true, casOd: "08:00", casDo: "20:00" });
+pridejScenar("placement 32t 6 kurtu", 32, 8, { pocetKurtu: 6, bezSkupin: true, playoffMode: "vitez", vitezBracket: "auto", placementBracket: true, casOd: "08:00", casDo: "22:00" });
+pridejScenar("placement 64t 8 kurtu", 64, 16, { pocetKurtu: 8, bezSkupin: true, playoffMode: "vitez", vitezBracket: "auto", placementBracket: true, casOd: "08:00", casDo: "23:00" });
+pridejScenar("placement 8t + skupiny", 8, 2, { playoffMode: "vitez", vitezBracket: "top8", placementBracket: true, casDo: "20:00" });
 
 // === bezSkupin (jen playoff) ===
 pridejScenar("bezSkupin 4t medaile", 4, 1, { bezSkupin: true, playoffMode: "medaile" });

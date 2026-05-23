@@ -1275,41 +1275,44 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
   const finalniPoradi = useMemo((): { nazev: string; skore: number }[] => {
     if (!vsechnoHotove) return [];
     if (playoff && playoffExistuje) {
-      const result: { nazev: string; skore: number }[] = [];
-      // Najdi vsechna finale (stary format "final" i novy "Finale" / "Finale (1.-4.)")
-      const jeFin = (u: string | null) => {
-        const x = (u ?? "").toLowerCase();
-        return x === "final" || x.startsWith("finale");
-      };
-      const jeO3 = (u: string | null) => {
-        const x = (u ?? "");
-        return x === "o3misto" || /^o \d+\. misto/i.test(x);
-      };
-      // Pasmo z umisteni napr. "Finale (1.-4.)" -> "1.-4." (pro multi-tier).
-      // Bez pasma -> "".
-      const pasmo = (u: string | null) => {
-        const m = (u ?? "").match(/\(([^)]+)\)/);
-        return m ? m[1] : "";
-      };
-      const finaleZapasy = zapasyPlayoff.filter(z => jeFin(z.umisteni))
-        .sort((a, b) => (a.umisteni ?? "").localeCompare(b.umisteni ?? ""));
-      const o3Zapasy = zapasyPlayoff.filter(z => jeO3(z.umisteni));
-
-      for (const f of finaleZapasy) {
-        if (f.skore_tym1 == null || f.skore_tym2 == null) continue;
-        const win = f.skore_tym1 > f.skore_tym2 ? f.tym1_id : f.tym2_id;
-        const lose = f.skore_tym1 > f.skore_tym2 ? f.tym2_id : f.tym1_id;
-        result.push({ nazev: jmenoTymu(win), skore: Math.max(f.skore_tym1, f.skore_tym2) });
-        result.push({ nazev: jmenoTymu(lose), skore: Math.min(f.skore_tym1, f.skore_tym2) });
-        // Najdi odpovidajici O 3. misto pro stejne pasmo
-        const fP = pasmo(f.umisteni);
-        const o3 = o3Zapasy.find(o => pasmo(o.umisteni) === fP);
-        if (o3 && o3.skore_tym1 != null && o3.skore_tym2 != null) {
-          const w = o3.skore_tym1 > o3.skore_tym2 ? o3.tym1_id : o3.tym2_id;
-          const l = o3.skore_tym1 > o3.skore_tym2 ? o3.tym2_id : o3.tym1_id;
-          result.push({ nazev: jmenoTymu(w), skore: Math.max(o3.skore_tym1, o3.skore_tym2) });
-          result.push({ nazev: jmenoTymu(l), skore: Math.min(o3.skore_tym1, o3.skore_tym2) });
+      // Hledáme tzv. "ranking match" — zápas, který určuje umístění
+      // konkrétní dvojice týmů. Zahrnuje:
+      //   - "Finale" / "Finale (X.-Y.)" → 1.-2. (resp. X.-(X+1).)
+      //   - "O 3. misto" → 3.-4.
+      //   - "O N.-M. misto" → N.-(N+1). (placement bracket: O 5.-6., O 7.-8., …)
+      // Pro každý takový zápas vytáhneme počáteční pořadí (X) a vrátíme:
+      //   { vítěz, X. } a { poražený, (X+1). }.
+      type RankMatch = { x: number; w: string | null; l: string | null; ws: number; ls: number };
+      const ranking: RankMatch[] = [];
+      const finaleR = /^Finale(?:\s*\((\d+)\.-\d+\.\))?$/i;
+      const o3R = /^O 3\. m[ií]sto/i;
+      // "O 5.-6. misto" -> X=5; "O 5.-8. misto" -> X=5 (multi-tier nižšího pásma)
+      const oXR = /^O (\d+)\.(?:-\d+\.)?\s*m[ií]sto/i;
+      for (const z of zapasyPlayoff) {
+        if (z.skore_tym1 == null || z.skore_tym2 == null) continue;
+        const u = z.umisteni ?? "";
+        let x: number | null = null;
+        const mFin = u.match(finaleR);
+        if (mFin) x = mFin[1] ? parseInt(mFin[1], 10) : 1;
+        else if (o3R.test(u)) x = 3;
+        else {
+          const mOX = u.match(oXR);
+          if (mOX) x = parseInt(mOX[1], 10);
         }
+        if (x === null) continue;
+        const w = z.skore_tym1 > z.skore_tym2 ? z.tym1_id : z.tym2_id;
+        const l = z.skore_tym1 > z.skore_tym2 ? z.tym2_id : z.tym1_id;
+        ranking.push({
+          x, w, l,
+          ws: Math.max(z.skore_tym1, z.skore_tym2),
+          ls: Math.min(z.skore_tym1, z.skore_tym2),
+        });
+      }
+      ranking.sort((a, b) => a.x - b.x);
+      const result: { nazev: string; skore: number }[] = [];
+      for (const r of ranking) {
+        result.push({ nazev: r.w ? jmenoTymu(r.w) : "?", skore: r.ws });
+        result.push({ nazev: r.l ? jmenoTymu(r.l) : "?", skore: r.ls });
       }
       return result;
     }
@@ -1632,6 +1635,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
         vitezBracket: (s.vitez_bracket as "auto" | "top4" | "top8" | "top16") ?? "auto",
         utechovyPavouk: s.utech_pavouk === true,
         bezSkupin: s.bez_skupin === true,
+        placementBracket: s.placement_bracket === true,
         pointRule: (s.point_rule as "golden" | "star" | "advantage") ?? "star",
         pocetKurtu: hra.pocet_kurtu,
         casOd: (s.cas_od as string) ?? "16:00",
@@ -1669,11 +1673,12 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
         if (mCF) labelMap[`Vitez CF ${mCF[1]}`] = win;
         const mPL = u.match(/^Playoff K\d+\s+#(\d+)/i);
         if (mPL) labelMap[`Vitez PL ${mPL[1]}`] = win;
-        const mU1 = u.match(/^Utech 1\. kolo/i);
-        if (mU1) {
-          // Tezsi — labelMap pro utech_2 a utech_finale dela engine pres "Vitez utech N"
-          // Tady jen dohledame poradi a pridame Vitez utech N
-          // (Pro jednoduchost: pouze pokud existuje vyrazne mapovani)
+        // PLACEMENT BRACKET: umisteni typu "K1 1.-8. #1"
+        // -> labely "Vitez K1 1.-8. #1" a "Porazeny K1 1.-8. #1"
+        const mPlace = u.match(/^K\d+\s+\d+\.-\d+\.\s+#\d+/i);
+        if (mPlace) {
+          labelMap[`Vitez ${u}`] = win;
+          labelMap[`Porazeny ${u}`] = lose;
         }
       }
 
