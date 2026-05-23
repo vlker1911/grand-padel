@@ -393,14 +393,19 @@ export function generujRozvrh(
       }
     } else if (klic && klic.hlavniPocetZeSkupiny > 0) {
       // Postupový klíč: top N z každé skupiny do hlavního bracketu.
-      // Pořadí v bracketu: 1.A, 1.B, 1.C, ..., 2.A, 2.B, ..., atd.
-      // (interleaved — vítězové skupin nejvýš)
+      // Pořadí: 1.A, 1.B, 1.C, ..., 2.A, 2.B, ..., atd. (interleaved)
+      // Pozor: vynech pozice ktere v dane skupine neexistuji (mensi skupiny).
       for (let poz = 1; poz <= klic.hlavniPocetZeSkupiny && participants.length < bs; poz++) {
         for (const sk of skupinyKlice) {
           if (participants.length >= bs) break;
+          const velSkupiny = skupinyMap.get(sk)?.length ?? 0;
+          if (poz > velSkupiny) continue; // pozice {poz} v skupine {sk} neexistuje
           participants.push({ id: null, label: `${poz}.${sk}` });
         }
       }
+      // Po filtraci může být méně týmů než bs — pak zaokrouhlit bs dolu
+      while (bs > participants.length && bs > 2) bs /= 2;
+      participants = participants.slice(0, bs);
     } else {
       for (let i = 0; i < bs; i++) {
         const sk = skupinyKlice[i % Math.max(1, skupinyKlice.length)] ?? "A";
@@ -532,18 +537,20 @@ export function generujRozvrh(
       const od = klic.utechovy.od;
       const do_ = klic.utechovy.do;
       if (do_ >= od) {
-        const pocetUtechovych = (do_ - od + 1) * skupinyKlice.length;
+        // Sestav seznam SKUTECNE existujicich pozic od..do v kazde skupine.
+        let utechParticipants: Array<{ id: string | null; label: string }> = [];
+        for (let poz = od; poz <= do_; poz++) {
+          for (const sk of skupinyKlice) {
+            const velSkupiny = skupinyMap.get(sk)?.length ?? 0;
+            if (poz > velSkupiny) continue; // pozice neexistuje v teto skupine
+            utechParticipants.push({ id: null, label: `${poz}.${sk}` });
+          }
+        }
         // Zaokrouhlit dolu na mocninu 2
         let utechBs = 2;
-        while (utechBs * 2 <= pocetUtechovych) utechBs *= 2;
+        while (utechBs * 2 <= utechParticipants.length) utechBs *= 2;
+        utechParticipants = utechParticipants.slice(0, utechBs);
         if (utechBs >= 2) {
-          let utechParticipants: Array<{ id: string | null; label: string }> = [];
-          for (let poz = od; poz <= do_ && utechParticipants.length < utechBs; poz++) {
-            for (const sk of skupinyKlice) {
-              if (utechParticipants.length >= utechBs) break;
-              utechParticipants.push({ id: null, label: `${poz}.${sk}` });
-            }
-          }
           // Single elim bracket pro útěchový pavouk
           let utKolo = 1;
           let utKdyMuze = playoffStart;

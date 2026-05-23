@@ -194,6 +194,14 @@ S("F3 32t/8sk top2 hlavni + 3-4 utech", 32, 8, {
   postupovyKlic: { hlavniPocetZeSkupiny: 2, utechovy: { od: 3, do: 4 } },
   casDo: "23:00",
 });
+S("F4 14t/4sk top2+3-4 (nerovnoměrné skupiny)", 14, 4, {
+  playoffMode: "vitez",
+  postupovyKlic: { hlavniPocetZeSkupiny: 2, utechovy: { od: 3, do: 4 } },
+});
+S("F5 11t/3sk top1+2-3 (lichý)", 11, 3, {
+  playoffMode: "vitez",
+  postupovyKlic: { hlavniPocetZeSkupiny: 1, utechovy: { od: 2, do: 3 } },
+});
 
 // ===== Spousteni =====
 

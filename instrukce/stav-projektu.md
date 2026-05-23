@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.14.0  
+**Aktuální:** v0.14.1  
 **Poslední změna:** 18. 5. 2026  
-**Git tag:** v0.14.0
+**Git tag:** v0.14.1
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.14.1 | 18. 5. 2026 | **Bug fix postupový klíč — nerovnoměrné skupiny.** Engine generoval zápasy pro neexistující pozice (např. 4.C / 4.D když skupiny C a D mají jen 3 týmy). Fix: před sestavením bracketu se filtrují pozice podle `skupinyMap.get(sk).length` — jen existující se zahrnou. Velikost bracketu se zaokrouhlí dolu na nejbližší mocninu 2. Pro 14t (A=4,B=4,C=3,D=3) / top2+3-4 = 28 zápasů (před 32). Nový test runner `scripts/test-20-scenaru.mjs` (20 edge case scénářů, 20/20 OK). Verify-all 53/53 |
 | v0.14.0 | 18. 5. 2026 | **Postupový klíč** (hlavní + útěchový pavouk). Nový typ `PostupovyKlic` v `TurnajFormat`: `hlavniPocetZeSkupiny` (top N do hlavního pavouka) + `utechovy: {od, do}` (volitelný Plate). Engine rozšířen v `vitez` mode: pokud klíč definován, top N×K týmů (kde K=počet skupin) → hlavní bracket, pozice od.-do z každé skupiny → útěchový bracket (single elim). Útěchový pavouk běží **paralelně** s hlavním. UI panel v kroku 3 pod placement bracketem. Test runner 51 scénářů (3 nové: F1=16t/top2+3-4útěch, F2=16t/top1, F3=32t/top2+3-4útěch) |
 | v0.13.1 | 18. 5. 2026 | **Seeding chytrý do 64+ týmů.** Funkce `rozdelSeSeedingem` přesunuta z `hry/nova/page.tsx` do `lib/turnaj-postup.ts` (testovatelné). Algoritmus: pot 1 = random permutace (top K do K skupin), pot 2 = cross-pot (opačně k pot 1 — zaručí 1. a (K+1). v různých skupinách), pot 3+ = random permutace. Test `scripts/test-seeding.mjs` ověří 8t/12t/16t/32t/64t s 0 až all-nasazenými týmy — vše OK |
 | v0.13.0 | 18. 5. 2026 | **Seeding (nasazené týmy + pot system).** Krok 3 vyplnění párů: vedle "odebrat" nový input "Nasazení" (volitelné, číslo 1, 2, 3, …). Funkce `rozdelSeSeedingem(tymy, K)`: nasazené 1.-K. → pot 1 (1. pozice ve skupinách A-K), K+1..2K → pot 2 (cross-pot: 2. pozice opačně), atd. Ne-nasazené týmy se náhodně rozdělí do zbylých pozic. Pokud žádný tým nemá nasazení, default snake-style distribuce. Cross-pot pravidlo zajistí že 1. a 3. nasazený nemůžou skončit ve stejné skupině. Info nota v UI vysvětluje princip |
