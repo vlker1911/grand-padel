@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.11.2  
+**Aktuální:** v0.12.0  
 **Poslední změna:** 18. 5. 2026  
-**Git tag:** v0.11.2
+**Git tag:** v0.12.0
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.12.0 | 18. 5. 2026 | **Hezké labely fází + lock losování.** Engine generuje `umisteni`: Osmifinále / Čtvrtfinále / Semifinále / Finále podle velikosti bracketu (místo "K1 1.-16. #1"). Pásmo o nižší umístění: "Čtvrtfinále o 9.-16. místo #1". Pro 16t placement: Osmifinále → Čtvrtfinále → Semifinále → Finále + O 3./5.-6./7.-8./9.-10./11.-12./13.-14./15.-16. místo. labelMap regex aktualizován. Lock losování v hry/nova krok 4: po 1. kliknutí se tlačítko změní na "Losovat znovu (vyžaduje potvrzení)" — promt vyžaduje napsat slovo "LOSUJ". Audit: `settings.losovani_provedeno` a `losovani_at` |
 | v0.11.2 | 18. 5. 2026 | **Bug fix: zachovat plánovaný čas zápasu.** `ulozSkore` přepisoval `cas_konec` systémovým časem (vznikalo "16:00–08:35"). `spustitZapasNaKurtu` přepisoval `cas_zacatek`. Nyní obojí ponecháno z engine plánu — DB sloupce slouží jako rozvrh, ne skutečný čas. UI test: konečné pořadí v tab Tabulky funguje, taby Rozlosování / Pořadí zápasů renderují korektně |
 | v0.11.1 | 18. 5. 2026 | **Fix duplicit po placement.** Stará auto-gen logika v `ulozSkore` (z v0.7.x pro `playoffMode === "vitez"`) generovala další kolo i pro nové turnaje s placement bracketem → duplicitní zápasy. Teď je stará logika aktivní jen pro turnaje bez `settings.turnaj_format` (= před v0.8.0). Nové turnaje řeší výhradně `aktualizujDruhouFazi()`. Plus nový `scripts/verify-all.mjs` — systematická matice 48 smysluplných kombinací, vše prochází |
 | v0.11.0 | 18. 5. 2026 | **Plný placement bracket** (až 64 týmů). Nový flag `placementBracket: boolean` v `TurnajFormat`. Algoritmus: po každém kole se bucket rozdělí na vítěze (vyšší pásmo) a poražené (nižší). Každý tým hraje až do konce o své umístění. Počty zápasů: 8t=12, 16t=32, 32t=80, 64t=192. `umisteni` ve formátu `K1 1.-8. #1` → `Vitez K1 1.-8. #1` jako klíč labelMap pro auto-gen. `finalniPoradi` sestaví ranking z `Finale` / `O 3.` / `O 5.-6.` / `O 7.-8.` / atd. UI: checkbox "Hrát o všechna umístění" v kroku 3 pod velikostí pavouka. Test runner 81 scénářů (7 nových placement variant) |

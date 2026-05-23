@@ -844,6 +844,8 @@ export default function NovaHraPage() {
         typ_parovani: typParovani,
         rezim_kurtu: rezimKurtu,
         utech_pavouk: utechovyPavouk,
+        losovani_provedeno: losovaneTymy != null,
+        losovani_at: losovaneTymy != null ? new Date().toISOString() : null,
         bez_skupin: bezSkupin,
         placement_bracket: placementBracket,
         point_rule: pointRule,
@@ -1603,16 +1605,32 @@ export default function NovaHraPage() {
                 </p>
               </div>
 
-              {/* Rozlosovat */}
+              {/* Rozlosovat — kliknut jen jednou. Znovu jen po potvrzeni. */}
               <div className="flex items-center justify-between gap-3 px-1">
-                <p className="text-xs" style={{ color: losovaneTymy ? "#374151" : "#9ca3af" }}>
-                  {losovaneTymy ? "Pary rozlosovany nahodne" : "Pary jsou v zadanem poradi — klikni pro nahodne rozlosovani."}
+                <p className="text-xs" style={{ color: losovaneTymy ? "#16a34a" : "#9ca3af" }}>
+                  {losovaneTymy ? "Losování provedeno (fair-play: jen 1× klik)" : "Páry jsou v zadaném pořadí — klikni pro náhodné rozlosování."}
                 </p>
-                <button onClick={() => setLosovaneTymy(shuffleArray(efektivniTymy))}
-                  className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold border-2 transition-all"
-                  style={{ borderColor: "#801A28", color: "#801A28", backgroundColor: "white" }}>
-                  {losovaneTymy ? "Rozlosovat znovu" : "Rozlosovat"}
-                </button>
+                {!losovaneTymy ? (
+                  <button onClick={() => setLosovaneTymy(shuffleArray(efektivniTymy))}
+                    className="shrink-0 rounded-lg px-4 py-1.5 text-xs font-semibold text-white"
+                    style={{ backgroundColor: "#801A28" }}>
+                    Rozlosovat
+                  </button>
+                ) : (
+                  <button onClick={() => {
+                    const odpoved = window.prompt(
+                      "Losování již proběhlo. Opakované losování zhoršuje fair-play.\n\n" +
+                      'Pro nové losování napiš slovo "LOSUJ":',
+                    );
+                    if (odpoved?.trim().toUpperCase() === "LOSUJ") {
+                      setLosovaneTymy(shuffleArray(efektivniTymy));
+                    }
+                  }}
+                    className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium border border-zinc-200"
+                    style={{ color: "#9ca3af" }}>
+                    Losovat znovu (vyžaduje potvrzení)
+                  </button>
+                )}
               </div>
 
               {skupiny.map((skupina, si) => (

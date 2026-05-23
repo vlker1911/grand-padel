@@ -84,6 +84,19 @@ function formatHM(min: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+// Cesky nazev fáze podle velikosti bracketu (počet účastníků v daném kole).
+// 2 = Finále, 4 = Semifinále, 8 = Čtvrtfinále, 16 = Osmifinále, atd.
+export function nazevFazePodleVelikosti(velikost: number): string {
+  if (velikost === 2) return "Finále";
+  if (velikost === 4) return "Semifinále";
+  if (velikost === 8) return "Čtvrtfinále";
+  if (velikost === 16) return "Osmifinále";
+  if (velikost === 32) return "Šestnáctifinále";
+  if (velikost === 64) return "Předkolo";
+  if (velikost === 128) return "R128";
+  return `Kolo (${velikost})`;
+}
+
 function delkaZapasu(faze: GenZapas["faze"], fmt: TurnajFormat): number {
   // Pravidlo na 40:40: golden = bez prirustku, star ~ +4 min, advantage ~ +6 min na zapas
   const pointBonus = fmt.scoringTyp === "cas" ? 0
@@ -388,7 +401,7 @@ export function generujRozvrh(
             const [a, b] = bucket.participants;
             const jeFinaleCela = bucket.rankFrom === 1;
             const um = jeFinaleCela
-              ? "Finale"
+              ? "Finále"
               : bucket.rankFrom === 3
                 ? "O 3. místo"
                 : `O ${bucket.rankFrom}.-${bucket.rankTo}. místo`;
@@ -415,8 +428,11 @@ export function generujRozvrh(
             for (let i = 0; i < n / 2; i++) {
               const a = bucket.participants[i];
               const b = bucket.participants[n - 1 - i];
-              // Unikatni umisteni label slouzi i jako klic pro labelMap propagaci.
-              const um = `K${kolo} ${bucket.rankFrom}.-${bucket.rankTo}. #${i + 1}`;
+              // Unikatni umisteni label = nazev faze + pasmo + poradi.
+              // Pasmo "o X.-Y. místo" se prida jen kdyz to neni hlavni bracket (rankFrom > 1).
+              const nazev = nazevFazePodleVelikosti(n);
+              const pasmoSuffix = bucket.rankFrom === 1 ? "" : ` o ${bucket.rankFrom}.-${bucket.rankTo}. místo`;
+              const um = `${nazev}${pasmoSuffix} #${i + 1}`;
               const z = naplanuj("placement", null, kolo,
                 { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
                 um, kdyMuze, allKurty);

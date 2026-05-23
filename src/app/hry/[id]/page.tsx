@@ -1676,9 +1676,10 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
         if (mCF) labelMap[`Vitez CF ${mCF[1]}`] = win;
         const mPL = u.match(/^Playoff K\d+\s+#(\d+)/i);
         if (mPL) labelMap[`Vitez PL ${mPL[1]}`] = win;
-        // PLACEMENT BRACKET: umisteni typu "K1 1.-8. #1"
-        // -> labely "Vitez K1 1.-8. #1" a "Porazeny K1 1.-8. #1"
-        const mPlace = u.match(/^K\d+\s+\d+\.-\d+\.\s+#\d+/i);
+        // PLACEMENT BRACKET: umisteni typu
+        //   "Osmifinále #1" / "Čtvrtfinále o 9.-16. místo #1" / "Semifinále #1"
+        // -> labely "Vitez {umisteni}" a "Porazeny {umisteni}".
+        const mPlace = u.match(/^(Předkolo|Šestnáctifinále|Osmifinále|Čtvrtfinále|Semifinále|R128)(?:\s+o\s+\d+\.-\d+\.\s+místo)?\s+#\d+$/i);
         if (mPlace) {
           labelMap[`Vitez ${u}`] = win;
           labelMap[`Porazeny ${u}`] = lose;
