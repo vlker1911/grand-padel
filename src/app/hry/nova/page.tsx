@@ -16,7 +16,7 @@ const FORMATY: { typ: Typ; nazev: string; popis: string }[] = [
 ];
 
 type HracEntry = { jmeno: string; email: string };
-type ParEntry  = { id: number; nazevTymu: string; jmeno1: string; pohlavi1: string; jmeno2: string; pohlavi2: string };
+type ParEntry  = { id: number; nazevTymu: string; jmeno1: string; pohlavi1: string; jmeno2: string; pohlavi2: string; nasazeni?: number | null };
 type SingEntry = { id: number; jmeno: string; pohlavi: string };
 
 const SKUPINY_NAZVY = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -302,6 +302,41 @@ function rozdelDoSkupin(tymy: ParEntry[], numSkupin: number): ParEntry[][] {
   return groups;
 }
 
+// Pot system (seeding): nasazene tymy (1, 2, 3, ...) se rozdeli tak, ze
+// kazdy pot ma prave numSkupin tymu, jeden do kazde skupiny.
+//
+// Pot 1 = nasazeni 1..K  (kde K = numSkupin) -> 1. pozice ve skupinach A..K
+// Pot 2 = nasazeni K+1..2K -> 2. pozice ve skupinach (cross-pot pro fair-play)
+// Pot 3 = ... atd.
+// Ne-nasazene tymy se rozdistribuuji nahodne do zbylych pozic.
+function rozdelSeSeedingem(tymy: ParEntry[], numSkupin: number): ParEntry[][] {
+  const groups: ParEntry[][] = Array.from({ length: numSkupin }, () => []);
+  const nasazene = tymy.filter(t => typeof t.nasazeni === "number" && t.nasazeni! > 0)
+    .sort((a, b) => (a.nasazeni ?? 99) - (b.nasazeni ?? 99));
+  const ostatni = tymy.filter(t => typeof t.nasazeni !== "number" || t.nasazeni! <= 0);
+
+  // Rozdel nasazene do potu po K tymech (K = numSkupin)
+  // Pot p (0-indexed) = nasazene[p*K..p*K+K-1]
+  for (let p = 0; Math.floor(p * numSkupin / numSkupin) === p && p * numSkupin < nasazene.length; p++) {
+    const pot = nasazene.slice(p * numSkupin, (p + 1) * numSkupin);
+    // Cross-pot allocation: pot p s sudym indexem (0, 2, ...) jde do skupin v poradi 0..K-1,
+    // pot s lichym indexem v opacnem poradi K-1..0 (aby se 1. a 3. nasazeny nedostali do stejne).
+    const indexyDoSkupin = p % 2 === 0
+      ? pot.map((_, i) => i)
+      : pot.map((_, i) => numSkupin - 1 - i);
+    pot.forEach((tym, i) => groups[indexyDoSkupin[i]].push(tym));
+    if (pot.length < numSkupin) break;
+  }
+
+  // Ne-nasazene tymy doplnit do skupin (round-robin, pocinaje nejmensi skupinou)
+  const shuffled = [...ostatni].sort(() => Math.random() - 0.5);
+  for (const t of shuffled) {
+    const najmensi = groups.reduce((min, g, i) => g.length < groups[min].length ? i : min, 0);
+    groups[najmensi].push(t);
+  }
+  return groups;
+}
+
 export default function NovaHraPage() {
   const router   = useRouter();
   const supabase = createClient();
@@ -444,6 +479,9 @@ export default function NovaHraPage() {
     setLosovano(false);
   }
   function updatePar(id: number, pole: keyof ParEntry, hodnota: string) { setPary(prev => prev.map(p => p.id === id ? { ...p, [pole]: hodnota } : p)); }
+  function nastavNasazeni(id: number, nasazeni: number | null) {
+    setPary(prev => prev.map(p => p.id === id ? { ...p, nasazeni } : p));
+  }
   function pridejPar() { if (pary.length >= 128) return; const newId = Math.max(0, ...pary.map(p => p.id)) + 1; setPary([...pary, { id: newId, nazevTymu: "", jmeno1: "", pohlavi1: "", jmeno2: "", pohlavi2: "" }]); setPocetTymu(pary.length + 1); }
   function odeberPar(id: number) { if (pary.length <= 2) return; setPary(prev => prev.filter(p => p.id !== id)); setPocetTymu(prev => typeof prev === "number" ? prev - 1 : prev); }
   function updateSingle(id: number, pole: keyof SingEntry, hodnota: string) { setSinglesHraci(prev => prev.map(s => s.id === id ? { ...s, [pole]: hodnota } : s)); }
@@ -461,7 +499,15 @@ export default function NovaHraPage() {
   }, [typ, typParovani, pouzitNazvyTymu, pary, singlesHraci, losovano, losovanoSingles]);
 
   const pocetSkupin = useMemo(() => vypocitejPocetSkupin(efektivniTymy.length), [efektivniTymy.length]);
-  const skupiny     = useMemo(() => rozdelDoSkupin(losovaneTymy ?? efektivniTymy, pocetSkupin), [losovaneTymy, efektivniTymy, pocetSkupin]);
+  // Pokud aspoň 1 tym má nasazeni > 0, použij pot system (seeding).
+  // Jinak default: snake-style distribuce po (případném) losování.
+  const skupiny = useMemo(() => {
+    const tymyList = losovaneTymy ?? efektivniTymy;
+    const maSeeding = tymyList.some(t => typeof t.nasazeni === "number" && t.nasazeni > 0);
+    return maSeeding
+      ? rozdelSeSeedingem(tymyList, pocetSkupin)
+      : rozdelDoSkupin(tymyList, pocetSkupin);
+  }, [losovaneTymy, efektivniTymy, pocetSkupin]);
 
   // Celkovy cas k dispozici v minutach
   const celkemMinut = useMemo(() => {
@@ -751,7 +797,10 @@ export default function NovaHraPage() {
     if (typ !== "turnaj") return null;
     const tymyList = losovaneTymy ?? efektivniTymy;
     if (tymyList.length < 2) return null;
-    const skupinyData = rozdelDoSkupin(tymyList, pocetSkupin);
+    const maSeeding = tymyList.some(t => typeof t.nasazeni === "number" && t.nasazeni > 0);
+    const skupinyData = maSeeding
+      ? rozdelSeSeedingem(tymyList, pocetSkupin)
+      : rozdelDoSkupin(tymyList, pocetSkupin);
     const tymyVeSkupinach: TymVeSkupine[] = skupinyData.flatMap((skupina, si) =>
       skupina.map((tym, ti) => ({
         tymId: `preview-${si}-${ti}`,
@@ -876,8 +925,13 @@ export default function NovaHraPage() {
       }
     }
 
-    // Tymy (pary nebo nazvy) — pouzij losovany seznam pokud existuje
-    const skupinyData = rozdelDoSkupin(losovaneTymy ?? tymy, pocetSkupin);
+    // Tymy (pary nebo nazvy) — pouzij losovany seznam pokud existuje.
+    // Pokud aspoň jeden tym má nasazeni, použij pot system.
+    const tymyZdroj = losovaneTymy ?? tymy;
+    const maSeedingFinal = tymyZdroj.some(t => typeof t.nasazeni === "number" && t.nasazeni > 0);
+    const skupinyData = maSeedingFinal
+      ? rozdelSeSeedingem(tymyZdroj, pocetSkupin)
+      : rozdelDoSkupin(tymyZdroj, pocetSkupin);
     const tymyInsert = skupinyData.flatMap((skupina, si) =>
       skupina.map((tym, ti) => {
         const link = parToUcastnici[tym.id];
@@ -889,7 +943,8 @@ export default function NovaHraPage() {
           hrac1_id: link?.h1Id ?? null,
           hrac2_id: link?.h2Id ?? null,
           skupina: SKUPINY_NAZVY[si],
-          nasazeni: ti + 1,
+          // Pokud uzivatel zadal globalni nasazeni, ulozime ho. Jinak poradi v ramci skupiny (ti+1).
+          nasazeni: typeof tym.nasazeni === "number" && tym.nasazeni > 0 ? tym.nasazeni : ti + 1,
         };
       })
     );
@@ -1481,11 +1536,27 @@ export default function NovaHraPage() {
               {(typParovani === "pary" || typParovani === "mix") && (
                 <div className="flex flex-col gap-3">
                   {typParovani === "mix" && <p className="text-xs font-semibold" style={{ color: "#374151" }}>Hotove pary:</p>}
+                  <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs" style={{ color: "#6b7280" }}>
+                    <strong style={{ color: "#374151" }}>Nasazení (volitelné):</strong> nasazené týmy se rozdělí spravedlivě do skupin (pot system). 1.-K. nasazený → jeden do každé skupiny, K+1..2K do dalšího potu opačně, atd. Nech prázdné pro náhodné rozlosování.
+                  </div>
                   {pary.map((p, i) => (
                     <div key={p.id} className="bg-white rounded-xl border border-zinc-100 p-4 flex flex-col gap-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-3">
                         <span className="text-xs font-bold" style={{ color: "#9ca3af" }}>{pouzitNazvyTymu ? `Tym ${i + 1}` : `Par ${i + 1}`}</span>
-                        {pary.length > 2 && <button onClick={() => odeberPar(p.id)} className="text-xs" style={{ color: "#9ca3af" }}>odebrat</button>}
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs whitespace-nowrap" style={{ color: "#9ca3af" }}>Nasazení:</label>
+                          <input type="number" min={0} max={64}
+                            value={p.nasazeni ?? ""}
+                            onChange={e => {
+                              const v = e.target.value;
+                              if (v === "") { nastavNasazeni(p.id, null); return; }
+                              const n = parseInt(v);
+                              nastavNasazeni(p.id, isNaN(n) || n <= 0 ? null : n);
+                            }}
+                            placeholder="—"
+                            className="w-14 rounded border border-zinc-200 px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                          {pary.length > 2 && <button onClick={() => odeberPar(p.id)} className="text-xs" style={{ color: "#9ca3af" }}>odebrat</button>}
+                        </div>
                       </div>
                       {pouzitNazvyTymu ? (
                         <input type="text" placeholder="Nazev tymu" value={p.nazevTymu} onChange={e => updatePar(p.id, "nazevTymu", e.target.value)}
