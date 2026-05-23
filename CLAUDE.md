@@ -12,6 +12,23 @@ Uživatel: Roman Vlk, začátečník bez zkušeností s kódem. Vše vysvětlova
 
 - **Žádné emoji v UI** — nikde v aplikaci nepoužívat emoji (ani v navigaci, tlačítkách, kartách, nadpisech). Výjimka pouze pokud uživatel explicitně požádá.
 
+## Zásada: README a CLAUDE.md jsou rozcestníky, ne snapshots
+
+Konkrétní fakta (HEX barvy, fonty, verze, stav projektu, otevřené úkoly) **patří do svého source-of-truth souboru**, ne do README/CLAUDE.md. README odkazuje, neuložuje.
+
+**Source-of-truth pro typické věci:**
+- Stav projektu, hotové funkce, verze → `web-app/instrukce/stav-projektu.md`
+- Brand barvy → `vizual/barvy/paleta.md`
+- Fonty → `vizual/typografie/fonty.md`
+- Otevřené otázky → `otazky/otevrene-otazky.md`
+- Pravidla turnajového enginu → `web-app/instrukce/turnaj-koncept.md` + pravidlo níže
+- Pravidla her → `web-app/instrukce/pravidla/`
+
+**Pravidlo pro Claude:**
+1. Před prací na vizuálu/stavu projektu **vždy** otevři příslušný source-of-truth soubor — nespoléhej na to, co je napsané v README.
+2. Po změně vizuálu/stavu **vždy** aktualizuj source-of-truth soubor (ne README).
+3. Pokud najdeš v README nebo CLAUDE.md zastaralé tvrdé hodnoty (datované „Poslední aktualizace" víc než měsíc, hard-coded HEX/font), **upozorni uživatele** a navrhni převedení na rozcestník.
+
 ## Pravidla turnajového rozvrhu (engine `lib/turnaj-format.ts`)
 
 Tato pravidla musí dodržet jakákoliv úprava enginu nebo plánovače zápasů:
@@ -36,15 +53,18 @@ Vždy si přečti před prací:
 
 - **Next.js 16** (App Router, TypeScript)
 - **Tailwind CSS v4**
-- **Font:** Inter (placeholder — finální font dodá grafik)
 - **Hosting:** Vercel (zatím nenasazeno)
 - **Databáze:** Supabase (Frankfurt)
 
-## Brand barvy (placeholdery — finální dodá grafik)
+## Brand identita — kde jsou skutečné hodnoty
 
-- Bordó: `#801A28`
-- Krémová: `#F2EDE4`
-- Černá: `#0A0A0A`
+⚠️ **Nikdy nehard-codeuj barvy a fonty z paměti nebo z tohoto souboru.** Konkrétní hodnoty (HEX, fonty, váhy) drží jeden zdroj pravdy. Před prací s vizuálem si vždy načti:
+
+- `C:\Users\VlkR\Documents\grand-padel\vizual\barvy\paleta.md` — aktuální HEX/RGB/Pantone všech brand barev
+- `C:\Users\VlkR\Documents\grand-padel\vizual\typografie\fonty.md` — aktuální fonty a váhy
+- `C:\Users\VlkR\Documents\grand-padel\vizual\README.md` — rozcestník, odkud se dostaneš dál
+
+Pokud měníš brand v kódu (`globals.css`, `lib/brand.ts`, apod.), nejdřív ověř proti těmto souborům. Když najdeš nesoulad (kód říká X, paleta říká Y), **paleta vyhrává** a kód se upravuje.
 
 ## Struktura souborů
 
