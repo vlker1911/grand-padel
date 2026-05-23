@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.13.0  
+**Aktuální:** v0.13.1  
 **Poslední změna:** 18. 5. 2026  
-**Git tag:** v0.13.0
+**Git tag:** v0.13.1
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.13.1 | 18. 5. 2026 | **Seeding chytrý do 64+ týmů.** Funkce `rozdelSeSeedingem` přesunuta z `hry/nova/page.tsx` do `lib/turnaj-postup.ts` (testovatelné). Algoritmus: pot 1 = random permutace (top K do K skupin), pot 2 = cross-pot (opačně k pot 1 — zaručí 1. a (K+1). v různých skupinách), pot 3+ = random permutace. Test `scripts/test-seeding.mjs` ověří 8t/12t/16t/32t/64t s 0 až all-nasazenými týmy — vše OK |
 | v0.13.0 | 18. 5. 2026 | **Seeding (nasazené týmy + pot system).** Krok 3 vyplnění párů: vedle "odebrat" nový input "Nasazení" (volitelné, číslo 1, 2, 3, …). Funkce `rozdelSeSeedingem(tymy, K)`: nasazené 1.-K. → pot 1 (1. pozice ve skupinách A-K), K+1..2K → pot 2 (cross-pot: 2. pozice opačně), atd. Ne-nasazené týmy se náhodně rozdělí do zbylých pozic. Pokud žádný tým nemá nasazení, default snake-style distribuce. Cross-pot pravidlo zajistí že 1. a 3. nasazený nemůžou skončit ve stejné skupině. Info nota v UI vysvětluje princip |
 | v0.12.0 | 18. 5. 2026 | **Hezké labely fází + lock losování.** Engine generuje `umisteni`: Osmifinále / Čtvrtfinále / Semifinále / Finále podle velikosti bracketu (místo "K1 1.-16. #1"). Pásmo o nižší umístění: "Čtvrtfinále o 9.-16. místo #1". Pro 16t placement: Osmifinále → Čtvrtfinále → Semifinále → Finále + O 3./5.-6./7.-8./9.-10./11.-12./13.-14./15.-16. místo. labelMap regex aktualizován. Lock losování v hry/nova krok 4: po 1. kliknutí se tlačítko změní na "Losovat znovu (vyžaduje potvrzení)" — promt vyžaduje napsat slovo "LOSUJ". Audit: `settings.losovani_provedeno` a `losovani_at` |
 | v0.11.2 | 18. 5. 2026 | **Bug fix: zachovat plánovaný čas zápasu.** `ulozSkore` přepisoval `cas_konec` systémovým časem (vznikalo "16:00–08:35"). `spustitZapasNaKurtu` přepisoval `cas_zacatek`. Nyní obojí ponecháno z engine plánu — DB sloupce slouží jako rozvrh, ne skutečný čas. UI test: konečné pořadí v tab Tabulky funguje, taby Rozlosování / Pořadí zápasů renderují korektně |

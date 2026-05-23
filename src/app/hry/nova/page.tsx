@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { generujAmericano } from "@/lib/americano";
 import { generujRozvrh, type TurnajFormat, type TymVeSkupine, type Rozvrh } from "@/lib/turnaj-format";
+import { rozdelSeSeedingem as rozdelSeSeedingemLib } from "@/lib/turnaj-postup";
 
 type Typ = "americano" | "mexicano" | "turnaj";
 
@@ -302,39 +303,10 @@ function rozdelDoSkupin(tymy: ParEntry[], numSkupin: number): ParEntry[][] {
   return groups;
 }
 
-// Pot system (seeding): nasazene tymy (1, 2, 3, ...) se rozdeli tak, ze
-// kazdy pot ma prave numSkupin tymu, jeden do kazde skupiny.
-//
-// Pot 1 = nasazeni 1..K  (kde K = numSkupin) -> 1. pozice ve skupinach A..K
-// Pot 2 = nasazeni K+1..2K -> 2. pozice ve skupinach (cross-pot pro fair-play)
-// Pot 3 = ... atd.
-// Ne-nasazene tymy se rozdistribuuji nahodne do zbylych pozic.
+// Pot system (seeding) — implementace v lib/turnaj-postup.ts.
+// Tady jen tenký wrapper s ParEntry typem.
 function rozdelSeSeedingem(tymy: ParEntry[], numSkupin: number): ParEntry[][] {
-  const groups: ParEntry[][] = Array.from({ length: numSkupin }, () => []);
-  const nasazene = tymy.filter(t => typeof t.nasazeni === "number" && t.nasazeni! > 0)
-    .sort((a, b) => (a.nasazeni ?? 99) - (b.nasazeni ?? 99));
-  const ostatni = tymy.filter(t => typeof t.nasazeni !== "number" || t.nasazeni! <= 0);
-
-  // Rozdel nasazene do potu po K tymech (K = numSkupin)
-  // Pot p (0-indexed) = nasazene[p*K..p*K+K-1]
-  for (let p = 0; Math.floor(p * numSkupin / numSkupin) === p && p * numSkupin < nasazene.length; p++) {
-    const pot = nasazene.slice(p * numSkupin, (p + 1) * numSkupin);
-    // Cross-pot allocation: pot p s sudym indexem (0, 2, ...) jde do skupin v poradi 0..K-1,
-    // pot s lichym indexem v opacnem poradi K-1..0 (aby se 1. a 3. nasazeny nedostali do stejne).
-    const indexyDoSkupin = p % 2 === 0
-      ? pot.map((_, i) => i)
-      : pot.map((_, i) => numSkupin - 1 - i);
-    pot.forEach((tym, i) => groups[indexyDoSkupin[i]].push(tym));
-    if (pot.length < numSkupin) break;
-  }
-
-  // Ne-nasazene tymy doplnit do skupin (round-robin, pocinaje nejmensi skupinou)
-  const shuffled = [...ostatni].sort(() => Math.random() - 0.5);
-  for (const t of shuffled) {
-    const najmensi = groups.reduce((min, g, i) => g.length < groups[min].length ? i : min, 0);
-    groups[najmensi].push(t);
-  }
-  return groups;
+  return rozdelSeSeedingemLib(tymy, numSkupin);
 }
 
 export default function NovaHraPage() {
