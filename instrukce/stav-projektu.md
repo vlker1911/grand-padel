@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.15.4  
+**Aktuální:** v0.15.5  
 **Poslední změna:** 23. 5. 2026  
-**Git tag:** v0.15.4
+**Git tag:** v0.15.5
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.15.5 | 23. 5. 2026 | **Open Graph + Twitter Card meta tagy.** Sdílení odkazů (WhatsApp, Facebook, LinkedIn, Twitter, iMessage) teď ukáže náhled s logem a fotkou. `layout.tsx` rozšířen: `metadataBase`, `title.template` (`%s | Grand Padel`), description o všech 3 lokalitách (Olomouc/Ostrava/Praha-Zličín), keywords, OG image (`/photos/hero-homepage.jpg` 1200×630), Twitter `summary_large_image`, ikony (monogram). Site URL z env `NEXT_PUBLIC_SITE_URL` (default `https://grandpadel.cz`) |
 | v0.15.4 | 23. 5. 2026 | **Middleware → Proxy** (Next.js 16 deprecation). Soubor `src/middleware.ts` přejmenován na `src/proxy.ts`, funkce `middleware()` → `proxy()`. Funkčnost beze změny (Supabase Auth cookies refresh). Build už nehlásí deprecation warning |
 | v0.15.3 | 23. 5. 2026 | **Lint errors fix — připraveno pro Vercel build.** 9 chyb v `hry/page.tsx`, `hry/[id]/page.tsx`, `hry/nova/page.tsx` (`react-hooks/set-state-in-effect` + nová React 19 `forward-reference` chyba v useEffect + `next/no-html-link-for-pages`). Fix: `<a href="/hry">` → `<Link>` (import `next/link`), eslint-disable komentáře pro datově načítací useEffecty (správný pattern). `npm run build` ✓ kompletní (14 routes generated) |
 | v0.15.2 | 18. 5. 2026 | **Přepočet délky zápasů na body** podle reálné Americano statistiky. Vzorec `limit × 0.5` (předtím `0.45 + 5`). 16 bodů = 8 min, 24 bodů = 12 min, 32 bodů = 16 min. Pro Americano 8 hráčů / 7 zápasů / 32 bodů s 2 min pauzou se vejde do 2 hodin (16×7 + 2×6 = 124 min) |
