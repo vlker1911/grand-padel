@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.15.7  
+**Aktuální:** v0.15.8  
 **Poslední změna:** 23. 5. 2026  
-**Git tag:** v0.15.7
+**Git tag:** v0.15.8
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.15.8 | 23. 5. 2026 | **Wizard "Doporuč variantu" rozšířen o sety + placement bracket.** Scoring filter má nově **"Na sety (best of 3)"** — generuje variantu s 2 vítěznými sety, do 6 gamů, set TB, STB místo 3. setu (~70 min/zápas). Playoff filter má **"Placement bracket"** — pavouk od začátku (vyžaduje bezSkupin=true). Vzorec: (n/2)·log2(n) zápasů (8t=12, 16t=32, 32t=80, 64t=192). Po zvolení varianty: sety → `setSetyVitezne(2)`; placement → `setPlayoffMode("vitez") + setPlacementBracket(true) + setBezSkupin(true)`. `popisPlayoff` a `popisFormat` rozšířeny o oba nové režimy |
 | v0.15.7 | 23. 5. 2026 | **Odebrat tým z turnaje** (jen před losováním). V tabu Hráči přibylo tlačítko **"Odebrat"** vedle "Upravit" — zobrazí se jen pokud `zapasy.length === 0` (turnaj ještě není rozlosovaný). Confirm dialog s názvem týmu. Funkce `odeberTym(tymId, tymNazev)`: DELETE z `turnaj_tymy`. Pokud už proběhlo losování, tlačítko se nezobrazí (a kdyby někdo zavolal funkci jinak, alert blokuje akci) |
 | v0.15.6 | 23. 5. 2026 | **Obnovit zrušený turnaj.** V banneru "Turnaj byl zrušen" přibylo tlačítko **"Obnovit turnaj"** (vedle "Smazat trvale"). Funkce `obnovTurnaj()` smaže `settings.zruseno / duvod_zruseni / zruseno_at` a vrátí `stav` na `"priprava"` (pokud žádné zápasy) nebo `"probiha"`. Confirm dialog. Banner zmizí a turnaj se obnoví |
 | v0.15.5 | 23. 5. 2026 | **Open Graph + Twitter Card meta tagy.** Sdílení odkazů (WhatsApp, Facebook, LinkedIn, Twitter, iMessage) teď ukáže náhled s logem a fotkou. `layout.tsx` rozšířen: `metadataBase`, `title.template` (`%s | Grand Padel`), description o všech 3 lokalitách (Olomouc/Ostrava/Praha-Zličín), keywords, OG image (`/photos/hero-homepage.jpg` 1200×630), Twitter `summary_large_image`, ikony (monogram). Site URL z env `NEXT_PUBLIC_SITE_URL` (default `https://grandpadel.cz`) |

@@ -33,7 +33,7 @@ function odhadMinut(body: number) {
 // ===== Wizard / kalkulator variant =====
 
 type WizardScoringTyp = "gamy" | "body" | "cas" | "sety";
-type WizardPlayoffMode = "bez" | "medaile" | "vitez" | "umisteni" | "skupiny_o_umisteni";
+type WizardPlayoffMode = "bez" | "medaile" | "vitez" | "umisteni" | "skupiny_o_umisteni" | "placement";
 type WizardVitezBracket = "auto" | "top4" | "top8" | "top16";
 
 type WizardInput = {
@@ -100,6 +100,12 @@ function calculateWizardVariant(input: WizardInput): WizardVariant {
     const horniVel = Math.ceil(n / 2);
     const dolniVel = n - horniVel;
     zapasuPlayoff = (horniVel * (horniVel - 1)) / 2 + (dolniVel * (dolniVel - 1)) / 2;
+  } else if (input.playoffMode === "placement") {
+    // Placement bracket: kazdy hraje az do konce o sve umisteni.
+    // Pro n = mocnina 2: zapasy = (n/2) * log2(n). Pro 4=6, 8=12, 16=32, 32=80, 64=192.
+    // Pro non-mocniny: zaokrouhli na nejblizsi mocninu 2.
+    const nPow2 = Math.pow(2, Math.round(Math.log2(Math.max(2, n))));
+    zapasuPlayoff = (nPow2 / 2) * Math.log2(nPow2);
   }
 
   const totalZapasu = zapasuSkupiny + zapasuPlayoff;
@@ -122,6 +128,10 @@ function calculateWizardVariant(input: WizardInput): WizardVariant {
     }
   } else if (input.scoringTyp === "gamy") {
     minNaZapas = input.scoringLimit * 3 + 5;
+  } else if (input.scoringTyp === "sety") {
+    // 2 vitezne sety, do 6 gamu, set TB, super-TB misto 3. setu.
+    // Odhad: ~65 min/zapas (best-of-3 s STB), bez STB ~75 min.
+    minNaZapas = 70;
   } else {
     minNaZapas = odhadMinut(input.scoringLimit) + 5;
   }
@@ -156,19 +166,20 @@ function calculateWizardVariant(input: WizardInput): WizardVariant {
 // strukturaFilter: "vse" / "skupiny" (jen se skupinami) / "bezSkupin" (jen playoff).
 function generateWizardVariants(
   baseInput: { pocetTymu: number; casOdMin: number; casDoMin: number },
-  scoringFilter: "gamy" | "cas" | "vse" = "vse",
+  scoringFilter: "gamy" | "cas" | "sety" | "vse" = "vse",
   maxKurtu: number = 10,
-  playoffFilter: "vse" | "ano" | "ne" | "umisteni" = "vse",
+  playoffFilter: "vse" | "ano" | "ne" | "umisteni" | "placement" = "vse",
   strukturaFilter: "vse" | "skupiny" | "bezSkupin" = "vse",
   gamyFilter: "vse" | 4 | 5 | 6 = "vse",
 ): WizardVariant[] {
   const variants: WizardVariant[] = [];
   const kurtyOptions = [1, 2, 3, 4, 5, 6, 8, 10].filter(k => k <= maxKurtu);
-  const allModes: WizardPlayoffMode[] = ["umisteni", "skupiny_o_umisteni", "vitez", "medaile", "bez"];
+  const allModes: WizardPlayoffMode[] = ["umisteni", "skupiny_o_umisteni", "vitez", "medaile", "placement", "bez"];
   const playoffModes: WizardPlayoffMode[] =
-    playoffFilter === "ano"      ? allModes.filter(m => m !== "bez") :
-    playoffFilter === "ne"       ? ["bez"] :
-    playoffFilter === "umisteni" ? ["umisteni", "skupiny_o_umisteni"] :
+    playoffFilter === "ano"       ? allModes.filter(m => m !== "bez") :
+    playoffFilter === "ne"        ? ["bez"] :
+    playoffFilter === "umisteni"  ? ["umisteni", "skupiny_o_umisteni"] :
+    playoffFilter === "placement" ? ["placement"] :
     allModes;
   const vitezBrackets: WizardVitezBracket[] = ["auto", "top4", "top8", "top16"];
   const gamyLimits: number[] = gamyFilter === "vse" ? [4, 5, 6] : [gamyFilter];
@@ -184,6 +195,8 @@ function generateWizardVariants(
         if (bezSk && playoffMode === "bez") continue;
         // Skupiny o umisteni vyzaduji skupinovou fazi
         if (bezSk && playoffMode === "skupiny_o_umisteni") continue;
+        // Placement bracket je bracket od zacatku — vyzaduje bezSkupin = true
+        if (!bezSk && playoffMode === "placement") continue;
         const bracketsToTry: (WizardVitezBracket | undefined)[] = playoffMode === "vitez" ? vitezBrackets : [undefined];
         for (const vb of bracketsToTry) {
           if (scoringFilter === "cas" || scoringFilter === "vse") {
@@ -203,6 +216,15 @@ function generateWizardVariants(
                 playoffMode, vitezBracket: vb, bezSkupin: bezSk,
               }));
             }
+          }
+          if (scoringFilter === "sety" || scoringFilter === "vse") {
+            // Sety: 2 vitezne, do 6 gamu, set TB, STB misto 3. setu — ~70 min/zapas
+            variants.push(calculateWizardVariant({
+              pocetTymu: baseInput.pocetTymu, pocetKurtu: kurty,
+              casOdMin: baseInput.casOdMin, casDoMin: baseInput.casDoMin,
+              scoringTyp: "sety", scoringLimit: 6,
+              playoffMode, vitezBracket: vb, bezSkupin: bezSk,
+            }));
           }
         }
       }
@@ -396,9 +418,9 @@ export default function NovaHraPage() {
   const [wizardMaxKurtu,     setWizardMaxKurtu]     = useState<number | "">(4);
   const [wizardDelkaH,       setWizardDelkaH]       = useState<number | "">(3);
   const [wizardDelkaM,       setWizardDelkaM]       = useState<number | "">(0);
-  const [wizardScoring,      setWizardScoring]      = useState<"gamy" | "cas" | "vse">("vse");
+  const [wizardScoring,      setWizardScoring]      = useState<"gamy" | "cas" | "sety" | "vse">("vse");
   const [wizardGamyLimit,    setWizardGamyLimit]    = useState<"vse" | 4 | 5 | 6>("vse");
-  const [wizardPlayoff,      setWizardPlayoff]      = useState<"vse" | "ano" | "ne" | "umisteni">("vse");
+  const [wizardPlayoff,      setWizardPlayoff]      = useState<"vse" | "ano" | "ne" | "umisteni" | "placement">("vse");
   const [wizardStruktura,    setWizardStruktura]    = useState<"vse" | "skupiny" | "bezSkupin">("vse");
   const [wizardZobrazVse,    setWizardZobrazVse]    = useState(false);
 
@@ -752,9 +774,21 @@ export default function NovaHraPage() {
       setScoringLimit(v.scoringLimit);
       setScoringLimitPlayoff(v.scoringLimit);
     }
-    setPlayoffMode(v.playoffMode);
+    // Sety: default konfigurace 2 vitezne (best of 3), do 6 gamu, set TB + STB misto 3. setu
+    if (v.scoringTyp === "sety") {
+      setSetyVitezne(2);
+    }
+    // Placement bracket je flag, ne playoffMode — prelozime na vitez + placementBracket + bezSkupin
+    if (v.playoffMode === "placement") {
+      setPlayoffMode("vitez");
+      setPlacementBracket(true);
+      setBezSkupin(true);
+    } else {
+      setPlayoffMode(v.playoffMode);
+      setPlacementBracket(false);
+      setBezSkupin(v.bezSkupin === true);
+    }
     if (v.vitezBracket) setVitezBracket(v.vitezBracket);
-    setBezSkupin(v.bezSkupin === true);
     nastavPocetTymu(v.pocetTymu);
     setWizardOpen(false);
   }
@@ -2057,6 +2091,7 @@ export default function NovaHraPage() {
           if (m === "medaile") return "Final Four (4 zápasy)";
           if (m === "vitez") return `single elim${vb && vb !== "auto" ? ` (${vb})` : ""}`;
           if (m === "skupiny_o_umisteni") return "Skupiny o umístění";
+          if (m === "placement") return "Placement bracket (každý hraje až do konce)";
           return "Pavouk o umístění (multi-tier)";
         };
         const popisFormat = (v: WizardVariant) => {
@@ -2066,6 +2101,7 @@ export default function NovaHraPage() {
             return `${v.scoringDelkaKola} min/zápas (≈ ${odhadGamu} gamů)`;
           }
           if (v.scoringTyp === "gamy") return `do ${v.scoringLimit} gamů`;
+          if (v.scoringTyp === "sety") return `sety (best of 3, do 6 gamů + STB)`;
           return `${v.scoringLimit} bodů`;
         };
         const formatMin = (m: number) => {
@@ -2157,8 +2193,9 @@ export default function NovaHraPage() {
                   {([
                     ["vse", "Je mi to jedno"],
                     ["gamy", "Na gamy"],
+                    ["sety", "Na sety (best of 3)"],
                     ["cas", "Na čas"],
-                  ] as Array<["vse" | "gamy" | "cas", string]>).map(([k, label]) => (
+                  ] as Array<["vse" | "gamy" | "sety" | "cas", string]>).map(([k, label]) => (
                     <button key={k} onClick={() => setWizardScoring(k)}
                       className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
                       style={wizardScoring === k
@@ -2199,8 +2236,9 @@ export default function NovaHraPage() {
                     ["vse", "Je mi to jedno"],
                     ["ano", "S playoff"],
                     ["umisteni", "O všechna umístění"],
+                    ["placement", "Placement bracket (každý hraje až do konce)"],
                     ["ne", "Bez playoff"],
-                  ] as Array<["vse" | "ano" | "umisteni" | "ne", string]>).map(([k, label]) => (
+                  ] as Array<["vse" | "ano" | "umisteni" | "placement" | "ne", string]>).map(([k, label]) => (
                     <button key={k} onClick={() => setWizardPlayoff(k)}
                       className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
                       style={wizardPlayoff === k
