@@ -1415,11 +1415,13 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
     const hh = String(nyni.getHours()).padStart(2, "0");
     const mm = String(nyni.getMinutes()).padStart(2, "0");
     const vitez = s1 > s2 ? zapas?.tym1_id : s2 > s1 ? zapas?.tym2_id : null;
+    // POZOR: cas_zacatek a cas_konec drzime PLANOVANY cas z engine.
+    // Skutecny cas dohraní nepřepisujeme (drive bylo prepsano na systemovy cas,
+    // coz delalo nesmyslne "16:00 - 08:35" zaznamy).
     await supabase.from("turnaj_zapasy").update({
       skore_tym1: s1,
       skore_tym2: s2,
       stav: "ukonceno",
-      cas_konec: `${hh}:${mm}`,
       vitez_id: vitez ?? null,
     }).eq("id", zapasId);
 
@@ -1506,13 +1508,10 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
       setKurtModal(null);
       return;
     }
-    const nyni = new Date();
-    const hh = String(nyni.getHours()).padStart(2, "0");
-    const mm = String(nyni.getMinutes()).padStart(2, "0");
+    // POZOR: cas_zacatek nezapisujeme — drzime planovany cas z engine.
     await supabase.from("turnaj_zapasy").update({
       stav: "probiha",
       kurt,
-      cas_zacatek: `${hh}:${mm}`,
     }).eq("id", zapasId);
     setKurtModal(null);
     nactiTurnaj();

@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.11.1  
+**Aktuální:** v0.11.2  
 **Poslední změna:** 18. 5. 2026  
-**Git tag:** v0.11.1
+**Git tag:** v0.11.2
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.11.2 | 18. 5. 2026 | **Bug fix: zachovat plánovaný čas zápasu.** `ulozSkore` přepisoval `cas_konec` systémovým časem (vznikalo "16:00–08:35"). `spustitZapasNaKurtu` přepisoval `cas_zacatek`. Nyní obojí ponecháno z engine plánu — DB sloupce slouží jako rozvrh, ne skutečný čas. UI test: konečné pořadí v tab Tabulky funguje, taby Rozlosování / Pořadí zápasů renderují korektně |
 | v0.11.1 | 18. 5. 2026 | **Fix duplicit po placement.** Stará auto-gen logika v `ulozSkore` (z v0.7.x pro `playoffMode === "vitez"`) generovala další kolo i pro nové turnaje s placement bracketem → duplicitní zápasy. Teď je stará logika aktivní jen pro turnaje bez `settings.turnaj_format` (= před v0.8.0). Nové turnaje řeší výhradně `aktualizujDruhouFazi()`. Plus nový `scripts/verify-all.mjs` — systematická matice 48 smysluplných kombinací, vše prochází |
 | v0.11.0 | 18. 5. 2026 | **Plný placement bracket** (až 64 týmů). Nový flag `placementBracket: boolean` v `TurnajFormat`. Algoritmus: po každém kole se bucket rozdělí na vítěze (vyšší pásmo) a poražené (nižší). Každý tým hraje až do konce o své umístění. Počty zápasů: 8t=12, 16t=32, 32t=80, 64t=192. `umisteni` ve formátu `K1 1.-8. #1` → `Vitez K1 1.-8. #1` jako klíč labelMap pro auto-gen. `finalniPoradi` sestaví ranking z `Finale` / `O 3.` / `O 5.-6.` / `O 7.-8.` / atd. UI: checkbox "Hrát o všechna umístění" v kroku 3 pod velikostí pavouka. Test runner 81 scénářů (7 nových placement variant) |
 | v0.10.2 | 18. 5. 2026 | **Bug fix konečné pořadí + multi-tier ranking.** `finalniPoradi` hledala `umisteni === "final"` (lowercase), engine od v0.8.0 dává `"Finale"` / `"Finale (1.-4.)"`. Plus pro multi-tier teď zahrnuje **všechna pásma** — vrátí 1.-4., 5.-8., atd. podle finále a o 3. míst |
