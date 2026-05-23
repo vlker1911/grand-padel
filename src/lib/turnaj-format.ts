@@ -580,3 +580,40 @@ export function generujRozvrh(
 
   return { zapasy, trvaniMin, casovyRamec, vejdeSe, rezervaMin, varovani };
 }
+
+// ===== Dosazení skutečných týmů do placeholderů =====
+//
+// Engine vrací placeholdery jako "1.A", "2.B" (po skupinové fázi)
+// nebo "1.", "2." (globální nasazení) nebo "Vitez S1", "Porazeny S1"
+// (po semifinále).
+//
+// `dosadDoRozvrhu` nahradí placeholder label tym_id z mapy.
+// Mapa: label -> tym_id. Pokud label v mapě není, ponechá null.
+
+export type RozvrhSDosazenymi = GenZapas & {
+  // Zachovava labely pro UI (napr. pokud potrebujeme zobrazit "1.A" vedle nazvu).
+  originalniTym1Label: string;
+  originalniTym2Label: string;
+};
+
+export function dosadDoRozvrhu(
+  zapasy: GenZapas[],
+  mapaLabelu: Record<string, string>,
+): RozvrhSDosazenymi[] {
+  return zapasy.map(z => {
+    const tym1Id = z.tym1Id ?? mapaLabelu[z.tym1Label] ?? null;
+    const tym2Id = z.tym2Id ?? mapaLabelu[z.tym2Label] ?? null;
+    return {
+      ...z,
+      tym1Id,
+      tym2Id,
+      originalniTym1Label: z.tym1Label,
+      originalniTym2Label: z.tym2Label,
+    };
+  });
+}
+
+// Pomocná funkce: vrátí pouze zápasy z druhé fáze (vše kromě skupin).
+export function zapasy2Faze(zapasy: GenZapas[]): GenZapas[] {
+  return zapasy.filter(z => z.faze !== "skupina");
+}

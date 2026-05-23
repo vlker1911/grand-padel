@@ -6,6 +6,11 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { spocitejTabulku } from "@/lib/americano";
 import { smazatHru as smazatHruDb, nactiPoctyMazani, type HraTyp } from "@/lib/hry";
+import {
+  generujRozvrh, dosadDoRozvrhu, zapasy2Faze,
+  type TurnajFormat, type TymVeSkupine,
+} from "@/lib/turnaj-format";
+import { poradiSkupin, globalniNasazeni } from "@/lib/turnaj-postup";
 import StartovneTab from "@/components/StartovneTab";
 
 type Hra = {
@@ -1024,6 +1029,23 @@ function spocitejHarmonogram(
   return result;
 }
 
+// Vrati pekny label pro zobrazeni faze zapasu.
+// Preferuje umisteni (engine ho nastavuje hezky), jinak fallback podle fáze.
+function fazeLabelGlobal(z: TurnajZapas): string {
+  if (z.umisteni) return z.umisteni;
+  if (z.faze === "skupina") return `Skupina ${z.skupina ?? ""}${z.kolo ? ` - kolo ${z.kolo}` : ""}`;
+  if (z.faze === "skupina_o_umisteni") return "Skupina o umístění";
+  if (z.faze === "semifinale") return "Semifinále";
+  if (z.faze === "finale") return "Finále";
+  if (z.faze === "o_3_misto") return "O 3. místo";
+  if (z.faze === "ctvrtfinale") return "Čtvrtfinále";
+  if (z.faze === "utech_1") return "Útěchový pavouk — 1. kolo";
+  if (z.faze === "utech_2") return "Útěchový pavouk";
+  if (z.faze === "utech_finale") return "Útěchové finále";
+  if (z.faze === "playoff") return "Playoff";
+  return z.faze.replace("playoff_pas_", "Pásmo ");
+}
+
 function skupinaTabulka(tymy: TurnajTym[], zapasy: TurnajZapas[]) {
   const stats: Record<string, { vyhry: number; remisy: number; prohry: number; skore: number; obdrzeno: number }> = {};
   tymy.forEach(t => { stats[t.id] = { vyhry: 0, remisy: 0, prohry: 0, skore: 0, obdrzeno: 0 }; });
@@ -1215,6 +1237,27 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
     () => playoffExistuje && zapasyPlayoff.every(z => z.skore_tym1 != null),
     [playoffExistuje, zapasyPlayoff]
   );
+
+  // Auto-aktualizace 2. fáze v DB:
+  //   - po dohrání skupin se vloží 1. kolo playoff (semi, mini-bracketové
+  //     finále pro malá pásma, skupiny_o_umisteni round-robin).
+  //   - po dohrání semi se vloží finále + o 3. místo s reálnými ID.
+  //   - po dohrání čtvrtfinále se vloží semifinále, atd.
+  // Funkce aktualizujDruhouFazi je idempotentní (dedup) — bezpečně se volá vícekrát.
+  // Aby useEffect neběžel donekonečna, kontrolujeme změnu počtu zápasů.
+  const posledniPocetZapasu = useRef(0);
+  useEffect(() => {
+    if (jeZruseno || !jeEditor) return;
+    if (!playoff) return;
+    if (!vsechnySkupinyHotove) return;
+    if (generujiPlayoff) return;
+    // Spouštíme jen pokud se počet zápasů změnil od poslední aktualizace
+    // (nebo poprvé). Pokud nic nepřibylo, není co dělat.
+    if (posledniPocetZapasu.current === zapasy.length && zapasy.length > 0) return;
+    posledniPocetZapasu.current = zapasy.length;
+    aktualizujDruhouFazi();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vsechnySkupinyHotove, zapasy.length, jeZruseno, jeEditor, playoff, generujiPlayoff]);
 
   const vsechnoHotove = useMemo(
     () => (!playoff && vsechnySkupinyHotove) || (playoff && vsechnyPlayoffHotove),
@@ -1550,14 +1593,108 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
     nactiTurnaj();
   }
 
-  async function vytvorPlayoff() {
+  // Idempotentni aktualizace 2. faze v DB.
+  // - Re-runs engine s aktualnimi vysledky skupin + dohranych playoff.
+  // - Pridava jen zapasy, ktere v DB jeste nejsou (dedup podle umisteni/kolo/skupina).
+  // - Volana jak po dohrani skupin (vytvorPlayoff = prvni spusteni),
+  //   tak po dohrani semi (vyplni finale s realnymi tymy).
+  const aktualizujDruhouFazi = useCallback(async () => {
+    if (!hra) return;
     setGenerujiPlayoff(true);
-    const noveZapasy = generujPlayoff(skupinyMap, zapasySkupin, playoffMode, hra.id, hra.settings?.vitez_bracket ?? "auto");
-    await supabase.from("turnaj_zapasy").insert(noveZapasy);
-    nactiTurnaj();
-    setAktivniTab("tabulky");
-    setGenerujiPlayoff(false);
-  }
+    try {
+      const s = (hra.settings ?? {}) as Record<string, unknown>;
+      const tf = (s.turnaj_format as Record<string, unknown> | undefined) ?? {};
+      const fmt: TurnajFormat = {
+        scoringTyp: (s.scoring_typ as "gamy" | "body" | "cas") ?? "gamy",
+        scoringLimit: (s.scoring_limit as number) ?? 4,
+        scoringLimitPlayoff: (s.scoring_limit_playoff as number) ?? (s.scoring_limit as number) ?? 4,
+        playoffMode: playoffMode,
+        vitezBracket: (s.vitez_bracket as "auto" | "top4" | "top8" | "top16") ?? "auto",
+        utechovyPavouk: s.utech_pavouk === true,
+        bezSkupin: s.bez_skupin === true,
+        pointRule: (s.point_rule as "golden" | "star" | "advantage") ?? "star",
+        pocetKurtu: hra.pocet_kurtu,
+        casOd: (s.cas_od as string) ?? "16:00",
+        casDo: (s.cas_do as string) ?? "20:00",
+        delkaSkupinaMin: typeof tf.delka_skupina_min === "number" ? tf.delka_skupina_min : null,
+        delkaSemiMin: typeof tf.delka_semi_min === "number" ? tf.delka_semi_min : null,
+        delkaFinaleMin: typeof tf.delka_finale_min === "number" ? tf.delka_finale_min : null,
+        pauzaMin: typeof tf.pauza_min === "number" ? tf.pauza_min : 1,
+      };
+      const tymyVeSkupinach: TymVeSkupine[] = tymy.map(t => ({
+        tymId: t.id,
+        nazev: t.nazev,
+        skupina: t.skupina ?? "A",
+        nasazeni: t.nasazeni ?? 1,
+      }));
+      const rozvrh = generujRozvrh(fmt, tymyVeSkupinach);
+
+      // Mapa label -> tym_id: z dohranych skupin + z dohranych playoff zapasu.
+      const labelMap: Record<string, string> = {
+        ...poradiSkupin(tymy, zapasySkupin),     // "1.A", "2.A", ...
+        ...globalniNasazeni(tymy, zapasySkupin), // "1.", "2.", ...
+      };
+      for (const z of zapasyPlayoff) {
+        if (z.skore_tym1 == null || z.skore_tym2 == null) continue;
+        const win = z.skore_tym1 > z.skore_tym2 ? z.tym1_id : z.tym2_id;
+        const lose = z.skore_tym1 > z.skore_tym2 ? z.tym2_id : z.tym1_id;
+        if (!win || !lose) continue;
+        const u = z.umisteni ?? "";
+        const mSemi = u.match(/^Semi(?:finale)?\s+(\d+)/i);
+        if (mSemi) {
+          labelMap[`Vitez S${mSemi[1]}`] = win;
+          labelMap[`Porazeny S${mSemi[1]}`] = lose;
+        }
+        const mCF = u.match(/^Ctvrtfinale\s+(\d+)/i);
+        if (mCF) labelMap[`Vitez CF ${mCF[1]}`] = win;
+        const mPL = u.match(/^Playoff K\d+\s+#(\d+)/i);
+        if (mPL) labelMap[`Vitez PL ${mPL[1]}`] = win;
+        const mU1 = u.match(/^Utech 1\. kolo/i);
+        if (mU1) {
+          // Tezsi — labelMap pro utech_2 a utech_finale dela engine pres "Vitez utech N"
+          // Tady jen dohledame poradi a pridame Vitez utech N
+          // (Pro jednoduchost: pouze pokud existuje vyrazne mapovani)
+        }
+      }
+
+      const dosazene = dosadDoRozvrhu(zapasy2Faze(rozvrh.zapasy), labelMap);
+      // Dedup: zapas povazujem za "uz v DB" pokud sedi kolo + umisteni + skupina.
+      const dbKey = (z: { kolo: number | null; umisteni: string | null; skupina: string | null }) =>
+        `${z.kolo ?? "x"}|${z.umisteni ?? "x"}|${z.skupina ?? "x"}`;
+      const existKeys = new Set(zapasyPlayoff.map(dbKey));
+      const kVlozeni = dosazene.filter(z =>
+        z.tym1Id != null && z.tym2Id != null && !existKeys.has(dbKey(z)),
+      );
+
+      if (kVlozeni.length > 0) {
+        const insert = kVlozeni.map(z => ({
+          hra_id: hra.id,
+          faze: "playoff",
+          skupina: z.skupina,
+          kolo: z.kolo,
+          tym1_id: z.tym1Id,
+          tym2_id: z.tym2Id,
+          cas_zacatek: z.casZacatek,
+          cas_konec: z.casKonec,
+          kurt: z.kurt,
+          poradi_fronta: z.poradiFronta,
+          umisteni: z.umisteni,
+          stav: "ceka",
+        }));
+        const { error } = await supabase.from("turnaj_zapasy").insert(insert);
+        if (error) {
+          console.error("Chyba pri aktualizaci 2. faze:", error);
+        } else {
+          nactiTurnaj();
+        }
+      }
+    } finally {
+      setGenerujiPlayoff(false);
+    }
+  }, [hra, tymy, zapasySkupin, zapasyPlayoff, playoffMode, supabase, nactiTurnaj]);
+
+  // Zpetna kompatibilita: tlacitko "Zahajit playoff" v UI.
+  const vytvorPlayoff = aktualizujDruhouFazi;
 
   function renderZapas(z: TurnajZapas, limit: number) {
     const sc = getScore(z.id);
@@ -1920,12 +2057,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
           if (cb) return 1;
           return (a.faze ?? "").localeCompare(b.faze ?? "");
         });
-        const fazeLabel = (z: TurnajZapas) => {
-          if (z.umisteni) return z.umisteni;
-          if (z.faze === "skupina") return `Skupina ${z.skupina}${z.kolo ? ` - kolo ${z.kolo}` : ""}`;
-          if (z.faze === "playoff") return "Finale";
-          return z.faze;
-        };
+        const fazeLabel = fazeLabelGlobal;
         return (
           <div className="flex flex-col gap-3">
             <p className="text-xs" style={{ color: "#9ca3af" }}>
@@ -2087,7 +2219,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                         const z = zapasy.find(zz => zz.id === h.zapasId);
                         if (!z) return null;
                         const hotovo = z.skore_tym1 != null;
-                        const skupinaLabel = z.skupina ? `Skupina ${z.skupina}` : z.faze === "playoff" ? "Finale" : z.faze.replace("playoff_pas_", "Pas ");
+                        const skupinaLabel = fazeLabelGlobal(z);
                         return (
                           <div key={h.zapasId} className="px-5 py-3 flex items-center gap-3">
                             <div className="shrink-0 text-right w-12">
@@ -2545,7 +2677,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
               {odehrane.map(z => {
                 const s1 = z.skore_tym1!, s2 = z.skore_tym2!;
                 const vitez = s1 > s2 ? z.tym1_id : s2 > s1 ? z.tym2_id : null;
-                const skupinaLabel = z.skupina ? `Skupina ${z.skupina}` : z.faze === "playoff" ? "Finale" : z.faze.replace("playoff_pas_", "Pas ");
+                const skupinaLabel = fazeLabelGlobal(z);
                 return (
                   <div key={z.id} className="px-5 py-3">
                     <div className="flex items-center justify-between mb-1">

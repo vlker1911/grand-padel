@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.9.7  
-**Poslední změna:** 17. 5. 2026  
-**Git tag:** v0.9.7
+**Aktuální:** v0.10.0  
+**Poslední změna:** 18. 5. 2026  
+**Git tag:** v0.10.0
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.10.0 | 18. 5. 2026 | **Auto-generace 2. fáze v DB.** Nový `lib/turnaj-postup.ts` (V/R/P tabulka skupin, `poradiSkupin()`, `globalniNasazeni()`). V `lib/turnaj-format.ts` přidán `dosadDoRozvrhu()` a `zapasy2Faze()`. V `TurnajView` idempotentní `aktualizujDruhouFazi()`: po dohrání skupin se automaticky vloží 1. kolo playoff (semi / final four / skupiny o umístění), po dohrání semi se doplní finále + o 3. místo s reálnými ID vítězů/poražených. `useEffect` to sleduje a opakovaně volá. Sjednocené labelování nových fází přes `fazeLabelGlobal()` (česky: Semifinále, Finále, O 3. místo, Čtvrtfinále, Útěchový pavouk…) |
 | v0.9.7 | 17. 5. 2026 | **Tab Pořadí zápasů fix.** (1) Bug: `spustitZapas` nyní kontroluje, že žádný z týmů nehraje na jiném kurtu — alert + zákaz. (2) Pořadí zápasů je **fixní podle `poradi_fronta`** (z engine) — žádné přesouvání po dohrání. (3) Inline zadání skóre přímo v řádku — pro probíhající a "upravit" se zobrazí inputy, tlačítko "Uložit skóre" |
 | v0.9.6 | 17. 5. 2026 | **Finále paralelně s O 3. místo.** Engine přestal čekat se zahájením finále až po dohrání všech ostatních — finále se plánuje hned po svých semi (s pauzou). Příklad: 4 týmy/medaile zkráceno z 2h11min na 1h29min (Finále a O 3. místo hrají paralelně na 2 kurtech, oba končí 17:29). Pro multi-tier s víc pásmy než kurtů: některá pásma matematicky dohrají později — to už je přijatelné. Test validátor "finále poslední" uvolněn |
 | v0.9.5 | 17. 5. 2026 | **Star Point = default** (3 shody klasické výhody → Golden Point). Popis opraven, řazení tlačítek (Star / Golden / Klasické výhody) |
