@@ -663,7 +663,22 @@ export function generujRozvrh(
             { tym1Id: null, tym2Id: null, tym1Label: "Vitez S1", tym2Label: "Vitez S2" },
             `Finale${labelPasma}`, poSemi, kurty);
         }
-      } else if (tymyPasma === 3 || tymyPasma === 2) {
+      } else if (tymyPasma === 3) {
+        // Mini round-robin (3 zápasy: 1v2, 1v3, 2v3) — kazdy s kazdym.
+        // Faze "skupina_o_umisteni" aby UI poznala ze jde o RR a spocitala
+        // konecne poradi podle V/R/P + skore.
+        const t1 = tymPro(p * 4 + 0);
+        const t2 = tymPro(p * 4 + 1);
+        const t3 = tymPro(p * 4 + 2);
+        const skupinaKey = `umisteni-${p + 1}`;
+        const pary: Array<[typeof t1, typeof t1]> = [[t1, t2], [t1, t3], [t2, t3]];
+        pary.forEach((par, kolo) => {
+          naplanuj("skupina_o_umisteni", skupinaKey, kolo + 1,
+            { tym1Id: par[0].id, tym2Id: par[1].id, tym1Label: par[0].label, tym2Label: par[1].label },
+            `Mini-skupina o ${p * 4 + 1}.-${p * 4 + 3}. místo - kolo ${kolo + 1}`,
+            playoffStart, kurty);
+        });
+      } else if (tymyPasma === 2) {
         const t1 = tymPro(p * 4 + 0), t2 = tymPro(p * 4 + 1);
         const entry = { tym1Id: t1.id, tym2Id: t2.id, tym1Label: t1.label, tym2Label: t2.label };
         const z = naplanuj("finale", null, p * 10 + 1, entry,

@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.14.1  
+**Aktuální:** v0.14.2  
 **Poslední změna:** 18. 5. 2026  
-**Git tag:** v0.14.1
+**Git tag:** v0.14.2
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.14.2 | 18. 5. 2026 | **Mini-skupina pro 3-členná pásma** (multi-tier). Místo 1 zápasu o pásmový titul se hraje **round-robin** (3 zápasy: 1v2, 1v3, 2v3) — každý hraje a získá své umístění. Pro 7t: 1.-4. semi+finále + 5.-7. mini-RR. Pro 11t: + 9.-11. mini-RR. Pro 15t: + 13.-15. mini-RR. Pro 23t: + 21.-23. mini-RR. Generická logika `N mod 4 = 3`. Mini-skupiny běží paralelně s hlavními pásmy a skončí dříve než finále čela |
 | v0.14.1 | 18. 5. 2026 | **Bug fix postupový klíč — nerovnoměrné skupiny.** Engine generoval zápasy pro neexistující pozice (např. 4.C / 4.D když skupiny C a D mají jen 3 týmy). Fix: před sestavením bracketu se filtrují pozice podle `skupinyMap.get(sk).length` — jen existující se zahrnou. Velikost bracketu se zaokrouhlí dolu na nejbližší mocninu 2. Pro 14t (A=4,B=4,C=3,D=3) / top2+3-4 = 28 zápasů (před 32). Nový test runner `scripts/test-20-scenaru.mjs` (20 edge case scénářů, 20/20 OK). Verify-all 53/53 |
 | v0.14.0 | 18. 5. 2026 | **Postupový klíč** (hlavní + útěchový pavouk). Nový typ `PostupovyKlic` v `TurnajFormat`: `hlavniPocetZeSkupiny` (top N do hlavního pavouka) + `utechovy: {od, do}` (volitelný Plate). Engine rozšířen v `vitez` mode: pokud klíč definován, top N×K týmů (kde K=počet skupin) → hlavní bracket, pozice od.-do z každé skupiny → útěchový bracket (single elim). Útěchový pavouk běží **paralelně** s hlavním. UI panel v kroku 3 pod placement bracketem. Test runner 51 scénářů (3 nové: F1=16t/top2+3-4útěch, F2=16t/top1, F3=32t/top2+3-4útěch) |
 | v0.13.1 | 18. 5. 2026 | **Seeding chytrý do 64+ týmů.** Funkce `rozdelSeSeedingem` přesunuta z `hry/nova/page.tsx` do `lib/turnaj-postup.ts` (testovatelné). Algoritmus: pot 1 = random permutace (top K do K skupin), pot 2 = cross-pot (opačně k pot 1 — zaručí 1. a (K+1). v různých skupinách), pot 3+ = random permutace. Test `scripts/test-seeding.mjs` ověří 8t/12t/16t/32t/64t s 0 až all-nasazenými týmy — vše OK |
