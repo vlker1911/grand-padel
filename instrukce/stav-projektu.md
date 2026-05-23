@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.15.2  
-**Poslední změna:** 18. 5. 2026  
-**Git tag:** v0.15.2
+**Aktuální:** v0.15.3  
+**Poslední změna:** 23. 5. 2026  
+**Git tag:** v0.15.3
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.15.3 | 23. 5. 2026 | **Lint errors fix — připraveno pro Vercel build.** 9 chyb v `hry/page.tsx`, `hry/[id]/page.tsx`, `hry/nova/page.tsx` (`react-hooks/set-state-in-effect` + nová React 19 `forward-reference` chyba v useEffect + `next/no-html-link-for-pages`). Fix: `<a href="/hry">` → `<Link>` (import `next/link`), eslint-disable komentáře pro datově načítací useEffecty (správný pattern). `npm run build` ✓ kompletní (14 routes generated) |
 | v0.15.2 | 18. 5. 2026 | **Přepočet délky zápasů na body** podle reálné Americano statistiky. Vzorec `limit × 0.5` (předtím `0.45 + 5`). 16 bodů = 8 min, 24 bodů = 12 min, 32 bodů = 16 min. Pro Americano 8 hráčů / 7 zápasů / 32 bodů s 2 min pauzou se vejde do 2 hodin (16×7 + 2×6 = 124 min) |
 | v0.15.1 | 18. 5. 2026 | **UI volba pro N mod 4 = 1** (5, 9, 13, 17, 21t — poslední pásmo má 1 tým). Engine: `posledniSamotny: "automaticky" / "slouceni_pasem" / "bonus_zapas"`. UI panel se zobrazí v kroku 4 (doplňková nastavení) jen pro multi-tier a počet týmů kde N mod 4 = 1. Volby: (1) automaticky — nehraje, (2) sloučit poslední 5 týmů do RR, (3) bonus zápas s nejhorším z předchozího pásma |
 | v0.15.0 | 18. 5. 2026 | **Sety jako scoring typ** (standardní padel formát). Nový `scoringTyp: "sety"` v `TurnajFormat` + `setyKonfigurace: {vitezne, delkaSetu, setTiebreak, superTiebreak}`. Default: 2 vítězné, do 6 gamů, set tiebreak ZAP, super-tiebreak VYP. Pro 2 vítězné dostupná volba "Super-tiebreak místo 3. setu" (1:1 → STB do 10 bodů). Engine `delkaZapasu`: spočítá realistický čas (best-of-3 ~75 min, s STB ~65 min). UI 4. tlačítko "Sety" v kroku 1 + sub-konfigurace. Validace skóre: ukládá se počet vítězných setů (např. 2:0, 2:1) |

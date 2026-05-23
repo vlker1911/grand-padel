@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { spocitejTabulku } from "@/lib/americano";
@@ -1212,6 +1213,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
     setLoading(false);
   }, [hra.id, supabase]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { nactiTurnaj(); }, [nactiTurnaj]);
 
   // Skupiny
@@ -1260,6 +1262,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
     const trig = `${zapasy.length}|${pocetDohranych}`;
     if (posledniTrigger.current === trig) return;
     posledniTrigger.current = trig;
+    // eslint-disable-next-line
     aktualizujDruhouFazi();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vsechnySkupinyHotove, zapasy.length, pocetDohranych, jeZruseno, jeEditor, playoff, generujiPlayoff]);
@@ -2948,6 +2951,7 @@ export default function HraDetailPage() {
     setLoading(false);
   }, [id, supabase]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { nactiData(); }, [nactiData]);
 
   if (loading) return (
@@ -2973,7 +2977,7 @@ export default function HraDetailPage() {
         <div className="max-w-3xl mx-auto">
 
           <div className="mb-8">
-            <a href="/hry" className="text-sm hover:underline" style={{ color: "#801A28" }}>Zpet na hry</a>
+            <Link href="/hry" className="text-sm hover:underline" style={{ color: "#801A28" }}>Zpet na hry</Link>
             <div className="flex items-start justify-between gap-4 mt-3">
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl font-bold" style={{ color: "#801A28" }}>{hra.nazev}</h1>

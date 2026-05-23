@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import { generujAmericano } from "@/lib/americano";
@@ -408,6 +409,7 @@ export default function NovaHraPage() {
       const raw = localStorage.getItem(WIZARD_LS_KEY);
       if (!raw) return;
       const s = JSON.parse(raw);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (typeof s.tymu === "number") setWizardTymu(s.tymu);
       if (typeof s.maxKurtu === "number") setWizardMaxKurtu(s.maxKurtu);
       if (typeof s.delkaH === "number") setWizardDelkaH(s.delkaH);
@@ -570,6 +572,7 @@ export default function NovaHraPage() {
   useEffect(() => {
     if (scoringTyp === "cas" && autoKolo && autoKolo.validni) {
       const cap = Math.min(autoKolo.delkaKola, 60);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (scoringLimit !== cap) setScoringLimit(cap);
     }
   }, [scoringTyp, autoKolo, scoringLimit]);
@@ -578,6 +581,7 @@ export default function NovaHraPage() {
   useEffect(() => {
     if (scoringTyp !== "gamy") return;
     const novy = scoringLimit >= 6 ? "advantage" : "sudden_death";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (gamyTiebreak !== novy) setGamyTiebreak(novy);
   }, [scoringTyp, scoringLimit, gamyTiebreak]);
 
@@ -1016,7 +1020,7 @@ export default function NovaHraPage() {
         <div className="max-w-2xl mx-auto">
 
           <div className="mb-8">
-            <a href="/hry" className="text-sm hover:underline" style={{ color: "#801A28" }}>Zpet na hry</a>
+            <Link href="/hry" className="text-sm hover:underline" style={{ color: "#801A28" }}>Zpet na hry</Link>
             <h1 className="text-2xl font-bold mt-3" style={{ color: "#801A28" }}>Nova hra</h1>
             <div className="flex gap-2 mt-4">
               {Array.from({ length: maxKrok }, (_, i) => (
