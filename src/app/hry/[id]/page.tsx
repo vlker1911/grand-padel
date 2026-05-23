@@ -1618,6 +1618,16 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
     window.location.reload();
   }
 
+  async function odeberTym(tymId: string, tymNazev: string) {
+    if (zapasy.length > 0) {
+      alert("Tym nelze odebrat — turnaj uz je rozlosovany. Pokud chces zmenit slozeni, musis turnaj zrusit a vytvorit novy.");
+      return;
+    }
+    if (!confirm(`Opravdu odebrat tym "${tymNazev}" z turnaje?`)) return;
+    await supabase.from("turnaj_tymy").delete().eq("id", tymId);
+    nactiTurnaj();
+  }
+
   async function obnovTurnaj() {
     if (!confirm("Obnovit zruseny turnaj? Banner zmizi a turnaj bude opet aktivni.")) return;
     const noveSettings = { ...(hra.settings ?? {}) };
@@ -2821,15 +2831,25 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                           )}
                         </div>
                         {jeEditor && !jeZruseno && !editujem && (
-                          <button onClick={() => {
-                            setEditHraciTymId(t.id);
-                            setEditHrac1(h1?.jmeno ?? "");
-                            setEditHrac2(h2?.jmeno ?? "");
-                          }}
-                            className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1 text-xs font-medium hover:bg-zinc-50"
-                            style={{ color: "#801A28" }}>
-                            Upravit
-                          </button>
+                          <div className="shrink-0 flex items-center gap-2">
+                            <button onClick={() => {
+                              setEditHraciTymId(t.id);
+                              setEditHrac1(h1?.jmeno ?? "");
+                              setEditHrac2(h2?.jmeno ?? "");
+                            }}
+                              className="rounded-lg border border-zinc-200 px-3 py-1 text-xs font-medium hover:bg-zinc-50"
+                              style={{ color: "#801A28" }}>
+                              Upravit
+                            </button>
+                            {zapasy.length === 0 && (
+                              <button onClick={() => odeberTym(t.id, t.nazev)}
+                                title="Odebrat tym z turnaje (jen pred losovanim)"
+                                className="rounded-lg border border-red-200 px-3 py-1 text-xs font-medium hover:bg-red-50"
+                                style={{ color: "#801A28" }}>
+                                Odebrat
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                       {editujem && (

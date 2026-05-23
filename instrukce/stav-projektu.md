@@ -7,14 +7,15 @@
 
 ## Verze
 
-**Aktuální:** v0.15.6  
+**Aktuální:** v0.15.7  
 **Poslední změna:** 23. 5. 2026  
-**Git tag:** v0.15.6
+**Git tag:** v0.15.7
 
 ### Historie verzí
 
 | Verze | Datum | Co přibylo |
 |---|---|---|
+| v0.15.7 | 23. 5. 2026 | **Odebrat tým z turnaje** (jen před losováním). V tabu Hráči přibylo tlačítko **"Odebrat"** vedle "Upravit" — zobrazí se jen pokud `zapasy.length === 0` (turnaj ještě není rozlosovaný). Confirm dialog s názvem týmu. Funkce `odeberTym(tymId, tymNazev)`: DELETE z `turnaj_tymy`. Pokud už proběhlo losování, tlačítko se nezobrazí (a kdyby někdo zavolal funkci jinak, alert blokuje akci) |
 | v0.15.6 | 23. 5. 2026 | **Obnovit zrušený turnaj.** V banneru "Turnaj byl zrušen" přibylo tlačítko **"Obnovit turnaj"** (vedle "Smazat trvale"). Funkce `obnovTurnaj()` smaže `settings.zruseno / duvod_zruseni / zruseno_at` a vrátí `stav` na `"priprava"` (pokud žádné zápasy) nebo `"probiha"`. Confirm dialog. Banner zmizí a turnaj se obnoví |
 | v0.15.5 | 23. 5. 2026 | **Open Graph + Twitter Card meta tagy.** Sdílení odkazů (WhatsApp, Facebook, LinkedIn, Twitter, iMessage) teď ukáže náhled s logem a fotkou. `layout.tsx` rozšířen: `metadataBase`, `title.template` (`%s | Grand Padel`), description o všech 3 lokalitách (Olomouc/Ostrava/Praha-Zličín), keywords, OG image (`/photos/hero-homepage.jpg` 1200×630), Twitter `summary_large_image`, ikony (monogram). Site URL z env `NEXT_PUBLIC_SITE_URL` (default `https://grandpadel.cz`) |
 | v0.15.4 | 23. 5. 2026 | **Middleware → Proxy** (Next.js 16 deprecation). Soubor `src/middleware.ts` přejmenován na `src/proxy.ts`, funkce `middleware()` → `proxy()`. Funkčnost beze změny (Supabase Auth cookies refresh). Build už nehlásí deprecation warning |
