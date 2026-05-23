@@ -49,6 +49,7 @@ function defaultFormat(over = {}) {
     utechovyPavouk: false,
     bezSkupin: false,
     placementBracket: false,
+    postupovyKlic: undefined,
     pointRule: "golden",
     pocetKurtu: 4,
     casOd: "16:00",

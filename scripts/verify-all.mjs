@@ -31,6 +31,7 @@ function defaultFormat(over = {}) {
     utechovyPavouk: false,
     bezSkupin: false,
     placementBracket: false,
+    postupovyKlic: undefined,
     pointRule: "star",
     pocetKurtu: 4,
     casOd: "08:00",
@@ -178,6 +179,21 @@ S("D5 3t 1 skupina bez playoff", 3, 1, { playoffMode: "bez" });
 
 // ===== E) Velke turnaje placement =====
 S("E1 32t skupiny+placement", 32, 8, { pocetKurtu: 8, playoffMode: "vitez", vitezBracket: "auto", placementBracket: true, casDo: "23:00" });
+
+// ===== F) Postupovy klic =====
+S("F1 16t/4sk top2 hlavni + 3-4 utech", 16, 4, {
+  playoffMode: "vitez",
+  postupovyKlic: { hlavniPocetZeSkupiny: 2, utechovy: { od: 3, do: 4 } },
+});
+S("F2 16t/4sk top1 hlavni (jen vitezove)", 16, 4, {
+  playoffMode: "vitez",
+  postupovyKlic: { hlavniPocetZeSkupiny: 1 },
+});
+S("F3 32t/8sk top2 hlavni + 3-4 utech", 32, 8, {
+  pocetKurtu: 8, playoffMode: "vitez",
+  postupovyKlic: { hlavniPocetZeSkupiny: 2, utechovy: { od: 3, do: 4 } },
+  casDo: "23:00",
+});
 
 // ===== Spousteni =====
 

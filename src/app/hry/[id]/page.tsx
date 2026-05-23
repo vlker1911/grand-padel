@@ -1639,6 +1639,16 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
         utechovyPavouk: s.utech_pavouk === true,
         bezSkupin: s.bez_skupin === true,
         placementBracket: s.placement_bracket === true,
+        postupovyKlic: (() => {
+          const k = s.postupovy_klic as Record<string, unknown> | null | undefined;
+          if (!k || typeof k.hlavni_pocet_ze_skupiny !== "number") return undefined;
+          return {
+            hlavniPocetZeSkupiny: k.hlavni_pocet_ze_skupiny,
+            utechovy: (typeof k.utechovy_od === "number" && typeof k.utechovy_do === "number")
+              ? { od: k.utechovy_od, do: k.utechovy_do }
+              : undefined,
+          };
+        })(),
         pointRule: (s.point_rule as "golden" | "star" | "advantage") ?? "star",
         pocetKurtu: hra.pocet_kurtu,
         casOd: (s.cas_od as string) ?? "16:00",

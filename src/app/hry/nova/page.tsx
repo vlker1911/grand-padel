@@ -354,6 +354,10 @@ export default function NovaHraPage() {
   const [utechovyPavouk,     setUtechovyPavouk]     = useState(false);
   const [bezSkupin,          setBezSkupin]          = useState(false);
   const [placementBracket,   setPlacementBracket]   = useState(false);
+  // Postupový klíč: kdo postupuje do hlavního/útěchového bracketu (jen pro vitez mod se skupinami)
+  const [klicHlavniN,        setKlicHlavniN]        = useState<number>(0); // 0 = neaktivni
+  const [klicUtechOd,        setKlicUtechOd]        = useState<number>(0); // 0 = neaktivni
+  const [klicUtechDo,        setKlicUtechDo]        = useState<number>(0);
   const [pointRule,          setPointRule]          = useState<"golden" | "star" | "advantage">("star");
   const [vlastniDelky,       setVlastniDelky]       = useState(false);
   const [delkaSkupinaMin,    setDelkaSkupinaMin]    = useState<number | "">(20);
@@ -762,7 +766,13 @@ export default function NovaHraPage() {
     delkaSemiMin: vlastniDelky && typeof delkaSemiMin === "number" ? delkaSemiMin : null,
     delkaFinaleMin: vlastniDelky && typeof delkaFinaleMin === "number" ? delkaFinaleMin : null,
     pauzaMin: typeof pauzaMin === "number" ? pauzaMin : 1,
-  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, placementBracket, pointRule, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin]);
+    postupovyKlic: klicHlavniN > 0 ? {
+      hlavniPocetZeSkupiny: klicHlavniN,
+      utechovy: klicUtechOd > 0 && klicUtechDo >= klicUtechOd
+        ? { od: klicUtechOd, do: klicUtechDo }
+        : undefined,
+    } : undefined,
+  }), [scoringTyp, scoringLimit, scoringLimitPlayoff, odlisnyScoring, playoffMode, vitezBracket, utechovyPavouk, bezSkupin, placementBracket, pointRule, pocetKurtu, casOd, casDo, vlastniDelky, delkaSkupinaMin, delkaSemiMin, delkaFinaleMin, pauzaMin, klicHlavniN, klicUtechOd, klicUtechDo]);
 
   // Preview rozvrhu — z formularovych poli (s placeholder ID)
   const previewRozvrh = useMemo<Rozvrh | null>(() => {
@@ -869,6 +879,11 @@ export default function NovaHraPage() {
         losovani_at: losovaneTymy != null ? new Date().toISOString() : null,
         bez_skupin: bezSkupin,
         placement_bracket: placementBracket,
+        postupovy_klic: klicHlavniN > 0 ? {
+          hlavni_pocet_ze_skupiny: klicHlavniN,
+          utechovy_od: klicUtechOd > 0 ? klicUtechOd : null,
+          utechovy_do: klicUtechDo > 0 ? klicUtechDo : null,
+        } : null,
         point_rule: pointRule,
         turnaj_format: {
           delka_skupina_min: turnajFormat.delkaSkupinaMin,
@@ -1363,6 +1378,49 @@ export default function NovaHraPage() {
                                 </span>
                               </span>
                             </label>
+
+                            {/* POSTUPOVÝ KLÍČ — jen pro single elim se skupinami */}
+                            {!bezSkupin && (
+                              <div className="mt-3 rounded-lg border border-zinc-200 p-3">
+                                <p className="text-sm font-semibold mb-2" style={{ color: "#374151" }}>Postupový klíč</p>
+                                <p className="text-xs mb-3" style={{ color: "#9ca3af" }}>
+                                  Kdo ze skupiny postupuje do kterého pavouka. Nech 0 pro automatický výběr top N podle velikosti pavouka.
+                                </p>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <label className="text-xs flex-1" style={{ color: "#374151" }}>
+                                    <strong>Hlavní pavouk:</strong> top
+                                  </label>
+                                  <input type="number" min={0} max={8}
+                                    value={klicHlavniN}
+                                    onChange={e => setKlicHlavniN(Math.max(0, parseInt(e.target.value) || 0))}
+                                    className="w-14 rounded border border-zinc-200 px-2 py-1 text-xs text-center" />
+                                  <span className="text-xs" style={{ color: "#9ca3af" }}>z každé skupiny</span>
+                                </div>
+                                {klicHlavniN > 0 && (
+                                  <>
+                                    <div className="flex items-center gap-2">
+                                      <label className="text-xs flex-1" style={{ color: "#374151" }}>
+                                        <strong>Útěchový pavouk:</strong> pozice
+                                      </label>
+                                      <input type="number" min={0} max={8}
+                                        value={klicUtechOd}
+                                        onChange={e => setKlicUtechOd(Math.max(0, parseInt(e.target.value) || 0))}
+                                        placeholder="od"
+                                        className="w-14 rounded border border-zinc-200 px-2 py-1 text-xs text-center" />
+                                      <span className="text-xs" style={{ color: "#9ca3af" }}>–</span>
+                                      <input type="number" min={0} max={8}
+                                        value={klicUtechDo}
+                                        onChange={e => setKlicUtechDo(Math.max(0, parseInt(e.target.value) || 0))}
+                                        placeholder="do"
+                                        className="w-14 rounded border border-zinc-200 px-2 py-1 text-xs text-center" />
+                                    </div>
+                                    <p className="text-xs mt-2" style={{ color: "#9ca3af" }}>
+                                      Příklad: hlavní top 2, útěch 3-4 = nejlepší 2 ze skupiny do hlavního pavouka, 3.-4. místa do útěchového pavouka (Plate). Hraje se paralelně.
+                                    </p>
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
 

@@ -18,6 +18,18 @@ export type VitezBracket = "auto" | "top4" | "top8" | "top16";
 //   advantage — Klasicka vyhoda (jako v tenisu). Nejdelsi.
 export type PointRule = "golden" | "star" | "advantage";
 
+// Postupový klíč: pravidla pro distribuci týmů ze skupinové fáze
+// do hlavního / útěchového / dohrávkového bracketu.
+export type PostupovyKlic = {
+  // Kolik nejlepších z každé skupiny postupuje do HLAVNÍHO pavouka.
+  // Např. 1 = jen vítězové, 2 = top 2, 3 = top 3, atd.
+  // 0 = postupový klíč se nepoužívá, použije se vitezBracket.
+  hlavniPocetZeSkupiny: number;
+  // Volitelný ÚTĚCHOVÝ pavouk (Plate). Pozice X-Y ze skupin (1-indexed).
+  // Např. {od: 3, do: 4} = 3. a 4. místo ze skupiny tvoří útěchový bracket.
+  utechovy?: { od: number; do: number };
+};
+
 export type TurnajFormat = {
   scoringTyp: ScoringTyp;
   scoringLimit: number;
@@ -27,6 +39,7 @@ export type TurnajFormat = {
   utechovyPavouk: boolean;
   bezSkupin: boolean;     // true = preskoc skupinovou fazi, hraj rovnou playoff (nasazeni = poradi)
   placementBracket: boolean; // pro vitez mod: kazdy hraje az do konce o sve umisteni (full placement)
+  postupovyKlic?: PostupovyKlic; // volitelne: rozdeleni do hlavni/utechovy podle umisteni ve skupinach
   pointRule: PointRule;   // pravidlo na 40:40 v game; ovlivnuje prumernou delku zapasu
   pocetKurtu: number;
   casOd: string;          // "HH:MM"
@@ -350,7 +363,15 @@ export function generujRozvrh(
   } else if (fmt.playoffMode === "vitez") {
     // Single elim bracket (s volitelnym full placement: kazdy hraje az do konce).
     let bs: number;
-    if (fmt.vitezBracket === "top4") bs = 4;
+    // Pokud je definován postupový klíč: velikost bracketu = pocetZeSkupiny × pocetSkupin
+    const klic = fmt.postupovyKlic;
+    if (klic && klic.hlavniPocetZeSkupiny > 0 && !fmt.bezSkupin && skupinyKlice.length > 0) {
+      bs = klic.hlavniPocetZeSkupiny * skupinyKlice.length;
+      // Zaokrouhlit dolu na nejblizsi mocninu 2 (pavoukova matematika)
+      let bs2 = 2;
+      while (bs2 * 2 <= bs) bs2 *= 2;
+      bs = bs2;
+    } else if (fmt.vitezBracket === "top4") bs = 4;
     else if (fmt.vitezBracket === "top8") bs = 8;
     else if (fmt.vitezBracket === "top16") bs = 16;
     else {
@@ -369,6 +390,16 @@ export function generujRozvrh(
       for (let i = 0; i < bs / 2; i++) {
         participants.push(tymPro(i));
         participants.push(tymPro(bs - 1 - i));
+      }
+    } else if (klic && klic.hlavniPocetZeSkupiny > 0) {
+      // Postupový klíč: top N z každé skupiny do hlavního bracketu.
+      // Pořadí v bracketu: 1.A, 1.B, 1.C, ..., 2.A, 2.B, ..., atd.
+      // (interleaved — vítězové skupin nejvýš)
+      for (let poz = 1; poz <= klic.hlavniPocetZeSkupiny && participants.length < bs; poz++) {
+        for (const sk of skupinyKlice) {
+          if (participants.length >= bs) break;
+          participants.push({ id: null, label: `${poz}.${sk}` });
+        }
       }
     } else {
       for (let i = 0; i < bs; i++) {
@@ -491,6 +522,54 @@ export function generujRozvrh(
         }
         participants = noveKolo;
         kolo++;
+      }
+    }
+
+    // ===== UTECHOVY PAVOUK PODLE POSTUPOVEHO KLICE =====
+    // Pokud klic.utechovy definovany: pozice od-do z kazde skupiny tvori
+    // samostatny single elim bracket. Hraje se paralelne s hlavnim pavoukem.
+    if (klic && klic.utechovy && !fmt.bezSkupin && skupinyKlice.length > 0) {
+      const od = klic.utechovy.od;
+      const do_ = klic.utechovy.do;
+      if (do_ >= od) {
+        const pocetUtechovych = (do_ - od + 1) * skupinyKlice.length;
+        // Zaokrouhlit dolu na mocninu 2
+        let utechBs = 2;
+        while (utechBs * 2 <= pocetUtechovych) utechBs *= 2;
+        if (utechBs >= 2) {
+          let utechParticipants: Array<{ id: string | null; label: string }> = [];
+          for (let poz = od; poz <= do_ && utechParticipants.length < utechBs; poz++) {
+            for (const sk of skupinyKlice) {
+              if (utechParticipants.length >= utechBs) break;
+              utechParticipants.push({ id: null, label: `${poz}.${sk}` });
+            }
+          }
+          // Single elim bracket pro útěchový pavouk
+          let utKolo = 1;
+          let utKdyMuze = playoffStart;
+          while (utechParticipants.length > 1) {
+            const noveKolo: Array<{ id: string | null; label: string }> = [];
+            const koloMatches: GenZapas[] = [];
+            for (let i = 0; i < utechParticipants.length; i += 2) {
+              const a = utechParticipants[i], b = utechParticipants[i + 1];
+              const velikost = utechParticipants.length;
+              const fazePrefix = nazevFazePodleVelikosti(velikost);
+              const um = velikost === 2
+                ? "Útěchové finále"
+                : `Útěchový pavouk — ${fazePrefix} #${i / 2 + 1}`;
+              const z = naplanuj("utech_2", null, utKolo,
+                { tym1Id: a.id, tym2Id: b.id, tym1Label: a.label, tym2Label: b.label },
+                um, utKdyMuze, allKurty);
+              koloMatches.push(z);
+              noveKolo.push({ id: null, label: `Vitez ${um}` });
+            }
+            if (koloMatches.length > 0) {
+              utKdyMuze = Math.max(...koloMatches.map(z => parseHM(z.casKonec))) + fmt.pauzaMin;
+            }
+            utechParticipants = noveKolo;
+            utKolo++;
+          }
+        }
       }
     }
   } else if (fmt.playoffMode === "skupiny_o_umisteni" && !fmt.bezSkupin) {
