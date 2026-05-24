@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
-import { PrezentacePdf, type PrezentaceData, type PhotoSet } from "@/lib/pdf/PrezentacePdf";
-import { PrezentacePdfB } from "@/lib/pdf/PrezentacePdfB";
+import { type PhotoSet, type PrezentaceData } from "@/lib/pdf/PrezentacePdf";
+import { generujPptx } from "@/lib/pptx/PrezentacePptx";
 
 export const runtime = "nodejs";
 
@@ -31,7 +30,6 @@ async function nacistFotky(prezentaceId: string): Promise<PhotoSet> {
   const perPrezDir = path.join(process.cwd(), "public", "photos", "prezentace", prezentaceId);
   const globalDir = path.join(process.cwd(), "public", "photos", "prezentace");
   const set: PhotoSet = {};
-
   for (const [key, globalFilename] of Object.entries(GLOBAL_PHOTO_FILES)) {
     let photo = await zkusitNacist(path.join(perPrezDir, `${key}.jpg`));
     if (!photo) photo = await zkusitNacist(path.join(perPrezDir, `${key}.png`));
@@ -56,7 +54,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const design = url.searchParams.get("design")?.toUpperCase() === "B" ? "B" : "A";
 
   const supabase = await createClient();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ chyba: "Nepřihlášen" }, { status: 401 });
 
@@ -82,28 +79,26 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ chyba: "Prezentace nemá obsah" }, { status: 400 });
   }
 
-  const [logoFull, monogram, photos] = await Promise.all([
+  const [logoFullBase64, monogramBase64, photos] = await Promise.all([
     nacistObrazek("gp-logo-full.png"),
     nacistObrazek("gp-logo-monogram.png"),
     nacistFotky(id),
   ]);
 
-  const element =
-    design === "B" ? (
-      <PrezentacePdfB data={prezentace} monogramBase64={monogram} photos={photos} />
-    ) : (
-      <PrezentacePdf data={prezentace} logoBase64={logoFull} photos={photos} />
-    );
+  const buffer = await generujPptx(design, {
+    data: prezentace,
+    logoFullBase64,
+    monogramBase64,
+    photos,
+  });
 
-  const buffer = await renderToBuffer(element);
-
-  const filename = `grand-padel-${slugify(prezentace.firma_nazev)}-${design.toLowerCase()}.pdf`;
+  const filename = `grand-padel-${slugify(prezentace.firma_nazev)}-${design.toLowerCase()}.pptx`;
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${filename}"`,
+      "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "no-store",
     },
   });

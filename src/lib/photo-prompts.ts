@@ -55,34 +55,47 @@ V pozadí barová zóna ("GRAND PADEL BAR" nápis). Hala má industriální ocel
     perPrezentace: true,
     prompt: `Vytvoř realistickou architektonickou fotografii VSTUPU NA CENTER PADEL KURT v hale Grand Padel — TITLE SPONSORSHIP experience pro partnera "{PARTNER}".
 
-KAMERA: Mírně z boku, ale tak, aby BYLA VIDĚT OTEVŘENÁ VSTUPNÍ BRÁNA do kurtu a skrz ni šedý povrch kurtu se sítí.
+REÁLNÝ PADEL KURT — DŮLEŽITÉ:
+- CENTER kurt má standardní rozměry 10×20 m, obklopený skleněnými mantinely vysokými ~3 m
+- VSTUPNÍ DVEŘE jsou na DELŠÍ (BOČNÍ) STĚNĚ kurtu UPROSTŘED (mid-court), NIKDY v zadní/přední krátké stěně
+- Dveře jsou součástí skleněné stěny — otevíratelný skleněný panel v hliníkovém rámu
+- Velikost dveří: cca 2 m vysoké × 1 m široké — BĚŽNÁ VELIKOST DVEŘÍ
+- Rám dveří je úzký (jako u skleněné vchodové dveře, NE masivní pylon)
+- NAD SKLENĚNÝMI STĚNAMI je TENKÝ PÁS PLETIVOVÉ MŘÍŽKY (cca 30-40 cm vysoký) kolem celého obvodu kurtu
+- Síť uprostřed kurtu kolmo na boční stěny
 
-DŮLEŽITÉ: ŽÁDNÍ HRÁČI, prázdný kurt. Žádné rakety, žádné míčky v letu. Statický architektonický záběr.
+KAMERA: Pohled z bordó koberce na BOČNÍ STĚNU kurtu, mírně z úhlu, tak aby byl OTEVŘENÝ VSTUP do kurtu výrazně viditelný v rámu fotografie. Skrz otevřené dveře vidět šedý povrch kurtu se sítí.
 
-BRANDOVÁNÍ V BARVĚ {PARTNER_COLOR}:
-1) VSTUPNÍ SLOUPKY a rám vstupních dveří jsou výrazně v barvě {PARTNER_COLOR} — DOMINANTNÍ prvek záběru
-2) Horní PLETIVOVÁ MŘÍŽKA: pouze TENKÝ PÁS cca 30–40 cm vysoký bezprostředně nad horní hranou skleněných mantinelů. NESMÍ se rozšiřovat nahoru jako klec nebo box — jen úzký doplňkový pás kolem celého obvodu kurtu.
-3) PÁSKA NAHOŘE NA SÍTI uprostřed kurtu v barvě {PARTNER_COLOR} — výraznější, viditelná skrz otevřený vchod
+DŮLEŽITÉ: ŽÁDNÍ HRÁČI, prázdný kurt. Statický architektonický záběr s referencí na reálný moderní indoor padel kurt (Vamos Padel, Padel Heaven, City Padel jako příklady reálných instalací).
+
+BRANDOVÁNÍ — PRIMÁRNÍ BARVA {PARTNER_COLOR} + SEKUNDÁRNÍ BARVA {PARTNER_COLOR_2}:
+1) RÁM VSTUPNÍCH DVEŘÍ na boční stěně — úzký, ale jasně v barvě {PARTNER_COLOR} (primární). NE masivní pylon, jen barevný rám okolo skleněných dveří.
+2) Horní PLETIVOVÁ MŘÍŽKA (TENKÝ pás 30-40 cm nad skleněnými mantinely) v barvě {PARTNER_COLOR} (primární)
+3) PÁSKA NAHOŘE NA SÍTI v barvě {PARTNER_COLOR_2} (sekundární) — výraznější, viditelná skrz otevřený vchod. Pokud partner nemá sekundární barvu, použij primární {PARTNER_COLOR}.
 
 KURT:
 - Povrch ŠEDÝ s BÍLÝMI čárami
 - Síť uprostřed s páskou v barvě partnera
-- Skleněné stěny, ostatní konstrukce ČERNÁ (kromě prvků v partner barvě)
+- Skleněné stěny po celém obvodu, hliníkové sloupky v rozích a ve spojích — ČERNÉ (kromě rámu dveří)
+- Bordó (#8C1325) koberec OKOLO celého kurtu až k černým stěnám haly
 
-LOGO PARTNERA "{PARTNER}":
-- VELKÝ BÍLÝ NÁPIS "{PARTNER}" na BORDÓ KOBERCI v popředí před vstupem (mimo herní pole, dominantní, čitelný). Písmo SANS-SERIF moderní (NE kurzíva / NE script).
+LOGO PARTNERA "{PARTNER}" — TŘI UMÍSTĚNÍ:
+1) VELKÝ BÍLÝ NÁPIS "{PARTNER}" na BORDÓ KOBERCI v popředí před vstupními dveřmi (mimo herní pole, dominantní, čitelný shora). Písmo SANS-SERIF moderní bold (NE kurzíva, NE script).
+2) NÁPIS "{PARTNER}" U VSTUPNÍCH DVEŘÍ — viditelný a čitelný. Buď bílý nápis na skle dveří (pískované/etched glass), nebo vertikální banner v barvě {PARTNER_COLOR} vedle dveří. Musí být čitelný z perspektivy fotografie.
+3) NÁPIS "{PARTNER}" NA PÁSCE NA SÍTI — bílý text "{PARTNER}" na barevné pásce nahoře na síti (jako branding tape u tenisových turnajů). Čitelný skrz otevřený vchod.
 
 LOUNGE ZÓNA A POZADÍ:
-- Po straně kurtu na bordó koberci LOUNGE ZÓNA s L-SEZENÍM ve světle ŠEDÉ čalouněné úpravě (NE kožené, NE tmavé)
-- NAD LOUNGE JE JASNÉ OSVĚTLENÍ — designové závěsné LED lampy nebo bodovky. Lounge musí být DOBŘE VIDĚT, ne v šeru.
-- V POZADÍ JE VIDITELNÝ NÁPIS "GRAND PADEL BAR" — nasvícený, malý ale čitelný, jako součást barové zóny haly.
+- Po straně kurtu (na bordó koberci) MODERNÍ LOUNGE ZÓNA s L-SEZENÍM ve světle ŠEDÉ čalouněné úpravě (NE kožené, NE tmavé)
+- Nad lounge JASNÉ OSVĚTLENÍ — designové závěsné LED lampy. Lounge je dobře vidět.
+- V POZADÍ viditelný nápis "GRAND PADEL BAR"
+- Hala má industriální ocelovou příhradovou konstrukci stropu s LED panely, vysoký strop
 
 OSVĚTLENÍ:
 - LED panely shora, dramatic spotlight na kurt + lounge
-- Tmavé okolí HALY, ale CENTER kurt + lounge zóna + bar JSOU JASNĚ OSVĚTLENÉ
+- Tmavé okolí haly, ALE CENTER kurt + lounge + bar JSOU JASNĚ OSVĚTLENÉ
 - Kontrastní lighting
 
-Bez lidí, prémiový venue feel, realistic architectural photography. 16:9 widescreen.`,
+Bez lidí, prémiový venue feel, REALISTIC architectural photography odpovídající skutečným moderním padel halám. 16:9 widescreen.`,
   },
   {
     slot: "teambuilding",

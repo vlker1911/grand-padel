@@ -10,9 +10,10 @@ type Props = {
   prezentaceId: string;
   firmaNazev: string;
   firmaBarva: string | null;
+  firmaBarvaSekundarni: string | null;
 };
 
-export default function FotoSekce({ prezentaceId, firmaNazev, firmaBarva }: Props) {
+export default function FotoSekce({ prezentaceId, firmaNazev, firmaBarva, firmaBarvaSekundarni }: Props) {
   return (
     <div className="bg-white rounded-2xl shadow-sm p-6">
       <h2 className="text-sm font-semibold mb-2 uppercase tracking-wide" style={{ color: brand.colors.muted }}>
@@ -33,6 +34,7 @@ export default function FotoSekce({ prezentaceId, firmaNazev, firmaBarva }: Prop
             slot={s.slot}
             firmaNazev={firmaNazev}
             firmaBarva={firmaBarva}
+            firmaBarvaSekundarni={firmaBarvaSekundarni}
           />
         ))}
       </div>
@@ -45,11 +47,13 @@ function FotoKarta({
   slot,
   firmaNazev,
   firmaBarva,
+  firmaBarvaSekundarni,
 }: {
   prezentaceId: string;
   slot: PhotoSlot;
   firmaNazev: string;
   firmaBarva: string | null;
+  firmaBarvaSekundarni: string | null;
 }) {
   const meta = PHOTO_SLOTS.find((p) => p.slot === slot)!;
   const [stav, setStav] = useState<Stav>("idle");
@@ -59,9 +63,12 @@ function FotoKarta({
   const [kopirovano, setKopirovano] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const barvaText = firmaBarva?.trim() || "brand barva partnera (doplň HEX nebo název)";
+  const barvaText = firmaBarva?.trim() || "primární brand barva partnera (doplň HEX nebo název)";
+  const barva2Text =
+    firmaBarvaSekundarni?.trim() || firmaBarva?.trim() || "sekundární brand barva partnera (volitelně)";
   const promptText = meta.prompt
     .replace(/\{PARTNER\}/g, firmaNazev)
+    .replace(/\{PARTNER_COLOR_2\}/g, barva2Text)
     .replace(/\{PARTNER_COLOR\}/g, barvaText);
 
   // Existence souboru ověřujeme přes <img> načtení (onError = neexistuje)

@@ -17,6 +17,7 @@ type PrezentaceRow = {
   firma_kontakt_telefon: string | null;
   firma_web: string | null;
   firma_barva: string | null;
+  firma_barva_sekundarni: string | null;
   typy_spoluprace: string[];
   lokalita: string;
   velikost_firmy: string;
@@ -65,16 +66,53 @@ export default async function DetailPrezentace({ params }: Props) {
                 {typy} · {lokalita} · {velikost}
               </p>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <a
-                href={`/api/admin/prezentace/${prezentace.id}/pdf`}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-full px-5 py-2.5 text-sm font-semibold text-white whitespace-nowrap"
-                style={{ backgroundColor: brand.colors.red }}
-              >
-                Stáhnout PDF
-              </a>
+            <div className="flex flex-col items-end gap-3">
+              <div>
+                <div className="text-xs uppercase tracking-wide mb-1 text-right" style={{ color: brand.colors.muted }}>
+                  PDF — finální verze
+                </div>
+                <div className="flex gap-2">
+                  <a
+                    href={`/api/admin/prezentace/${prezentace.id}/pdf?design=A`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full px-4 py-2 text-sm font-semibold text-white whitespace-nowrap"
+                    style={{ backgroundColor: brand.colors.red }}
+                  >
+                    PDF — A
+                  </a>
+                  <a
+                    href={`/api/admin/prezentace/${prezentace.id}/pdf?design=B`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap border-2"
+                    style={{ borderColor: brand.colors.red, color: brand.colors.red }}
+                  >
+                    PDF — B
+                  </a>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-wide mb-1 text-right" style={{ color: brand.colors.muted }}>
+                  PPTX — editovatelná
+                </div>
+                <div className="flex gap-2">
+                  <a
+                    href={`/api/admin/prezentace/${prezentace.id}/pptx?design=A`}
+                    className="rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap border-2"
+                    style={{ borderColor: brand.colors.black, color: brand.colors.black }}
+                  >
+                    PPTX — A
+                  </a>
+                  <a
+                    href={`/api/admin/prezentace/${prezentace.id}/pptx?design=B`}
+                    className="rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap border-2"
+                    style={{ borderColor: brand.colors.black, color: brand.colors.black }}
+                  >
+                    PPTX — B
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -84,6 +122,7 @@ export default async function DetailPrezentace({ params }: Props) {
               prezentaceId={prezentace.id}
               firmaNazev={prezentace.firma_nazev}
               firmaBarva={prezentace.firma_barva}
+              firmaBarvaSekundarni={prezentace.firma_barva_sekundarni}
             />
           </div>
 

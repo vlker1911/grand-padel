@@ -358,7 +358,8 @@ export function PrezentacePdf({
       <Page size={[PAGE_W, PAGE_H]} style={s.pageDark}>
         <View style={{ flex: 1, justifyContent: "center" }}>
           <Text style={s.closeBig}>Děkujeme.</Text>
-          <Text style={s.closeSub}>{data.firma_nazev}, věříme, že má spolupráce smysl.</Text>
+          <View style={{ height: 24 }} />
+          <Text style={s.closeSub}>{data.firma_nazev} & Grand Padel — spolupráce, která dává smysl.</Text>
           <View style={s.courtLineWhite} />
         </View>
         <Text style={{ fontSize: 10, color: brand.colors.white, opacity: 0.5 }}>grandpadel.cz</Text>
