@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/server";
 import { brand, LOKALITY, VELIKOSTI_FIRMY, TYPY_SPOLUPRACE } from "@/lib/brand";
 import type { GenerovanyObsah } from "@/app/api/admin/prezentace/ulozit/route";
+import FotoSekce from "./FotoSekce";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -15,6 +16,7 @@ type PrezentaceRow = {
   firma_kontakt_email: string | null;
   firma_kontakt_telefon: string | null;
   firma_web: string | null;
+  firma_barva: string | null;
   typy_spoluprace: string[];
   lokalita: string;
   velikost_firmy: string;
@@ -74,6 +76,15 @@ export default async function DetailPrezentace({ params }: Props) {
                 Stáhnout PDF
               </a>
             </div>
+          </div>
+
+          {/* Fotky — upload */}
+          <div className="mb-6">
+            <FotoSekce
+              prezentaceId={prezentace.id}
+              firmaNazev={prezentace.firma_nazev}
+              firmaBarva={prezentace.firma_barva}
+            />
           </div>
 
           {/* Metadata */}

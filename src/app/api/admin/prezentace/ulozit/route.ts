@@ -26,6 +26,7 @@ type Body = {
   firmaKontaktEmail?: string;
   firmaKontaktTelefon?: string;
   firmaWeb?: string;
+  firmaBarva?: string;
   typySpoluprace?: string[];
   lokalita?: string;
   velikostFirmy?: string;
@@ -73,6 +74,7 @@ export async function POST(req: Request) {
       firma_kontakt_email: body.firmaKontaktEmail?.trim() || null,
       firma_kontakt_telefon: body.firmaKontaktTelefon?.trim() || null,
       firma_web: body.firmaWeb?.trim() || null,
+      firma_barva: body.firmaBarva?.trim() || null,
       typy_spoluprace: body.typySpoluprace!,
       lokalita: body.lokalita!,
       velikost_firmy: body.velikostFirmy!,

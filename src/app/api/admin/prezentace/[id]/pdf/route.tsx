@@ -3,9 +3,53 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
-import { PrezentacePdf, type PrezentaceData } from "@/lib/pdf/PrezentacePdf";
+import { PrezentacePdf, type PrezentaceData, type PhotoSet } from "@/lib/pdf/PrezentacePdf";
 
 export const runtime = "nodejs";
+
+const GLOBAL_PHOTO_FILES: Record<keyof PhotoSet, string> = {
+  hero: "hero-kurt.jpg",
+  akce: "akce-hraci.jpg",
+  center: "center-kurt.jpg",
+  centerVstup: "center-kurt-vstup.jpg",
+  teambuilding: "teambuilding.jpg",
+  detail: "detail-raketa.jpg",
+};
+
+async function zkusitNacist(fullPath: string): Promise<string | undefined> {
+  try {
+    const buf = await readFile(fullPath);
+    const ext = fullPath.toLowerCase().endsWith(".png") ? "png" : "jpeg";
+    return `data:image/${ext};base64,${buf.toString("base64")}`;
+  } catch {
+    return undefined;
+  }
+}
+
+async function nacistFotky(prezentaceId: string): Promise<PhotoSet> {
+  const perPrezDir = path.join(process.cwd(), "public", "photos", "prezentace", prezentaceId);
+  const globalDir = path.join(process.cwd(), "public", "photos", "prezentace");
+  const set: PhotoSet = {};
+
+  for (const [key, globalFilename] of Object.entries(GLOBAL_PHOTO_FILES)) {
+    // 1) Nejprve per-prezentace (jpg, pak png)
+    let photo = await zkusitNacist(path.join(perPrezDir, `${key}.jpg`));
+    if (!photo) photo = await zkusitNacist(path.join(perPrezDir, `${key}.png`));
+    // 2) Fallback na globální
+    if (!photo) photo = await zkusitNacist(path.join(globalDir, globalFilename));
+    if (photo) set[key as keyof PhotoSet] = photo;
+  }
+  return set;
+}
+
+async function nacistLogo(): Promise<string | undefined> {
+  try {
+    const buf = await readFile(path.join(process.cwd(), "public", "gp-logo-full.png"));
+    return `data:image/png;base64,${buf.toString("base64")}`;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,16 +80,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ chyba: "Prezentace nemá obsah" }, { status: 400 });
   }
 
-  let logoBase64: string | undefined;
-  try {
-    const logoPath = path.join(process.cwd(), "public", "gp-logo-full.png");
-    const buf = await readFile(logoPath);
-    logoBase64 = `data:image/png;base64,${buf.toString("base64")}`;
-  } catch {
-    // Logo nedostupné — PDF se vyrenderuje bez něj
-  }
+  const [logoBase64, photos] = await Promise.all([nacistLogo(), nacistFotky(id)]);
 
-  const buffer = await renderToBuffer(<PrezentacePdf data={prezentace} logoBase64={logoBase64} />);
+  const buffer = await renderToBuffer(
+    <PrezentacePdf data={prezentace} logoBase64={logoBase64} photos={photos} />
+  );
 
   const filename = `grand-padel-${slugify(prezentace.firma_nazev)}.pdf`;
 

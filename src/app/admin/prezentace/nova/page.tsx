@@ -24,6 +24,7 @@ type FormData = {
   firmaKontaktEmail: string;
   firmaKontaktTelefon: string;
   firmaWeb: string;
+  firmaBarva: string;
   typySpoluprace: TypSpoluprace[];
   lokalita: Lokalita | "";
   velikostFirmy: VelikostFirmy | "";
@@ -38,6 +39,7 @@ const VYCHOZI_DATA: FormData = {
   firmaKontaktEmail: "",
   firmaKontaktTelefon: "",
   firmaWeb: "",
+  firmaBarva: "",
   typySpoluprace: [],
   lokalita: "",
   velikostFirmy: "",
@@ -316,6 +318,13 @@ function KrokFirma({ data, update }: { data: FormData; update: <K extends keyof 
         <Input label="Telefon" value={data.firmaKontaktTelefon} onChange={(v) => update("firmaKontaktTelefon", v)} placeholder="+420 ..." />
       </div>
       <Input label="Web firmy" value={data.firmaWeb} onChange={(v) => update("firmaWeb", v)} placeholder="https://firma.cz" />
+      <Input
+        label="Brand barva partnera"
+        value={data.firmaBarva}
+        onChange={(v) => update("firmaBarva", v)}
+        placeholder="oranžová #FF6600"
+        hint="Použije se v promptu pro CENTER kurt fotku (mřížka, sloupky, páska na síti). Nepovinné, ale doporučené."
+      />
     </div>
   );
 }
