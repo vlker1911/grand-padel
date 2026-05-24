@@ -36,6 +36,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# per-prezentace uploaded fotky (runtime data, ne component v gitu)
+# Globální fotky v /public/photos/prezentace/{filename}.jpg ZŮSTÁVAJÍ tracked.
+# Jen složky s UUID v cestě (per-prezentace uploads) se ignorují.
+/public/photos/prezentace/*/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
