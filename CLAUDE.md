@@ -66,6 +66,18 @@ Vždy si přečti před prací:
 
 Pokud měníš brand v kódu (`globals.css`, `lib/brand.ts`, apod.), nejdřív ověř proti těmto souborům. Když najdeš nesoulad (kód říká X, paleta říká Y), **paleta vyhrává** a kód se upravuje.
 
+### ⚠ Logo na barevném pozadí — KRITICKÉ pravidlo
+
+Soubory `vizual/loga/*.png` mají **vlastní pozadí v starším placeholderu `#801A28`**, NIKOLI v oficiální Brand Red `#8C1325`. Když umístíš PNG logo na bordó stránku (cover prezentace, hero sekce), vznikne viditelný obdélníkový okraj kolem loga.
+
+**Pravidla:**
+1. **NIKDY** nepokládat PNG logo s vlastním bordó pozadím přímo na bordó plochu.
+2. Pro PDF/PPTX bordó pozadí použít **textový wordmark** `Grand Padel` v Poppins 900 bílá.
+3. Pro web na bordó použít SVG (až bude od grafika) nebo CSS-rendered logo.
+4. PNG je OK **jen na bílé / krémové pozadí**, kde je vlastní pozadí PNG neviditelné.
+
+Plné pravidlo: `vizual/loga/PRAVIDLA-POUZITI.md`.
+
 ## Struktura souborů
 
 ```

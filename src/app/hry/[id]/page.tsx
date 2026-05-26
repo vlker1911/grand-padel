@@ -85,7 +85,7 @@ function OhnostrojOverlay({ vitez, poradi, onDone }: { vitez: string; poradi: { 
       [12, 18], [50, 8], [82, 22], [8, 60], [72, 50],
       [35, 78], [88, 15], [28, 42], [60, 30], [45, 65],
     ];
-    const colors = ["#f59e0b", "#fbbf24", "#ef4444", "#801A28", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#f97316", "#ffffff"];
+    const colors = ["#f59e0b", "#fbbf24", "#ef4444", "#8C1325", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#f97316", "#ffffff"];
     return bursts.flatMap(([bx, by], bi) =>
       Array.from({ length: 14 }, (_, pi) => ({
         id: `${bi}-${pi}`,
@@ -263,12 +263,12 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
             <tbody>
               {tabulka.map((h, i) => (
                 <tr key={h.id} className="border-t border-zinc-50">
-                  <td className="pl-5 pr-2 py-3 font-bold text-xs" style={{ color: i === 0 ? "#801A28" : "#9ca3af" }}>{i + 1}</td>
+                  <td className="pl-5 pr-2 py-3 font-bold text-xs" style={{ color: i === 0 ? "#8C1325" : "#9ca3af" }}>{i + 1}</td>
                   <td className="px-2 py-3 font-semibold" style={{ color: "#0A0A0A" }}>{h.jmeno}</td>
                   <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#16a34a" }}>{h.vyhry}</td>
                   <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#6b7280" }}>{h.remisy}</td>
                   <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#dc2626" }}>{h.prohry}</td>
-                  <td className="px-2 py-3 text-center text-xs font-bold" style={{ color: "#801A28" }}>{h.body}</td>
+                  <td className="px-2 py-3 text-center text-xs font-bold" style={{ color: "#8C1325" }}>{h.body}</td>
                   <td className="px-2 py-3 text-center text-xs" style={{ color: "#6b7280" }}>{h.obdrzeno}</td>
                   <td className="px-2 pr-5 py-3 text-center text-xs font-semibold" style={{ color: h.rozdil >= 0 ? "#16a34a" : "#dc2626" }}>
                     {h.rozdil >= 0 ? "+" : ""}{h.rozdil}
@@ -288,7 +288,7 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
             {kola.map(k => (
               <button key={k} onClick={() => setAktivniKolo(k)}
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                style={{ backgroundColor: aktivniKolo === k ? "#801A28" : "transparent", color: aktivniKolo === k ? "white" : "#6b7280" }}>
+                style={{ backgroundColor: aktivniKolo === k ? "#8C1325" : "transparent", color: aktivniKolo === k ? "white" : "#6b7280" }}>
                 Kolo {k}
               </button>
             ))}
@@ -315,12 +315,12 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
                         <input type="number" min={0} max={limit} value={sc.s1}
                           onChange={e => updateScore(z.id, "s1", e.target.value)}
                           placeholder="—"
-                          className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
+                          className="w-12 rounded-lg border-2 border-[#8C1325] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
                         <span className="font-bold text-sm" style={{ color: "#9ca3af" }}>:</span>
                         <input type="number" min={0} max={limit} value={sc.s2}
                           onChange={e => updateScore(z.id, "s2", e.target.value)}
                           placeholder="—"
-                          className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
+                          className="w-12 rounded-lg border-2 border-[#8C1325] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
                       </div>
                     ) : (
                       <div className="shrink-0 text-center w-16">
@@ -340,7 +340,7 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
                       setScoreMap(prev => ({ ...prev, [z.id]: { s1: String(z.skore_tym1), s2: String(z.skore_tym2) } }));
                     }}
                       className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium hover:bg-zinc-50"
-                      style={{ color: "#801A28" }}>
+                      style={{ color: "#8C1325" }}>
                       Upravit
                     </button>
                   )}
@@ -353,7 +353,7 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
                       return (
                         <button onClick={() => ulozSkore(z.id)} disabled={ukladam === z.id || !platne}
                           className="rounded-lg px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
-                          style={{ backgroundColor: "#801A28" }}>
+                          style={{ backgroundColor: "#8C1325" }}>
                           {ukladam === z.id ? "..." : "Ulozit"}
                         </button>
                       );
@@ -375,7 +375,7 @@ function AmericanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
       {jeEditor && vsechnyOdehrany && (
         <button onClick={() => setZobrazOhnostroj(true)}
           className="w-full rounded-full py-3 text-sm font-semibold text-white"
-          style={{ backgroundColor: "#801A28" }}>
+          style={{ backgroundColor: "#8C1325" }}>
           Vyhodnotit
         </button>
       )}
@@ -618,7 +618,7 @@ function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
           {maxKol !== null && (
             <>
               <span style={{ color: "#d1d5db" }}>·</span>
-              <span className="font-semibold" style={{ color: kola.length >= maxKol ? "#801A28" : "#16a34a" }}>
+              <span className="font-semibold" style={{ color: kola.length >= maxKol ? "#8C1325" : "#16a34a" }}>
                 kolo {kola.length} / {maxKol}
               </span>
             </>
@@ -628,7 +628,7 @@ function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
 
       {/* Upozorneni — konec casu */}
       {dosloNaMaxKol && (
-        <div className="rounded-2xl px-5 py-4 text-sm font-semibold text-white text-center" style={{ backgroundColor: "#801A28" }}>
+        <div className="rounded-2xl px-5 py-4 text-sm font-semibold text-white text-center" style={{ backgroundColor: "#8C1325" }}>
           Dosahl jsi maximalniho poctu kol ({maxKol}) pro rezervaci {casOd}–{casDo}.
         </div>
       )}
@@ -642,14 +642,14 @@ function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
           </span>
         </div>
         <div className="text-center mb-6">
-          <span className="text-6xl font-bold tabular-nums" style={{ color: sekundy < 60 ? "#801A28" : "#0A0A0A" }}>
+          <span className="text-6xl font-bold tabular-nums" style={{ color: sekundy < 60 ? "#8C1325" : "#0A0A0A" }}>
             {formatCas(sekundy)}
           </span>
         </div>
         <div className="flex gap-3">
           <button onClick={() => setBezi(!bezi)}
             className="flex-1 rounded-full py-3 text-sm font-semibold text-white"
-            style={{ backgroundColor: "#801A28" }}>
+            style={{ backgroundColor: "#8C1325" }}>
             {bezi ? "Pozastavit" : sekundy === minutNaKolo * 60 ? "Spustit kolo" : "Pokracovat"}
           </button>
           <button onClick={resetujCas}
@@ -669,7 +669,7 @@ function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
               {kola.map(k => (
                 <button key={k.cislo} onClick={() => { setAktivniKolo(k.cislo); setUpravitKolo(null); }}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                  style={{ backgroundColor: aktivniKolo === k.cislo ? "#801A28" : "transparent", color: aktivniKolo === k.cislo ? "white" : "#6b7280" }}>
+                  style={{ backgroundColor: aktivniKolo === k.cislo ? "#8C1325" : "transparent", color: aktivniKolo === k.cislo ? "white" : "#6b7280" }}>
                   {k.cislo}.
                 </button>
               ))}
@@ -698,11 +698,11 @@ function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
                   {jeEditor && (aktivniKolo === kola.length || upravitKolo === aktivniKolo) && (
                     <div className="mt-3 flex gap-2">
                       <button onClick={() => zapisVysledek(k.kurt, "tym1")}
-                        className={`flex-1 rounded-lg py-2 text-xs font-semibold border-2 transition-all ${vysledek?.vitez === "tym1" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                        className={`flex-1 rounded-lg py-2 text-xs font-semibold border-2 transition-all ${vysledek?.vitez === "tym1" ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
                         Vyhrali: {k.tym1[0]} / {k.tym1[1]}
                       </button>
                       <button onClick={() => zapisVysledek(k.kurt, "tym2")}
-                        className={`flex-1 rounded-lg py-2 text-xs font-semibold border-2 transition-all ${vysledek?.vitez === "tym2" ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                        className={`flex-1 rounded-lg py-2 text-xs font-semibold border-2 transition-all ${vysledek?.vitez === "tym2" ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
                         Vyhrali: {k.tym2[0]} / {k.tym2[1]}
                       </button>
                     </div>
@@ -726,7 +726,7 @@ function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
           ) : (
             <button onClick={() => setUpravitKolo(aktivniKolo)}
               className="rounded-lg border border-zinc-200 px-4 py-2 text-xs font-medium hover:bg-zinc-50"
-              style={{ color: "#801A28" }}>
+              style={{ color: "#8C1325" }}>
               Upravit kolo {aktivniKolo}
             </button>
           )}
@@ -737,7 +737,7 @@ function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
       {jeEditor && !pridavamKolo && (
         <button onClick={otevriNoveKolo} disabled={dosloNaMaxKol}
           className="w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{ backgroundColor: "#801A28" }}>
+          style={{ backgroundColor: "#8C1325" }}>
           {dosloNaMaxKol
             ? `Max kol dosazeno (${maxKol})`
             : "Zapsat dalsi kolo"}
@@ -752,7 +752,7 @@ function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
           {/* Doporuceni */}
           {pohybInfo.length > 0 && (
             <div className="rounded-xl p-4 flex flex-col gap-2" style={{ backgroundColor: "#F2EDE4" }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: "#801A28" }}>Doporuceny pohyb hracu:</p>
+              <p className="text-xs font-semibold mb-1" style={{ color: "#8C1325" }}>Doporuceny pohyb hracu:</p>
               {pohybInfo.map(p => (
                 <div key={p.kurt} className="text-xs" style={{ color: "#374151" }}>
                   <span className="font-medium">Kurt {p.kurt}:</span>{" "}
@@ -787,7 +787,7 @@ function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
                             onChange={e => { updateNovyPar(p.kurt, tym, idx, e.target.value); setAktivniSuggestion(fieldKey); }}
                             onFocus={() => setAktivniSuggestion(fieldKey)}
                             onBlur={() => setTimeout(() => setAktivniSuggestion(null), 150)}
-                            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]"
+                            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]"
                           />
                           {aktivniSuggestion === fieldKey && seznam.length > 0 && (
                             <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-zinc-200 rounded-lg shadow-md overflow-hidden">
@@ -818,7 +818,7 @@ function MexicanoView({ hra, ucastnici, zapasy, jeEditor, nactiData }: {
             </button>
             <button onClick={ulozNoveKolo}
               className="flex-1 rounded-full py-3 text-sm font-semibold text-white"
-              style={{ backgroundColor: "#801A28" }}>
+              style={{ backgroundColor: "#8C1325" }}>
               Ulozit kolo {kola.length + 1}
             </button>
           </div>
@@ -1791,7 +1791,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
             {jeEditor && (
               z.stav === "probiha"
                 ? <button onClick={() => zrusitSpusteni(z.id)} className="text-xs underline" style={{ color: "#9ca3af" }}>zrusit start</button>
-                : <button onClick={() => spustitZapas(z.id)} className="text-xs underline" style={{ color: "#801A28" }}>Spustit zapas</button>
+                : <button onClick={() => spustitZapas(z.id)} className="text-xs underline" style={{ color: "#8C1325" }}>Spustit zapas</button>
             )}
           </div>
         )}
@@ -1804,12 +1804,12 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
               <input type="number" min={0} max={scoringTyp === "cas" ? undefined : (scoringTyp === "gamy" && (hra.settings?.gamy_tiebreak ?? "sudden_death") === "advantage" ? limit + 1 : limit)} value={sc.s1}
                 onChange={e => updateScore(z.id, "s1", e.target.value, z.faze)}
                 placeholder="—"
-                className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
+                className="w-12 rounded-lg border-2 border-[#8C1325] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
               <span className="font-bold text-sm" style={{ color: "#9ca3af" }}>:</span>
               <input type="number" min={0} max={scoringTyp === "cas" ? undefined : (scoringTyp === "gamy" && (hra.settings?.gamy_tiebreak ?? "sudden_death") === "advantage" ? limit + 1 : limit)} value={sc.s2}
                 onChange={e => updateScore(z.id, "s2", e.target.value, z.faze)}
                 placeholder="—"
-                className="w-12 rounded-lg border-2 border-[#801A28] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
+                className="w-12 rounded-lg border-2 border-[#8C1325] px-1 py-2 text-center text-sm font-bold focus:outline-none" />
             </div>
           ) : (
             <div className="shrink-0 text-center w-16">
@@ -1824,7 +1824,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
           {jeEditor && z.skore_tym1 != null && !jeUpravovany && (
             <button onClick={() => { setUpravitId(z.id); setScoreMap(prev => ({ ...prev, [z.id]: { s1: String(z.skore_tym1), s2: String(z.skore_tym2) } })); }}
               className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium hover:bg-zinc-50"
-              style={{ color: "#801A28" }}>
+              style={{ color: "#8C1325" }}>
               Upravit
             </button>
           )}
@@ -1866,7 +1866,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
           }
           return (
             <div className="mt-3 flex items-center justify-between gap-2">
-              {hint && <span className="text-xs" style={{ color: "#801A28" }}>{hint}</span>}
+              {hint && <span className="text-xs" style={{ color: "#8C1325" }}>{hint}</span>}
               <div className="flex gap-2 ml-auto">
                 {jeUpravovany && (
                   <button onClick={() => setUpravitId(null)}
@@ -1876,7 +1876,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                 )}
                 <button onClick={() => ulozSkore(z.id)} disabled={ukladam === z.id || !platne}
                   className="rounded-lg px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
-                  style={{ backgroundColor: "#801A28" }}>
+                  style={{ backgroundColor: "#8C1325" }}>
                   {ukladam === z.id ? "..." : "Ulozit"}
                 </button>
               </div>
@@ -1910,7 +1910,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
         <div className="rounded-2xl px-5 py-4 border" style={{ backgroundColor: "#fef2f2", borderColor: "#fecaca" }}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
-              <p className="text-sm font-semibold mb-1" style={{ color: "#801A28" }}>Turnaj byl zrusen</p>
+              <p className="text-sm font-semibold mb-1" style={{ color: "#8C1325" }}>Turnaj byl zrusen</p>
               <p className="text-xs" style={{ color: "#7f1d1d" }}>Duvod: {hra.settings?.duvod_zruseni}</p>
               {hra.settings?.zruseno_at && (
                 <p className="text-xs mt-1" style={{ color: "#9ca3af" }}>
@@ -1927,7 +1927,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                 </button>
                 <button onClick={onSmazatRequest}
                   className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium hover:bg-red-50"
-                  style={{ color: "#801A28" }}>
+                  style={{ color: "#8C1325" }}>
                   Smazat trvale
                 </button>
               </div>
@@ -1956,8 +1956,8 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                     <button key={k} onClick={() => !obsazeny && spustitZapasNaKurtu(zapasModal.id, k)} disabled={obsazeny}
                       className="rounded-xl py-3 text-sm font-semibold border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{
-                        borderColor: obsazeny ? "#e5e7eb" : "#801A28",
-                        color: obsazeny ? "#9ca3af" : "#801A28",
+                        borderColor: obsazeny ? "#e5e7eb" : "#8C1325",
+                        color: obsazeny ? "#9ca3af" : "#8C1325",
                         backgroundColor: obsazeny ? "#f9fafb" : "#fff5f5",
                       }}>
                       Kurt {k}
@@ -1990,7 +1990,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
               value={zrusitDuvod}
               onChange={e => setZrusitDuvod(e.target.value)}
               placeholder="Napr. nedostatek hracu, zraneni, technicka zavada..."
-              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28] resize-none"
+              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325] resize-none"
               rows={3}
             />
             <div className="flex gap-2 mt-4 justify-end">
@@ -2001,7 +2001,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
               </button>
               <button onClick={provedZruseniTurnaje} disabled={zrusujem || !zrusitDuvod.trim()}
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-                style={{ backgroundColor: "#801A28" }}>
+                style={{ backgroundColor: "#8C1325" }}>
                 {zrusujem ? "Rusim..." : "Ano, zrusit turnaj"}
               </button>
             </div>
@@ -2037,7 +2037,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
         ] as { k: Tab; l: string }[]).map(t => (
           <button key={t.k} onClick={() => setAktivniTab(t.k)}
             className="px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap border-b-2 -mb-px"
-            style={{ borderColor: aktivniTab === t.k ? "#801A28" : "transparent", color: aktivniTab === t.k ? "#801A28" : "#6b7280" }}>
+            style={{ borderColor: aktivniTab === t.k ? "#8C1325" : "transparent", color: aktivniTab === t.k ? "#8C1325" : "#6b7280" }}>
             {t.l}
           </button>
         ))}
@@ -2049,7 +2049,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Informace o turnaji</h2>
             {jeEditor && !editInfo && !jeZruseno && (
-              <button onClick={() => setEditInfo(true)} className="text-xs underline" style={{ color: "#801A28" }}>upravit</button>
+              <button onClick={() => setEditInfo(true)} className="text-xs underline" style={{ color: "#8C1325" }}>upravit</button>
             )}
           </div>
           {editInfo ? (
@@ -2057,37 +2057,37 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
               <div>
                 <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Nazev turnaje</label>
                 <input type="text" value={editNazev} onChange={e => setEditNazev(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
                   <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Cas od</label>
                   <input type="time" value={editCasOd} onChange={e => setEditCasOd(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                 </div>
                 <div className="flex-1">
                   <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Cas do</label>
                   <input type="time" value={editCasDo} onChange={e => setEditCasDo(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                 </div>
                 <div className="w-24">
                   <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Kurty</label>
                   <input type="number" min={1} max={20} value={editPocetKurtu}
                     onChange={e => { const n = parseInt(e.target.value); setEditPocetKurtu(isNaN(n) ? "" : n); }}
-                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                 </div>
               </div>
               <div>
                 <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Popis turnaje</label>
                 <textarea value={popis} onChange={e => setPopis(e.target.value)} rows={3}
                   placeholder="Napr. otevreny mix turnaj pro hrace 4+, prizes..."
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28] resize-none" />
+                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325] resize-none" />
               </div>
               <div>
                 <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Pravidla</label>
                 <textarea value={pravidla} onChange={e => setPravidla(e.target.value)} rows={3}
                   placeholder="Napr. tie-break v rozhodujicim gemu, lerne case..."
-                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28] resize-none" />
+                  className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325] resize-none" />
               </div>
               <p className="text-xs" style={{ color: "#9ca3af" }}>
                 Format a scoring zatim nelze menit po vytvoreni — pripravujeme v dalsi verzi.
@@ -2104,7 +2104,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                 }}
                   className="rounded-lg px-3 py-2 text-xs font-medium border border-zinc-200" style={{ color: "#374151" }}>Zrusit</button>
                 <button onClick={ulozInfo} disabled={ukladamInfo}
-                  className="rounded-lg px-4 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: "#801A28" }}>
+                  className="rounded-lg px-4 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ backgroundColor: "#8C1325" }}>
                   {ukladamInfo ? "Ukladam..." : "Ulozit"}
                 </button>
               </div>
@@ -2220,12 +2220,12 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                                 <input type="number" min={0}
                                   value={sc.s1} onChange={e => updateScore(z.id, "s1", e.target.value, z.faze)}
                                   placeholder="—"
-                                  className="w-10 rounded border-2 border-[#801A28] px-1 py-1 text-center text-sm font-bold focus:outline-none" />
+                                  className="w-10 rounded border-2 border-[#8C1325] px-1 py-1 text-center text-sm font-bold focus:outline-none" />
                                 <span className="font-bold text-xs" style={{ color: "#9ca3af" }}>:</span>
                                 <input type="number" min={0}
                                   value={sc.s2} onChange={e => updateScore(z.id, "s2", e.target.value, z.faze)}
                                   placeholder="—"
-                                  className="w-10 rounded border-2 border-[#801A28] px-1 py-1 text-center text-sm font-bold focus:outline-none" />
+                                  className="w-10 rounded border-2 border-[#8C1325] px-1 py-1 text-center text-sm font-bold focus:outline-none" />
                               </div>
                             ) : (
                               <span className="shrink-0 text-center w-14">
@@ -2246,7 +2246,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                               )}
                               <button onClick={() => ulozSkore(z.id)} disabled={ukladam === z.id}
                                 className="rounded-lg px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
-                                style={{ backgroundColor: "#801A28" }}>
+                                style={{ backgroundColor: "#8C1325" }}>
                                 {ukladam === z.id ? "..." : "Ulozit"}
                               </button>
                             </div>
@@ -2272,7 +2272,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                           ) : jeEditor && !jeZruseno ? (
                             <button onClick={() => spustitZapas(z.id)}
                               className="rounded-lg px-2.5 py-1 text-xs font-semibold text-white"
-                              style={{ backgroundColor: "#801A28" }}>
+                              style={{ backgroundColor: "#8C1325" }}>
                               Spustit
                             </button>
                           ) : (
@@ -2304,7 +2304,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                 return (
                   <section key={kurt} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
                     <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
-                      <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Kurt {kurt}</p>
+                      <p className="text-sm font-semibold" style={{ color: "#8C1325" }}>Kurt {kurt}</p>
                     </div>
                     <div className="divide-y divide-zinc-50">
                       {zapasyKurtu.map(h => {
@@ -2318,7 +2318,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                               <p className="text-xs font-bold tabular-nums" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>{casMinToStr(h.casStartMin)}</p>
                               <p className="text-xs" style={{ color: "#d1d5db" }}>{casMinToStr(h.casEndMin)}</p>
                             </div>
-                            <div className="w-px self-stretch" style={{ backgroundColor: hotovo ? "#e5e7eb" : "#801A28", opacity: 0.4 }} />
+                            <div className="w-px self-stretch" style={{ backgroundColor: hotovo ? "#e5e7eb" : "#8C1325", opacity: 0.4 }} />
                             <div className="flex-1 min-w-0">
                               <p className="text-xs mb-0.5" style={{ color: "#9ca3af" }}>{skupinaLabel}</p>
                               <p className="text-sm font-semibold truncate" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>
@@ -2339,7 +2339,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                                   {jeEditor && !jeZruseno && (
                                     <button onClick={() => spustitZapas(z.id)}
                                       className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
-                                      style={{ backgroundColor: "#801A28" }}>
+                                      style={{ backgroundColor: "#8C1325" }}>
                                       Spustit
                                     </button>
                                   )}
@@ -2376,7 +2376,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
             </div>
             <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
               <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
-                <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Fronta zapasu ({fronta.length})</p>
+                <p className="text-sm font-semibold" style={{ color: "#8C1325" }}>Fronta zapasu ({fronta.length})</p>
               </div>
               <div className="divide-y divide-zinc-50">
                 {fronta.map((z, idx) => {
@@ -2394,10 +2394,10 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                         <div className="shrink-0 w-12 text-center">
                           <p className="text-xs font-bold" style={{ color: hotovo ? "#9ca3af" : "#0A0A0A" }}>#{cisloZapasu}</p>
                           {z.kurt && (probiha || hotovo) && (
-                            <p className="text-xs mt-0.5" style={{ color: "#801A28" }}>Kurt {z.kurt}</p>
+                            <p className="text-xs mt-0.5" style={{ color: "#8C1325" }}>Kurt {z.kurt}</p>
                           )}
                         </div>
-                        <div className="w-px self-stretch" style={{ backgroundColor: hotovo ? "#e5e7eb" : probiha ? "#16a34a" : "#801A28", opacity: 0.4 }} />
+                        <div className="w-px self-stretch" style={{ backgroundColor: hotovo ? "#e5e7eb" : probiha ? "#16a34a" : "#8C1325", opacity: 0.4 }} />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs mb-1" style={{ color: "#9ca3af" }}>{skupinaLabel}</p>
                           <div className="flex items-center gap-2">
@@ -2409,12 +2409,12 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                                 <input type="number" min={0}
                                   value={sc.s1} onChange={e => updateScore(z.id, "s1", e.target.value, z.faze)}
                                   placeholder="—"
-                                  className="w-10 rounded border-2 border-[#801A28] px-1 py-1 text-center text-sm font-bold focus:outline-none" />
+                                  className="w-10 rounded border-2 border-[#8C1325] px-1 py-1 text-center text-sm font-bold focus:outline-none" />
                                 <span className="font-bold text-xs" style={{ color: "#9ca3af" }}>:</span>
                                 <input type="number" min={0}
                                   value={sc.s2} onChange={e => updateScore(z.id, "s2", e.target.value, z.faze)}
                                   placeholder="—"
-                                  className="w-10 rounded border-2 border-[#801A28] px-1 py-1 text-center text-sm font-bold focus:outline-none" />
+                                  className="w-10 rounded border-2 border-[#8C1325] px-1 py-1 text-center text-sm font-bold focus:outline-none" />
                               </div>
                             ) : (
                               <span className="shrink-0 text-center w-14">
@@ -2448,7 +2448,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                               {jeEditor && !jeZruseno && (
                                 <button onClick={() => spustitZapas(z.id)}
                                   className="rounded-lg px-3 py-1 text-xs font-semibold text-white"
-                                  style={{ backgroundColor: "#801A28" }}>
+                                  style={{ backgroundColor: "#8C1325" }}>
                                   Spustit
                                 </button>
                               )}
@@ -2464,7 +2464,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                           )}
                           <button onClick={() => ulozSkore(z.id)} disabled={ukladam === z.id}
                             className="rounded-lg px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
-                            style={{ backgroundColor: "#801A28" }}>
+                            style={{ backgroundColor: "#8C1325" }}>
                             {ukladam === z.id ? "..." : "Ulozit skore"}
                           </button>
                         </div>
@@ -2527,7 +2527,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
               return (
                 <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
                   <div className="px-5 py-3 border-b border-zinc-100" style={{ backgroundColor: "#fafafa" }}>
-                    <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Playoff (struktura)</p>
+                    <p className="text-sm font-semibold" style={{ color: "#8C1325" }}>Playoff (struktura)</p>
                     <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>
                       Zapasy se vygeneruji po dokonceni skupin a kliknuti na &quot;Zahajit playoff&quot;.
                     </p>
@@ -2565,14 +2565,14 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
           {/* Filtr + search */}
           <div className="flex flex-col sm:flex-row gap-3">
             <select value={filtrSkupiny} onChange={e => setFiltrSkupiny(e.target.value)}
-              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]"
+              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]"
               style={{ color: "#374151" }}>
               <option value="vse">Vsechny skupiny</option>
               {skupinyNazvy.map(s => <option key={s} value={s}>Skupina {s}</option>)}
             </select>
             <input type="text" value={hledat} onChange={e => setHledat(e.target.value)}
               placeholder="Hledat tym podle nazvu..."
-              className="flex-1 rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+              className="flex-1 rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
           </div>
 
           {skupinyNazvy.filter(s => filtrSkupiny === "vse" || filtrSkupiny === s).map(sName => {
@@ -2603,12 +2603,12 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                       <tbody>
                         {filtrovanaTabulka.map((t, i) => (
                           <tr key={t.id} className="border-t border-zinc-50">
-                            <td className="pl-5 pr-2 py-3 font-bold text-xs" style={{ color: i < 2 ? "#801A28" : "#9ca3af" }}>{i + 1}</td>
+                            <td className="pl-5 pr-2 py-3 font-bold text-xs" style={{ color: i < 2 ? "#8C1325" : "#9ca3af" }}>{i + 1}</td>
                             <td className="px-2 py-3 font-semibold text-sm" style={{ color: "#0A0A0A" }}>{t.nazev}</td>
                             <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#16a34a" }}>{t.vyhry}</td>
                             <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#6b7280" }}>{t.remisy}</td>
                             <td className="px-2 py-3 text-center text-xs font-medium" style={{ color: "#dc2626" }}>{t.prohry}</td>
-                            <td className="px-2 py-3 text-center text-xs font-bold" style={{ color: "#801A28" }}>{t.skore}</td>
+                            <td className="px-2 py-3 text-center text-xs font-bold" style={{ color: "#8C1325" }}>{t.skore}</td>
                             <td className="px-2 pr-5 py-3 text-center text-xs font-semibold" style={{ color: t.rozdil >= 0 ? "#16a34a" : "#dc2626" }}>
                               {t.rozdil >= 0 ? "+" : ""}{t.rozdil}
                             </td>
@@ -2636,7 +2636,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
           {jeEditor && playoff && vsechnySkupinyHotove && !playoffExistuje && !jeZruseno && (
             <button onClick={vytvorPlayoff} disabled={generujiPlayoff}
               className="w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#801A28" }}>
+              style={{ backgroundColor: "#8C1325" }}>
               {generujiPlayoff ? "Generuji playoff..." : "Zahajit playoff"}
             </button>
           )}
@@ -2694,7 +2694,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                               {ostatni.map(z => renderZapas(z, scoringLimitPlayoff))}
                               {fin && (
                                 <div>
-                                  <div className="px-5 py-1 text-xs" style={{ color: "#801A28", backgroundColor: "#fff5f5" }}>Finále (1. místo)</div>
+                                  <div className="px-5 py-1 text-xs" style={{ color: "#8C1325", backgroundColor: "#fff5f5" }}>Finále (1. místo)</div>
                                   {renderZapas(fin, scoringLimitPlayoff)}
                                 </div>
                               )}
@@ -2725,7 +2725,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
             <>
               <button onClick={() => setZobrazOhnostroj(true)}
                 className="w-full rounded-full py-3 text-sm font-semibold text-white"
-                style={{ backgroundColor: "#801A28" }}>
+                style={{ backgroundColor: "#8C1325" }}>
                 Vyhodnotit — zobrazit viteze
               </button>
               {finalniPoradi.length > 0 && (
@@ -2738,7 +2738,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                       <div key={t.nazev} className="px-5 py-3 flex items-center gap-3">
                         <span className="text-sm font-bold w-6 text-right shrink-0" style={{ color: i === 0 ? "#f59e0b" : i === 1 ? "#9ca3af" : i === 2 ? "#cd7c32" : "#d1d5db" }}>{i + 1}.</span>
                         <span className="flex-1 font-semibold text-sm" style={{ color: "#0A0A0A" }}>{t.nazev}</span>
-                        <span className="text-sm font-bold shrink-0" style={{ color: i === 0 ? "#801A28" : "#6b7280" }}>{t.skore} b</span>
+                        <span className="text-sm font-bold shrink-0" style={{ color: i === 0 ? "#8C1325" : "#6b7280" }}>{t.skore} b</span>
                       </div>
                     ))}
                   </div>
@@ -2777,11 +2777,11 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                       {z.kurt && <p className="text-xs" style={{ color: "#9ca3af" }}>Kurt {z.kurt}</p>}
                     </div>
                     <div className="flex items-center gap-3">
-                      <p className="flex-1 text-right text-sm" style={{ color: vitez === z.tym1_id ? "#801A28" : "#6b7280", fontWeight: vitez === z.tym1_id ? 700 : 500 }}>
+                      <p className="flex-1 text-right text-sm" style={{ color: vitez === z.tym1_id ? "#8C1325" : "#6b7280", fontWeight: vitez === z.tym1_id ? 700 : 500 }}>
                         {jmenoTymu(z.tym1_id)}
                       </p>
                       <p className="shrink-0 text-base font-bold tabular-nums" style={{ color: "#0A0A0A" }}>{s1} : {s2}</p>
-                      <p className="flex-1 text-sm" style={{ color: vitez === z.tym2_id ? "#801A28" : "#6b7280", fontWeight: vitez === z.tym2_id ? 700 : 500 }}>
+                      <p className="flex-1 text-sm" style={{ color: vitez === z.tym2_id ? "#8C1325" : "#6b7280", fontWeight: vitez === z.tym2_id ? 700 : 500 }}>
                         {jmenoTymu(z.tym2_id)}
                       </p>
                     </div>
@@ -2803,7 +2803,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
           <div className="flex flex-col gap-3">
             <input type="text" value={hledat} onChange={e => setHledat(e.target.value)}
               placeholder="Hledat tym nebo hrace..."
-              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+              className="rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
             <section className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-100">
                 <h2 className="font-semibold text-sm" style={{ color: "#0A0A0A" }}>Tymy a hraci</h2>
@@ -2838,14 +2838,14 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                               setEditHrac2(h2?.jmeno ?? "");
                             }}
                               className="rounded-lg border border-zinc-200 px-3 py-1 text-xs font-medium hover:bg-zinc-50"
-                              style={{ color: "#801A28" }}>
+                              style={{ color: "#8C1325" }}>
                               Upravit
                             </button>
                             {zapasy.length === 0 && (
                               <button onClick={() => odeberTym(t.id, t.nazev)}
                                 title="Odebrat tym z turnaje (jen pred losovanim)"
                                 className="rounded-lg border border-red-200 px-3 py-1 text-xs font-medium hover:bg-red-50"
-                                style={{ color: "#801A28" }}>
+                                style={{ color: "#8C1325" }}>
                                 Odebrat
                               </button>
                             )}
@@ -2857,10 +2857,10 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                           <div className="flex gap-2">
                             <input type="text" value={editHrac1} onChange={e => setEditHrac1(e.target.value)}
                               placeholder="Jmeno hrace 1"
-                              className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                              className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                             <input type="text" value={editHrac2} onChange={e => setEditHrac2(e.target.value)}
                               placeholder="Jmeno hrace 2"
-                              className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                              className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                           </div>
                           <div className="flex gap-2 justify-end">
                             <button onClick={() => { setEditHraciTymId(null); setEditHrac1(""); setEditHrac2(""); }}
@@ -2870,7 +2870,7 @@ function TurnajView({ hra, jeEditor, onSmazatRequest }: { hra: Hra; jeEditor: bo
                             </button>
                             <button onClick={() => ulozHraceTymu(t.id)} disabled={ukladamHrace}
                               className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-                              style={{ backgroundColor: "#801A28" }}>
+                              style={{ backgroundColor: "#8C1325" }}>
                               {ukladamHrace ? "Ukladam..." : "Ulozit"}
                             </button>
                           </div>
@@ -3015,10 +3015,10 @@ export default function HraDetailPage() {
         <div className="max-w-3xl mx-auto">
 
           <div className="mb-8">
-            <Link href="/hry" className="text-sm hover:underline" style={{ color: "#801A28" }}>Zpet na hry</Link>
+            <Link href="/hry" className="text-sm hover:underline" style={{ color: "#8C1325" }}>Zpet na hry</Link>
             <div className="flex items-start justify-between gap-4 mt-3">
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl font-bold" style={{ color: "#801A28" }}>{hra.nazev}</h1>
+                <h1 className="text-2xl font-bold" style={{ color: "#8C1325" }}>{hra.nazev}</h1>
                 <p className="text-sm mt-1" style={{ color: "#6b7280" }}>
                   {hra.typ.charAt(0).toUpperCase() + hra.typ.slice(1)}
                   {" · "}{hra.pocet_kurtu} {hra.pocet_kurtu === 1 ? "kurt" : "kurty"}
@@ -3057,7 +3057,7 @@ export default function HraDetailPage() {
                 </div>
                 <button onClick={sdilet}
                   className="text-xs underline hover:no-underline"
-                  style={{ color: "#801A28" }}>
+                  style={{ color: "#8C1325" }}>
                   {zkopirovano ? "Zkopírováno ✓" : "Sdílet odkaz"}
                 </button>
               </div>
@@ -3073,7 +3073,7 @@ export default function HraDetailPage() {
               ] as Array<["hra" | "startovne", string]>).map(([k, l]) => (
                 <button key={k} onClick={() => setTopTab(k)}
                   className="px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px"
-                  style={{ borderColor: topTab === k ? "#801A28" : "transparent", color: topTab === k ? "#801A28" : "#6b7280" }}>
+                  style={{ borderColor: topTab === k ? "#8C1325" : "transparent", color: topTab === k ? "#8C1325" : "#6b7280" }}>
                   {l}
                 </button>
               ))}
@@ -3098,7 +3098,7 @@ export default function HraDetailPage() {
               <p className="text-xs mb-2" style={{ color: "#9ca3af" }}>Nebezpecna zona</p>
               <button onClick={otevriSmazatModal}
                 className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium hover:bg-red-50"
-                style={{ color: "#801A28" }}>
+                style={{ color: "#8C1325" }}>
                 Smazat trvale
               </button>
             </div>
@@ -3107,7 +3107,7 @@ export default function HraDetailPage() {
           {smazatModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => !mazem && setSmazatModal(false)}>
               <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold mb-2" style={{ color: "#801A28" }}>Trvale smazat hru?</h3>
+                <h3 className="text-lg font-bold mb-2" style={{ color: "#8C1325" }}>Trvale smazat hru?</h3>
                 <p className="text-sm mb-3" style={{ color: "#6b7280" }}>
                   Tato akce je <strong>nevratna</strong>. Smaze vsechny zapasy, ucastniky i nastaveni hry.
                 </p>
@@ -3136,7 +3136,7 @@ export default function HraDetailPage() {
                   </button>
                   <button onClick={provedSmazani} disabled={mazem || !potvrzeni}
                     className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-                    style={{ backgroundColor: "#801A28" }}>
+                    style={{ backgroundColor: "#8C1325" }}>
                     {mazem ? "Mazu..." : "Ano, smazat trvale"}
                   </button>
                 </div>

@@ -57,14 +57,14 @@ export default function Kontakt() {
 
               {/* Kontaktní údaje firmy */}
               <div>
-                <h2 className="text-xl font-bold mb-1 pb-3 border-b-2" style={{ color: "#801A28", borderColor: "#801A28" }}>
+                <h2 className="text-xl font-bold mb-1 pb-3 border-b-2" style={{ color: "#8C1325", borderColor: "#8C1325" }}>
                   Kontakt
                 </h2>
                 <div className="mt-5 flex flex-col gap-3 text-sm" style={{ color: "#374151" }}>
                   <p className="text-base font-bold" style={{ color: "#0A0A0A" }}>Grand Padel s.r.o.</p>
 
                   <div className="flex items-start gap-2.5">
-                    <MapPin size={16} className="mt-0.5 shrink-0" style={{ color: "#801A28" }} />
+                    <MapPin size={16} className="mt-0.5 shrink-0" style={{ color: "#8C1325" }} />
                     <div>
                       <p>Nad Sokolovnou 534</p>
                       <p>267 06 Hýskov</p>
@@ -73,17 +73,17 @@ export default function Kontakt() {
                   </div>
 
                   <div className="flex items-center gap-2.5">
-                    <Phone size={16} className="shrink-0" style={{ color: "#801A28" }} />
+                    <Phone size={16} className="shrink-0" style={{ color: "#8C1325" }} />
                     <a href="tel:+420722918191" className="hover:underline" style={{ color: "#374151" }}>+420 722 918 191</a>
                   </div>
 
                   <div className="flex items-center gap-2.5">
-                    <Mail size={16} className="shrink-0" style={{ color: "#801A28" }} />
+                    <Mail size={16} className="shrink-0" style={{ color: "#8C1325" }} />
                     <a href="mailto:info@grandpadel.cz" className="hover:underline" style={{ color: "#374151" }}>info@grandpadel.cz</a>
                   </div>
 
                   <div className="flex items-center gap-2.5">
-                    <AtSign size={16} className="shrink-0" style={{ color: "#801A28" }} />
+                    <AtSign size={16} className="shrink-0" style={{ color: "#8C1325" }} />
                     <a href="https://www.instagram.com/grandpadelcz" target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: "#374151" }}>
                       @grandpadelcz
                     </a>
@@ -105,16 +105,16 @@ export default function Kontakt() {
 
               {/* Lidé */}
               <div>
-                <h2 className="text-xl font-bold mb-1 pb-3 border-b-2" style={{ color: "#801A28", borderColor: "#801A28" }}>
+                <h2 className="text-xl font-bold mb-1 pb-3 border-b-2" style={{ color: "#8C1325", borderColor: "#8C1325" }}>
                   Obchodní a provozní kontakt
                 </h2>
                 <div className="mt-5 flex flex-col gap-5">
                   {LIDE.map((l) => (
-                    <div key={l.jmeno} className="pl-4 border-l-2" style={{ borderColor: "#801A28" }}>
+                    <div key={l.jmeno} className="pl-4 border-l-2" style={{ borderColor: "#8C1325" }}>
                       <p className="font-bold text-sm" style={{ color: "#0A0A0A" }}>{l.jmeno}</p>
                       {l.role && <p className="text-xs mb-1" style={{ color: "#6b7280" }}>{l.role}</p>}
-                      <a href={`tel:${l.tel.replace(/\s/g, "")}`} className="block text-sm hover:underline" style={{ color: "#801A28" }}>{l.tel}</a>
-                      <a href={`mailto:${l.email}`} className="block text-sm hover:underline" style={{ color: "#801A28" }}>{l.email}</a>
+                      <a href={`tel:${l.tel.replace(/\s/g, "")}`} className="block text-sm hover:underline" style={{ color: "#8C1325" }}>{l.tel}</a>
+                      <a href={`mailto:${l.email}`} className="block text-sm hover:underline" style={{ color: "#8C1325" }}>{l.email}</a>
                     </div>
                   ))}
                 </div>
@@ -122,7 +122,7 @@ export default function Kontakt() {
 
               {/* Teaser box */}
               <div className="rounded-2xl p-6" style={{ backgroundColor: "#F2EDE4" }}>
-                <p className="text-sm font-medium mb-1" style={{ color: "#801A28" }}>Otevření v roce 2026</p>
+                <p className="text-sm font-medium mb-1" style={{ color: "#8C1325" }}>Otevření v roce 2026</p>
                 <p className="text-sm" style={{ color: "#6b7280" }}>
                   Naše první haly jsou v přípravné fázi. Sledujte nás na sociálních sítích
                   nebo nám zanechte e-mail — dáme vám vědět jako prvním.
@@ -132,7 +132,7 @@ export default function Kontakt() {
 
             {/* PRAVÝ SLOUPEC — formulář */}
             <div>
-              <h2 className="text-xl font-bold mb-1 pb-3 border-b-2" style={{ color: "#801A28", borderColor: "#801A28" }}>
+              <h2 className="text-xl font-bold mb-1 pb-3 border-b-2" style={{ color: "#8C1325", borderColor: "#8C1325" }}>
                 Napište nám
               </h2>
 
@@ -148,46 +148,46 @@ export default function Kontakt() {
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium" style={{ color: "#374151" }} htmlFor="jmeno">Jméno</label>
                       <input id="jmeno" name="jmeno" type="text" placeholder="Jana Nováková"
-                        className="rounded-xl border border-zinc-200 px-4 py-3 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#801A28] focus:border-transparent"
+                        className="rounded-xl border border-zinc-200 px-4 py-3 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#8C1325] focus:border-transparent"
                         style={{ color: "#0A0A0A" }} />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium" style={{ color: "#374151" }} htmlFor="telefon">Telefon</label>
                       <input id="telefon" name="telefon" type="tel" placeholder="+420 777 123 456"
-                        className="rounded-xl border border-zinc-200 px-4 py-3 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#801A28] focus:border-transparent"
+                        className="rounded-xl border border-zinc-200 px-4 py-3 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#8C1325] focus:border-transparent"
                         style={{ color: "#0A0A0A" }} />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium" style={{ color: "#374151" }} htmlFor="email">
-                      Email <span style={{ color: "#801A28" }}>*</span>
+                      Email <span style={{ color: "#8C1325" }}>*</span>
                     </label>
                     <input id="email" name="email" type="email" required placeholder="jana@example.cz"
-                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#801A28] focus:border-transparent"
+                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#8C1325] focus:border-transparent"
                       style={{ color: "#0A0A0A" }} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium" style={{ color: "#374151" }} htmlFor="predmet">Předmět</label>
                     <input id="predmet" name="predmet" type="text" placeholder="Dotaz k otevření / spolupráce / ..."
-                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#801A28] focus:border-transparent"
+                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#8C1325] focus:border-transparent"
                       style={{ color: "#0A0A0A" }} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium" style={{ color: "#374151" }} htmlFor="zprava">
-                      Zpráva <span style={{ color: "#801A28" }}>*</span>
+                      Zpráva <span style={{ color: "#8C1325" }}>*</span>
                     </label>
                     <textarea id="zprava" name="zprava" required rows={5} placeholder="Vaše zpráva..."
-                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#801A28] focus:border-transparent resize-none"
+                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#8C1325] focus:border-transparent resize-none"
                       style={{ color: "#0A0A0A" }} />
                   </div>
 
                   {stav === "chyba" && (
-                    <p className="text-sm" style={{ color: "#801A28" }}>Něco se pokazilo. Zkuste to znovu nebo nás kontaktujte přímo na info@grandpadel.cz.</p>
+                    <p className="text-sm" style={{ color: "#8C1325" }}>Něco se pokazilo. Zkuste to znovu nebo nás kontaktujte přímo na info@grandpadel.cz.</p>
                   )}
 
                   <button type="submit" disabled={stav === "odesila"}
                     className="rounded-full px-8 py-4 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
-                    style={{ backgroundColor: "#801A28" }}>
+                    style={{ backgroundColor: "#8C1325" }}>
                     {stav === "odesila" ? "Odesílám…" : "Odeslat zprávu"}
                   </button>
                   <p className="text-xs" style={{ color: "#9ca3af" }}>Zpravidla odpovídáme do 24 hodin.</p>

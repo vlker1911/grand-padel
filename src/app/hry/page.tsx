@@ -26,7 +26,7 @@ const TYP_LABEL: Record<string, string> = {
 };
 
 const TYP_COLOR: Record<string, string> = {
-  americano: "#801A28",
+  americano: "#8C1325",
   mexicano: "#b45309",
   mixano: "#6d28d9",
   turnaj: "#0f766e",
@@ -123,12 +123,12 @@ export default function HryPage() {
 
           <div className="flex items-center justify-between mb-10">
             <div>
-              <h1 className="text-3xl font-bold" style={{ color: "#801A28" }}>Herní centrum</h1>
+              <h1 className="text-3xl font-bold" style={{ color: "#8C1325" }}>Herní centrum</h1>
               <p className="mt-1 text-sm" style={{ color: "#6b7280" }}>Americano, Mexicano, Mixano, Turnaj</p>
             </div>
             <Link href="/hry/nova"
               className="rounded-full px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#801A28" }}>
+              style={{ backgroundColor: "#8C1325" }}>
               + Nová hra
             </Link>
           </div>
@@ -145,7 +145,7 @@ export default function HryPage() {
                   className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
                     filtr === k ? "text-white" : "bg-white border border-zinc-200 hover:bg-zinc-50"
                   }`}
-                  style={filtr === k ? { backgroundColor: "#801A28" } : { color: "#374151" }}>
+                  style={filtr === k ? { backgroundColor: "#8C1325" } : { color: "#374151" }}>
                   {label} <span className={filtr === k ? "opacity-70" : "text-zinc-400"}>({pocty_filtru[k]})</span>
                 </button>
               ))}
@@ -162,7 +162,7 @@ export default function HryPage() {
               <p className="text-sm mb-6" style={{ color: "#6b7280" }}>Vytvoř první hru a pozvi kamarády!</p>
               <Link href="/hry/nova"
                 className="rounded-full px-6 py-3 text-sm font-semibold text-white"
-                style={{ backgroundColor: "#801A28" }}>
+                style={{ backgroundColor: "#8C1325" }}>
                 Vytvoř první hru
               </Link>
             </div>
@@ -223,7 +223,7 @@ export default function HryPage() {
       {smazatHra && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => !mazem && setSmazatHra(null)}>
           <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold mb-2" style={{ color: "#801A28" }}>Trvale smazat hru?</h3>
+            <h3 className="text-lg font-bold mb-2" style={{ color: "#8C1325" }}>Trvale smazat hru?</h3>
             <p className="text-sm mb-3" style={{ color: "#6b7280" }}>
               Tato akce je <strong>nevratná</strong>. Smaže všechny zápasy, účastníky i nastavení hry.
             </p>
@@ -252,7 +252,7 @@ export default function HryPage() {
               </button>
               <button onClick={provedSmazani} disabled={mazem || !potvrzeni}
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-                style={{ backgroundColor: "#801A28" }}>
+                style={{ backgroundColor: "#8C1325" }}>
                 {mazem ? "Mažu…" : "Ano, smazat trvale"}
               </button>
             </div>

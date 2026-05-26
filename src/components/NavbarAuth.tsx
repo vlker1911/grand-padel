@@ -44,8 +44,8 @@ export default function NavbarAuth() {
         {isAdmin && (
           <Link
             href="/admin"
-            className="text-sm font-medium hover:text-[#801A28] transition-colors"
-            style={{ color: "#801A28" }}
+            className="text-sm font-medium hover:text-[#8C1325] transition-colors"
+            style={{ color: "#8C1325" }}
           >
             Admin
           </Link>
@@ -53,7 +53,7 @@ export default function NavbarAuth() {
         <span className="text-sm text-zinc-500 truncate max-w-[160px]">{email}</span>
         <button onClick={odhlasit}
           className="rounded-full px-5 py-2 text-sm font-semibold border border-zinc-200 hover:bg-zinc-50 transition-colors"
-          style={{ color: "#801A28" }}>
+          style={{ color: "#8C1325" }}>
           Odhlásit
         </button>
       </div>
@@ -62,8 +62,8 @@ export default function NavbarAuth() {
 
   return (
     <Link href="/prihlaseni"
-      className="hidden md:inline-flex rounded-full px-5 py-2 text-sm font-semibold transition-colors border border-[#801A28]"
-      style={{ color: "#801A28" }}>
+      className="hidden md:inline-flex rounded-full px-5 py-2 text-sm font-semibold transition-colors border border-[#8C1325]"
+      style={{ color: "#8C1325" }}>
       Přihlásit se
     </Link>
   );

@@ -67,52 +67,21 @@ export default async function DetailPrezentace({ params }: Props) {
               </p>
             </div>
             <div className="flex flex-col items-end gap-3">
-              <div>
-                <div className="text-xs uppercase tracking-wide mb-1 text-right" style={{ color: brand.colors.muted }}>
-                  PDF — finální verze
-                </div>
-                <div className="flex gap-2">
-                  <a
-                    href={`/api/admin/prezentace/${prezentace.id}/pdf?design=A`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full px-4 py-2 text-sm font-semibold text-white whitespace-nowrap"
-                    style={{ backgroundColor: brand.colors.red }}
-                  >
-                    PDF — A
-                  </a>
-                  <a
-                    href={`/api/admin/prezentace/${prezentace.id}/pdf?design=B`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap border-2"
-                    style={{ borderColor: brand.colors.red, color: brand.colors.red }}
-                  >
-                    PDF — B
-                  </a>
-                </div>
-              </div>
-              <div>
-                <div className="text-xs uppercase tracking-wide mb-1 text-right" style={{ color: brand.colors.muted }}>
-                  PPTX — editovatelná
-                </div>
-                <div className="flex gap-2">
-                  <a
-                    href={`/api/admin/prezentace/${prezentace.id}/pptx?design=A`}
-                    className="rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap border-2"
-                    style={{ borderColor: brand.colors.black, color: brand.colors.black }}
-                  >
-                    PPTX — A
-                  </a>
-                  <a
-                    href={`/api/admin/prezentace/${prezentace.id}/pptx?design=B`}
-                    className="rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap border-2"
-                    style={{ borderColor: brand.colors.black, color: brand.colors.black }}
-                  >
-                    PPTX — B
-                  </a>
-                </div>
-              </div>
+              <StahnoutSekce
+                label="Celá prezentace (9–10 slidů)"
+                id={prezentace.id}
+                delka="full"
+              />
+              <StahnoutSekce
+                label="2 stránky (rychlý proposal)"
+                id={prezentace.id}
+                delka="2p"
+              />
+              <StahnoutSekce
+                label="1 stránka (exec summary)"
+                id={prezentace.id}
+                delka="1p"
+              />
             </div>
           </div>
 
@@ -243,6 +212,59 @@ export default async function DetailPrezentace({ params }: Props) {
       <footer className="py-4 px-4 text-center text-xs" style={{ backgroundColor: brand.colors.cream, color: "#9ca3af" }}>
         v{process.env.NEXT_PUBLIC_APP_VERSION}
       </footer>
+    </div>
+  );
+}
+
+function StahnoutSekce({
+  label,
+  id,
+  delka,
+}: {
+  label: string;
+  id: string;
+  delka: "full" | "2p" | "1p";
+}) {
+  const qs = delka === "full" ? "" : `&delka=${delka}`;
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide mb-1 text-right" style={{ color: brand.colors.muted }}>
+        {label}
+      </div>
+      <div className="flex flex-wrap gap-2 justify-end">
+        <a
+          href={`/api/admin/prezentace/${id}/pdf?design=A${qs}`}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-full px-3 py-1.5 text-xs font-semibold text-white whitespace-nowrap"
+          style={{ backgroundColor: brand.colors.red }}
+        >
+          PDF — A
+        </a>
+        <a
+          href={`/api/admin/prezentace/${id}/pdf?design=B${qs}`}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap border-2"
+          style={{ borderColor: brand.colors.red, color: brand.colors.red }}
+        >
+          PDF — B
+        </a>
+        <a
+          href={`/api/admin/prezentace/${id}/pptx?design=A${qs}`}
+          className="rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap border-2"
+          style={{ borderColor: brand.colors.black, color: brand.colors.black }}
+        >
+          PPTX — A
+        </a>
+        <a
+          href={`/api/admin/prezentace/${id}/pptx?design=B${qs}`}
+          className="rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap border-2"
+          style={{ borderColor: brand.colors.black, color: brand.colors.black }}
+        >
+          PPTX — B
+        </a>
+      </div>
     </div>
   );
 }

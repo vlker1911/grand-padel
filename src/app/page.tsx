@@ -28,7 +28,7 @@ export default function Home() {
       <Navbar />
 
       {/* Hero — bordó s foto overlay */}
-      <section className="relative flex items-center justify-center py-32 px-4 text-white overflow-hidden" style={{ backgroundColor: "#801A28", minHeight: "70vh" }}>
+      <section className="relative flex items-center justify-center py-32 px-4 text-white overflow-hidden" style={{ backgroundColor: "#8C1325", minHeight: "70vh" }}>
         <video
           autoPlay
           muted
@@ -50,7 +50,7 @@ export default function Home() {
             Každá hala s center kurtem — to jinde nenajdete.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/o-nas" className="rounded-full px-8 py-4 text-base font-semibold transition-colors shadow-md bg-white" style={{ color: "#801A28" }}>
+            <Link href="/o-nas" className="rounded-full px-8 py-4 text-base font-semibold transition-colors shadow-md bg-white" style={{ color: "#8C1325" }}>
               Zjistit více
             </Link>
             <Link href="/kontakt" className="rounded-full border border-white/50 px-8 py-4 text-base font-semibold transition-colors hover:bg-white/10">
@@ -63,7 +63,7 @@ export default function Home() {
       {/* Areály */}
       <section className="py-20 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-4" style={{ color: "#801A28" }}>Naše areály</h2>
+          <h2 className="text-3xl font-bold text-center mb-4" style={{ color: "#8C1325" }}>Naše areály</h2>
           <p className="text-center mb-12 max-w-xl mx-auto" style={{ color: "#6b7280" }}>
             Tři moderní indoor haly — každá s center kurtem, který v České republice nemá obdoby.
           </p>
@@ -81,7 +81,7 @@ export default function Home() {
                     <div className="flex items-center gap-2"><CalendarDays size={16} /><span>{a.date}</span></div>
                     <div className="flex items-center gap-2"><CircleDot size={16} /><span>{a.courts} kurtů vč. center kurtu</span></div>
                   </div>
-                  <div className="mt-auto pt-3 border-t border-zinc-100 flex items-center gap-2 text-sm font-medium" style={{ color: "#801A28" }}>
+                  <div className="mt-auto pt-3 border-t border-zinc-100 flex items-center gap-2 text-sm font-medium" style={{ color: "#8C1325" }}>
                     <Building2 size={16} /><span>Center kurt s tribunami</span>
                   </div>
                 </div>
@@ -94,11 +94,11 @@ export default function Home() {
       {/* Features */}
       <section className="py-20 px-4" style={{ backgroundColor: "#F2EDE4" }}>
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12" style={{ color: "#801A28" }}>Co Grand Padel nabízí</h2>
+          <h2 className="text-3xl font-bold text-center mb-12" style={{ color: "#8C1325" }}>Co Grand Padel nabízí</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {FEATURES.map((f) => (
               <div key={f.title} className="rounded-2xl border border-zinc-200 bg-white p-6 hover:shadow-md transition-shadow">
-                <div className="mb-4" style={{ color: "#801A28" }}><f.Icon size={36} strokeWidth={1.5} /></div>
+                <div className="mb-4" style={{ color: "#8C1325" }}><f.Icon size={36} strokeWidth={1.5} /></div>
                 <h3 className="text-lg font-semibold mb-2" style={{ color: "#0A0A0A" }}>{f.title}</h3>
                 <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>{f.description}</p>
               </div>
@@ -108,12 +108,12 @@ export default function Home() {
       </section>
 
       {/* CTA banner */}
-      <section className="py-16 px-4 text-white text-center" style={{ backgroundColor: "#801A28" }}>
+      <section className="py-16 px-4 text-white text-center" style={{ backgroundColor: "#8C1325" }}>
         <h2 className="text-3xl font-bold mb-4">Buďte u toho jako první</h2>
         <p className="mb-8 max-w-md mx-auto" style={{ color: "#f3c6ce" }}>
           Zanechte nám kontakt a dáme vám vědět, jakmile se otevře hala ve vašem městě.
         </p>
-        <Link href="/kontakt" className="rounded-full px-8 py-4 text-base font-semibold transition-colors bg-white" style={{ color: "#801A28" }}>
+        <Link href="/kontakt" className="rounded-full px-8 py-4 text-base font-semibold transition-colors bg-white" style={{ color: "#8C1325" }}>
           Mám zájem
         </Link>
       </section>
@@ -123,7 +123,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-10">
             <div>
-              <h2 className="text-3xl font-bold" style={{ color: "#801A28" }}>Sledujte nás</h2>
+              <h2 className="text-3xl font-bold" style={{ color: "#8C1325" }}>Sledujte nás</h2>
               <p className="mt-1 text-sm" style={{ color: "#6b7280" }}>@grandpadelcz na Instagramu</p>
             </div>
             <a href="https://www.instagram.com/grandpadelcz" target="_blank" rel="noopener noreferrer"

@@ -9,7 +9,7 @@ const PAGE_W = 13.333;
 const PAGE_H = 7.5;
 
 // Brand barvy bez "#" (pptxgenjs požaduje hex bez prefixu)
-const COLOR_BORDO = "801A28"; // sjednoceno s logem
+const COLOR_BORDO = "8C1325"; // sjednoceno s logem
 const COLOR_BORDO_ACCENT = "8C1325"; // web reality
 const COLOR_CREAM = "F2EDE4";
 const COLOR_WHITE = "FFFFFF";
@@ -23,24 +23,313 @@ type Args = {
   data: PrezentaceData;
   logoFullBase64?: string;
   monogramBase64?: string;
+  wordmarkBase64?: string;
   photos: PhotoSet;
 };
 
-export async function generujPptx(design: "A" | "B", args: Args): Promise<Buffer> {
+export type DelkaPptx = "full" | "2p" | "1p";
+
+// A4 portrait pro krátké varianty
+const PORTRAIT_W = 8.27;
+const PORTRAIT_H = 11.69;
+
+// Mapování slugů na lidsky čitelné labely
+function typyLabel(typy: string[] | null | undefined): string {
+  if (!Array.isArray(typy) || typy.length === 0) return "";
+  return typy.map((t) => {
+    if (t === "sponzoring") return "Sponzoring";
+    if (t === "firemni_turnaj") return "Firemní turnaj / teambuilding";
+    if (t === "pronajem_kurtu") return "Pronájem kurtu";
+    if (t === "b2b_partner") return "B2B partner";
+    return t;
+  }).join(" · ");
+}
+
+export async function generujPptx(design: "A" | "B", delka: DelkaPptx, args: Args): Promise<Buffer> {
   const pptx = new PptxGenJS();
-  pptx.layout = "LAYOUT_WIDE"; // 13.333 × 7.5
   pptx.title = `Návrh spolupráce — ${args.data.firma_nazev}`;
   pptx.author = "Grand Padel";
   pptx.subject = "B2B partnership proposal";
 
-  if (design === "A") {
-    sestavitDesignA(pptx, args);
+  if (delka === "1p" || delka === "2p") {
+    pptx.defineLayout({ name: "GP_PORTRAIT", width: PORTRAIT_W, height: PORTRAIT_H });
+    pptx.layout = "GP_PORTRAIT";
+    if (design === "B") {
+      sestavitDesignBKratky(pptx, args, delka);
+    } else {
+      // Design A short (zatím landscape — placeholder)
+      pptx.layout = "LAYOUT_WIDE";
+      sestavitDesignA(pptx, args);
+    }
   } else {
-    sestavitDesignB(pptx, args);
+    pptx.layout = "LAYOUT_WIDE";
+    if (design === "A") sestavitDesignA(pptx, args);
+    else sestavitDesignB(pptx, args);
   }
 
   const out = await pptx.write({ outputType: "nodebuffer" });
   return out as Buffer;
+}
+
+// ──────────────────────────────────────────────────────────
+// Design B krátké varianty (portrait A4) — strip + lajny + skutečné PNG logo
+// ──────────────────────────────────────────────────────────
+const STRIP_W_IN = 1.0;        // levý strip 1"
+const LINE_W = 0.025;          // čára cca 2pt = 0.025"
+const MARGIN = 0.4;            // okraje main
+
+function shellPortraitB(
+  pptx: PptxGenJS,
+  data: PrezentaceData,
+  monogramBase64: string | undefined,
+  metaLeft?: string,
+  tagline?: string,
+): PptxGenJS.Slide {
+  const s = pptx.addSlide();
+  s.background = { color: COLOR_BORDO };
+
+  // GP monogram (skutečné průhledné PNG) v levém stripu nahoře
+  if (monogramBase64) {
+    s.addImage({
+      data: monogramBase64,
+      x: 0.2, y: 0.25, w: 0.6, h: 0.36,
+    });
+  }
+  // Vertikální čára (pravý okraj stripu)
+  s.addShape(pptx.shapes.RECTANGLE, {
+    x: STRIP_W_IN, y: 0, w: LINE_W, h: PORTRAIT_H,
+    fill: { color: COLOR_WHITE }, line: { color: COLOR_WHITE, width: 0 },
+  });
+  // Horizontální čára dole
+  s.addShape(pptx.shapes.RECTANGLE, {
+    x: 0, y: PORTRAIT_H - 0.4, w: PORTRAIT_W, h: LINE_W,
+    fill: { color: COLOR_WHITE }, line: { color: COLOR_WHITE, width: 0 },
+  });
+
+  if (metaLeft) {
+    s.addText(metaLeft, {
+      x: STRIP_W_IN + 0.3, y: PORTRAIT_H - 0.3, w: 7, h: 0.2,
+      color: COLOR_WHITE, fontSize: 8, fontFace: FONT, transparency: 40,
+    });
+  }
+  if (tagline) {
+    s.addText(tagline, {
+      x: STRIP_W_IN + 0.2, y: PORTRAIT_H - 0.28, w: PORTRAIT_W - STRIP_W_IN - 0.4, h: 0.22,
+      color: COLOR_WHITE, fontSize: 11, fontFace: FONT, align: "center", bold: true,
+    });
+  }
+  return s;
+}
+
+function wordmarkOnPage(
+  s: PptxGenJS.Slide,
+  wordmarkBase64: string | undefined,
+  yPos: number,
+  size: "big" | "small",
+) {
+  if (!wordmarkBase64) return;
+  const w = size === "big" ? 3.0 : 1.8;
+  const h = size === "big" ? 1.7 : 1.0;
+  const x = STRIP_W_IN + (PORTRAIT_W - STRIP_W_IN - w) / 2;
+  s.addImage({ data: wordmarkBase64, x, y: yPos, w, h });
+}
+
+// Vrátí Y-pozici PRVNÍHO řádku DALŠÍ sekce (yStart + suma výšek bulletů).
+function bulletsBPortrait(s: PptxGenJS.Slide, items: string[], yStart: number, mark: "—" | "num"): number {
+  // Konzervativní výška bullet — 0.75" pojme 3 řádky při fontSize 11
+  const lineH = 0.75;
+  items.forEach((item, i) => {
+    const y = yStart + i * lineH;
+    const m = mark === "num" ? `${i + 1}.` : "—";
+    s.addText(m, {
+      x: STRIP_W_IN + MARGIN, y, w: 0.35, h: 0.4,
+      color: COLOR_CREAM, fontSize: 12, fontFace: FONT, bold: true,
+    });
+    s.addText(item, {
+      x: STRIP_W_IN + MARGIN + 0.4, y, w: PORTRAIT_W - STRIP_W_IN - MARGIN - 0.5, h: lineH - 0.05,
+      color: COLOR_WHITE, fontSize: 11, fontFace: FONT, transparency: 8,
+      valign: "top",
+    });
+  });
+  return yStart + items.length * lineH;
+}
+
+function sestavitDesignBKratky(pptx: PptxGenJS, args: Args, delka: "1p" | "2p") {
+  const { data, monogramBase64, wordmarkBase64, photos } = args;
+  const o = data.generovany_obsah;
+  const datum = formatDatum(data.created_at);
+  const typy = typyLabel(data.typy_spoluprace);
+
+  if (delka === "1p") {
+    const s = shellPortraitB(
+      pptx, data, monogramBase64,
+      undefined,
+      `${data.firma_nazev} & Grand Padel — spolupráce, která dává smysl.`,
+    );
+
+    // Big wordmark centrovaný nahoře
+    wordmarkOnPage(s, wordmarkBase64, 0.6, "big");
+
+    // Firma BIG
+    s.addText(data.firma_nazev, {
+      x: STRIP_W_IN + MARGIN, y: 2.6, w: PORTRAIT_W - STRIP_W_IN - MARGIN * 2, h: 0.9,
+      color: COLOR_WHITE, fontSize: 36, fontFace: FONT, bold: true,
+    });
+    if (typy) {
+      s.addText(typy, {
+        x: STRIP_W_IN + MARGIN, y: 3.55, w: PORTRAIT_W - STRIP_W_IN - MARGIN * 2, h: 0.3,
+        color: COLOR_CREAM, fontSize: 11, fontFace: FONT, transparency: 10,
+      });
+    }
+    // Divider
+    s.addShape(pptx.shapes.RECTANGLE, {
+      x: STRIP_W_IN + MARGIN, y: 3.95, w: 0.7, h: 0.04,
+      fill: { color: COLOR_WHITE }, line: { color: COLOR_WHITE, width: 0 },
+    });
+
+    // Hodnota eyebrow + 3 bullets
+    s.addText("PROČ GRAND PADEL", {
+      x: STRIP_W_IN + MARGIN, y: 4.15, w: 6, h: 0.25,
+      color: COLOR_CREAM, fontSize: 9, fontFace: FONT, bold: true, charSpacing: 3,
+    });
+    const hodnotaEnd = bulletsBPortrait(s, (o?.hodnota ?? []).slice(0, 3), 4.5, "—");
+
+    // CTA hned pod hodnotami
+    const ctaY = hodnotaEnd + 0.15;
+    if (o?.call_to_action) {
+      s.addShape(pptx.shapes.RECTANGLE, {
+        x: STRIP_W_IN + MARGIN - 0.05, y: ctaY, w: 0.04, h: 0.8,
+        fill: { color: COLOR_CREAM }, line: { color: COLOR_CREAM, width: 0 },
+      });
+      s.addText("DALŠÍ KROK", {
+        x: STRIP_W_IN + MARGIN + 0.1, y: ctaY, w: 6, h: 0.2,
+        color: COLOR_CREAM, fontSize: 9, fontFace: FONT, bold: true, charSpacing: 2,
+      });
+      s.addText(o.call_to_action, {
+        x: STRIP_W_IN + MARGIN + 0.1, y: ctaY + 0.2, w: PORTRAIT_W - STRIP_W_IN - MARGIN * 2 - 0.2, h: 0.6,
+        color: COLOR_WHITE, fontSize: 11, fontFace: FONT, valign: "top",
+      });
+    }
+
+    // Nabídka + Kontakt vedle sebe
+    const footerY = ctaY + 1.05;
+    const colW = (PORTRAIT_W - STRIP_W_IN - MARGIN * 2 - 0.3) / 2;
+    s.addText("NABÍDKA", {
+      x: STRIP_W_IN + MARGIN, y: footerY, w: colW, h: 0.2,
+      color: COLOR_CREAM, fontSize: 9, fontFace: FONT, bold: true, charSpacing: 2,
+    });
+    s.addText("Konkrétní nabídku zpracujeme po úvodním setkání podle vašich cílů a rozpočtu.", {
+      x: STRIP_W_IN + MARGIN, y: footerY + 0.2, w: colW, h: 0.8,
+      color: COLOR_WHITE, fontSize: 10, fontFace: FONT, transparency: 10, valign: "top",
+    });
+    s.addText("KONTAKT", {
+      x: STRIP_W_IN + MARGIN + colW + 0.3, y: footerY, w: colW, h: 0.2,
+      color: COLOR_CREAM, fontSize: 9, fontFace: FONT, bold: true, charSpacing: 2,
+    });
+    s.addText([
+      { text: "Roman Vlk\n", options: { fontFace: FONT, fontSize: 11, color: COLOR_WHITE, bold: true } },
+      { text: "info@grandpadel.cz\n", options: { fontFace: FONT, fontSize: 10, color: COLOR_WHITE } },
+      { text: "grandpadel.cz", options: { fontFace: FONT, fontSize: 10, color: COLOR_WHITE } },
+    ], { x: STRIP_W_IN + MARGIN + colW + 0.3, y: footerY + 0.2, w: colW, h: 0.8 });
+
+    // 2 fotky na konci
+    const fotoW = (PORTRAIT_W - STRIP_W_IN - MARGIN * 2 - 0.15) / 2;
+    const fotoH = 2.0;
+    const fotoY = PORTRAIT_H - 0.5 - fotoH - 0.3;
+    if (photos.hero) s.addImage({ data: photos.hero, x: STRIP_W_IN + MARGIN, y: fotoY, w: fotoW, h: fotoH, sizing: { type: "cover", w: fotoW, h: fotoH } });
+    if (photos.teambuilding) s.addImage({ data: photos.teambuilding, x: STRIP_W_IN + MARGIN + fotoW + 0.15, y: fotoY, w: fotoW, h: fotoH, sizing: { type: "cover", w: fotoW, h: fotoH } });
+  } else {
+    // 2p — Stránka 1: BIG wordmark + firma + hodnota
+    const s1 = shellPortraitB(
+      pptx, data, monogramBase64,
+      `NÁVRH SPOLUPRÁCE · ${datum} · 1/2`,
+    );
+    wordmarkOnPage(s1, wordmarkBase64, 0.6, "big");
+    s1.addText(data.firma_nazev, {
+      x: STRIP_W_IN + MARGIN, y: 2.6, w: PORTRAIT_W - STRIP_W_IN - MARGIN * 2, h: 0.9,
+      color: COLOR_WHITE, fontSize: 36, fontFace: FONT, bold: true,
+    });
+    if (typy) {
+      s1.addText(typy, {
+        x: STRIP_W_IN + MARGIN, y: 3.55, w: PORTRAIT_W - STRIP_W_IN - MARGIN * 2, h: 0.3,
+        color: COLOR_CREAM, fontSize: 11, fontFace: FONT, transparency: 10,
+      });
+    }
+    s1.addShape(pptx.shapes.RECTANGLE, {
+      x: STRIP_W_IN + MARGIN, y: 3.95, w: 0.7, h: 0.04,
+      fill: { color: COLOR_WHITE }, line: { color: COLOR_WHITE, width: 0 },
+    });
+    s1.addText("PROČ GRAND PADEL JAKO PARTNER", {
+      x: STRIP_W_IN + MARGIN, y: 4.2, w: 6, h: 0.25,
+      color: COLOR_CREAM, fontSize: 9, fontFace: FONT, bold: true, charSpacing: 3,
+    });
+    bulletsBPortrait(s1, (o?.hodnota ?? []).slice(0, 4), 4.55, "—");
+
+    // Stránka 2 — návrhy + CTA + kontakt + fotky NA KONEC + tagline
+    const s2 = shellPortraitB(
+      pptx, data, monogramBase64,
+      undefined,
+      `${data.firma_nazev} & Grand Padel — spolupráce, která dává smysl.`,
+    );
+    wordmarkOnPage(s2, wordmarkBase64, 0.45, "small");
+    s2.addText("KONKRÉTNÍ NÁVRHY", {
+      x: STRIP_W_IN + MARGIN, y: 1.8, w: 6, h: 0.25,
+      color: COLOR_CREAM, fontSize: 9, fontFace: FONT, bold: true, charSpacing: 3,
+    });
+    s2.addText("Co můžeme spolu udělat", {
+      x: STRIP_W_IN + MARGIN, y: 2.1, w: PORTRAIT_W - STRIP_W_IN - MARGIN * 2, h: 0.7,
+      color: COLOR_WHITE, fontSize: 22, fontFace: FONT, bold: true,
+    });
+    s2.addShape(pptx.shapes.RECTANGLE, {
+      x: STRIP_W_IN + MARGIN, y: 2.85, w: 0.7, h: 0.04,
+      fill: { color: COLOR_WHITE }, line: { color: COLOR_WHITE, width: 0 },
+    });
+    const navrhyEnd = bulletsBPortrait(s2, (o?.konkretni_navrhy ?? []).slice(0, 4), 3.1, "num");
+
+    // CTA hned pod návrhy
+    const ctaY = navrhyEnd + 0.15;
+    if (o?.call_to_action) {
+      s2.addShape(pptx.shapes.RECTANGLE, {
+        x: STRIP_W_IN + MARGIN - 0.05, y: ctaY, w: 0.04, h: 0.8,
+        fill: { color: COLOR_CREAM }, line: { color: COLOR_CREAM, width: 0 },
+      });
+      s2.addText("DALŠÍ KROK", {
+        x: STRIP_W_IN + MARGIN + 0.1, y: ctaY, w: 6, h: 0.2,
+        color: COLOR_CREAM, fontSize: 9, fontFace: FONT, bold: true, charSpacing: 2,
+      });
+      s2.addText(o.call_to_action, {
+        x: STRIP_W_IN + MARGIN + 0.1, y: ctaY + 0.2, w: PORTRAIT_W - STRIP_W_IN - MARGIN * 2 - 0.2, h: 0.6,
+        color: COLOR_WHITE, fontSize: 11, fontFace: FONT, valign: "top",
+      });
+    }
+
+    const footerY = ctaY + 1.05;
+    const colW = (PORTRAIT_W - STRIP_W_IN - MARGIN * 2 - 0.3) / 2;
+    s2.addText("NABÍDKA", {
+      x: STRIP_W_IN + MARGIN, y: footerY, w: colW, h: 0.2,
+      color: COLOR_CREAM, fontSize: 9, fontFace: FONT, bold: true, charSpacing: 2,
+    });
+    s2.addText("Konkrétní nabídku zpracujeme po úvodním setkání.", {
+      x: STRIP_W_IN + MARGIN, y: footerY + 0.2, w: colW, h: 0.7,
+      color: COLOR_WHITE, fontSize: 10, fontFace: FONT, transparency: 10, valign: "top",
+    });
+    s2.addText("KONTAKT", {
+      x: STRIP_W_IN + MARGIN + colW + 0.3, y: footerY, w: colW, h: 0.2,
+      color: COLOR_CREAM, fontSize: 9, fontFace: FONT, bold: true, charSpacing: 2,
+    });
+    s2.addText([
+      { text: "Roman Vlk\n", options: { fontFace: FONT, fontSize: 11, color: COLOR_WHITE, bold: true } },
+      { text: "info@grandpadel.cz\n", options: { fontFace: FONT, fontSize: 10, color: COLOR_WHITE } },
+      { text: "grandpadel.cz", options: { fontFace: FONT, fontSize: 10, color: COLOR_WHITE } },
+    ], { x: STRIP_W_IN + MARGIN + colW + 0.3, y: footerY + 0.2, w: colW, h: 0.9 });
+
+    // 2 fotky NA KONCI
+    const fotoW = (PORTRAIT_W - STRIP_W_IN - MARGIN * 2 - 0.15) / 2;
+    const fotoH = Math.max(1.6, PORTRAIT_H - 0.5 - 0.3 - (footerY + 1.2));
+    const fotoY = PORTRAIT_H - 0.5 - fotoH - 0.3;
+    if (photos.hero) s2.addImage({ data: photos.hero, x: STRIP_W_IN + MARGIN, y: fotoY, w: fotoW, h: fotoH, sizing: { type: "cover", w: fotoW, h: fotoH } });
+    if (photos.teambuilding) s2.addImage({ data: photos.teambuilding, x: STRIP_W_IN + MARGIN + fotoW + 0.15, y: fotoY, w: fotoW, h: fotoH, sizing: { type: "cover", w: fotoW, h: fotoH } });
+  }
 }
 
 // ──────────────────────────────────────────────────────────

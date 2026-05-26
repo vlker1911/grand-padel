@@ -43,7 +43,7 @@ export default async function PrezentaceSeznam() {
             <Link
               href="/admin/prezentace/nova"
               className="rounded-full px-5 py-2.5 text-sm font-semibold text-white"
-              style={{ backgroundColor: "#801A28" }}
+              style={{ backgroundColor: "#8C1325" }}
             >
               Nová prezentace
             </Link>
@@ -71,7 +71,7 @@ export default async function PrezentaceSeznam() {
                   {prezentace.map((p) => (
                     <tr key={p.id} className="border-t border-zinc-100">
                       <td className="px-4 py-3">
-                        <Link href={`/admin/prezentace/${p.id}`} className="font-medium hover:underline" style={{ color: "#801A28" }}>
+                        <Link href={`/admin/prezentace/${p.id}`} className="font-medium hover:underline" style={{ color: "#8C1325" }}>
                           {p.firma_nazev}
                         </Link>
                       </td>

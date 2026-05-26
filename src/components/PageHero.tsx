@@ -10,7 +10,7 @@ interface PageHeroProps {
 
 export default function PageHero({ badge, title, subtitle, photo, photoAlt }: PageHeroProps) {
   return (
-    <section className="relative py-20 px-4 text-center text-white overflow-hidden" style={{ backgroundColor: "#801A28" }}>
+    <section className="relative py-20 px-4 text-center text-white overflow-hidden" style={{ backgroundColor: "#8C1325" }}>
       {photo && (
         <Image
           src={photo}

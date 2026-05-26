@@ -34,11 +34,11 @@ export default function Turnaje() {
         {/* Formáty */}
         <section className="py-16 px-4 bg-white">
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-2xl font-bold text-center mb-10" style={{ color: "#801A28" }}>Co plánujeme</h2>
+            <h2 className="text-2xl font-bold text-center mb-10" style={{ color: "#8C1325" }}>Co plánujeme</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {FORMATY.map((f) => (
                 <div key={f.nadpis} className="rounded-2xl border border-zinc-100 p-6 hover:shadow-md transition-shadow">
-                  <div className="mb-4" style={{ color: "#801A28" }}><f.Icon size={36} strokeWidth={1.5} /></div>
+                  <div className="mb-4" style={{ color: "#8C1325" }}><f.Icon size={36} strokeWidth={1.5} /></div>
                   <h3 className="text-lg font-semibold mb-2" style={{ color: "#0A0A0A" }}>{f.nadpis}</h3>
                   <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>{f.popis}</p>
                 </div>
@@ -48,7 +48,7 @@ export default function Turnaje() {
         </section>
 
         {/* Center kurt callout */}
-        <section className="py-16 px-4" style={{ backgroundColor: "#801A28" }}>
+        <section className="py-16 px-4" style={{ backgroundColor: "#8C1325" }}>
           <div className="max-w-4xl mx-auto text-center text-white">
             <div className="flex justify-center mb-6"><Building2 size={64} strokeWidth={1.2} /></div>
             <h2 className="text-3xl font-extrabold mb-4 text-white">Center kurt v každé hale</h2>
@@ -61,7 +61,7 @@ export default function Turnaje() {
         {/* Proč padel */}
         <section className="py-16 px-4" style={{ backgroundColor: "#F2EDE4" }}>
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-2xl font-bold mb-6" style={{ color: "#801A28" }}>Proč padel?</h2>
+            <h2 className="text-2xl font-bold mb-6" style={{ color: "#8C1325" }}>Proč padel?</h2>
             <p className="text-lg leading-relaxed mb-4" style={{ color: "#6b7280" }}>
               Padel spojuje to nejlepší z tenisu a squashe — hraje se vždy ve čtyřech, na uzavřeném kurtu se skleněnými stěnami. Pravidla pochopíte za pět minut, první výměny si užijete hned.
             </p>
@@ -73,9 +73,9 @@ export default function Turnaje() {
 
         {/* CTA */}
         <section className="py-16 px-4 text-center bg-white">
-          <h2 className="text-2xl font-bold mb-4" style={{ color: "#801A28" }}>Nechte nám e-mail</h2>
+          <h2 className="text-2xl font-bold mb-4" style={{ color: "#8C1325" }}>Nechte nám e-mail</h2>
           <p className="mb-8 max-w-md mx-auto" style={{ color: "#6b7280" }}>Jakmile vypíšeme první turnaj, dáme vám vědět jako prvním.</p>
-          <Link href="/kontakt" className="rounded-full px-8 py-4 text-base font-semibold text-white transition-colors" style={{ backgroundColor: "#801A28" }}>Kontaktovat nás</Link>
+          <Link href="/kontakt" className="rounded-full px-8 py-4 text-base font-semibold text-white transition-colors" style={{ backgroundColor: "#8C1325" }}>Kontaktovat nás</Link>
         </section>
       </main>
 

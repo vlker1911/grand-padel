@@ -26,9 +26,9 @@ Font.register({
 
 const FONT = "Poppins";
 
-// Cover bordó SJEDNOCEN S LOGO PNG (#801A28) aby okraje loga nebyly viditelné.
+// Cover bordó SJEDNOCEN S LOGO PNG (#8C1325) aby okraje loga nebyly viditelné.
 // Brand Red akcenty zůstávají na #8C1325 (web reality).
-const COVER_BG = "#801A28";
+const COVER_BG = "#8C1325";
 
 // 16:9 widescreen — 960 × 540pt
 const PAGE_W = 960;

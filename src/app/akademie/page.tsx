@@ -34,19 +34,19 @@ export default function Akademie() {
         {/* Úrovně */}
         <section className="py-16 px-4 bg-white">
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-2xl font-bold text-center mb-10" style={{ color: "#801A28" }}>Tréninky pro každého</h2>
+            <h2 className="text-2xl font-bold text-center mb-10" style={{ color: "#8C1325" }}>Tréninky pro každého</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {UROVNE.map((u) => (
                 <div key={u.nadpis} className="rounded-2xl border border-zinc-100 p-6 hover:shadow-md transition-shadow flex flex-col gap-4">
                   <div className="flex items-center gap-3">
-                    <span style={{ color: "#801A28" }}><u.Icon size={32} strokeWidth={1.5} /></span>
+                    <span style={{ color: "#8C1325" }}><u.Icon size={32} strokeWidth={1.5} /></span>
                     <h3 className="text-lg font-semibold" style={{ color: "#0A0A0A" }}>{u.nadpis}</h3>
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>{u.popis}</p>
                   <ul className="flex flex-col gap-1 mt-auto">
                     {u.obsah.map((bod) => (
                       <li key={bod} className="flex items-center gap-2 text-sm" style={{ color: "#6b7280" }}>
-                        <span style={{ color: "#801A28" }}>→</span>{bod}
+                        <span style={{ color: "#8C1325" }}>→</span>{bod}
                       </li>
                     ))}
                   </ul>
@@ -59,14 +59,14 @@ export default function Akademie() {
         {/* Trenéři */}
         <section className="py-16 px-4" style={{ backgroundColor: "#F2EDE4" }}>
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-2xl font-bold mb-4" style={{ color: "#801A28" }}>Naši trenéři</h2>
+            <h2 className="text-2xl font-bold mb-4" style={{ color: "#8C1325" }}>Naši trenéři</h2>
             <p className="text-lg leading-relaxed mb-8" style={{ color: "#6b7280" }}>
               Tým trenérů Grand Padel Akademie připravujeme. Pracujeme s certifikovanými padelovými trenéry s mezinárodními zkušenostmi. Detaily zveřejníme před otevřením.
             </p>
             <div className="rounded-2xl p-8 border border-zinc-200 bg-white">
-              <p className="text-sm font-medium mb-1" style={{ color: "#801A28" }}>Chcete trénovat u nás?</p>
+              <p className="text-sm font-medium mb-1" style={{ color: "#8C1325" }}>Chcete trénovat u nás?</p>
               <p className="text-sm mb-4" style={{ color: "#6b7280" }}>Hledáme certifikované trenéry padelu pro Olomouc, Ostravu i Prahu. Ozvěte se.</p>
-              <Link href="/kontakt" className="inline-block rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-colors" style={{ backgroundColor: "#801A28" }}>
+              <Link href="/kontakt" className="inline-block rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-colors" style={{ backgroundColor: "#8C1325" }}>
                 Kontaktovat nás
               </Link>
             </div>
@@ -82,7 +82,7 @@ export default function Akademie() {
               { num: "3×",    label: "haly do 2027",      sub: "Olomouc, Ostrava, Praha Zličín" },
             ].map((s) => (
               <div key={s.label} className="flex flex-col items-center gap-1">
-                <span className="text-4xl font-extrabold" style={{ color: "#801A28" }}>{s.num}</span>
+                <span className="text-4xl font-extrabold" style={{ color: "#8C1325" }}>{s.num}</span>
                 <span className="font-semibold" style={{ color: "#0A0A0A" }}>{s.label}</span>
                 <span className="text-sm" style={{ color: "#9ca3af" }}>{s.sub}</span>
               </div>
@@ -91,10 +91,10 @@ export default function Akademie() {
         </section>
 
         {/* CTA */}
-        <section className="py-16 px-4 text-white text-center" style={{ backgroundColor: "#801A28" }}>
+        <section className="py-16 px-4 text-white text-center" style={{ backgroundColor: "#8C1325" }}>
           <h2 className="text-3xl font-bold mb-4">Začněte hrát ještě letos</h2>
           <p className="mb-8 max-w-md mx-auto" style={{ color: "#f3c6ce" }}>Akademie startuje s otevřením haly v Olomouci — říjen 2026. Zanechte e-mail a dáme vám vědět jako prvním.</p>
-          <Link href="/kontakt" className="rounded-full px-8 py-4 text-base font-semibold transition-colors bg-white" style={{ color: "#801A28" }}>Mám zájem</Link>
+          <Link href="/kontakt" className="rounded-full px-8 py-4 text-base font-semibold transition-colors bg-white" style={{ color: "#8C1325" }}>Mám zájem</Link>
         </section>
       </main>
 

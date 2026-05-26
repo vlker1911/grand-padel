@@ -50,7 +50,7 @@ export default function Prihlaseni() {
 
           {/* Logo / nadpis */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold" style={{ color: "#801A28" }}>Grand Padel</h1>
+            <h1 className="text-2xl font-bold" style={{ color: "#8C1325" }}>Grand Padel</h1>
             <p className="text-sm mt-1" style={{ color: "#6b7280" }}>
               {tab === "login" ? "Přihlaste se ke svému účtu" : "Vytvořte si účet zdarma"}
             </p>
@@ -60,12 +60,12 @@ export default function Prihlaseni() {
           <div className="flex rounded-xl overflow-hidden border border-zinc-200 mb-6">
             <button onClick={() => setTab("login")}
               className="flex-1 py-2.5 text-sm font-medium transition-colors"
-              style={{ backgroundColor: tab === "login" ? "#801A28" : "white", color: tab === "login" ? "white" : "#6b7280" }}>
+              style={{ backgroundColor: tab === "login" ? "#8C1325" : "white", color: tab === "login" ? "white" : "#6b7280" }}>
               Přihlášení
             </button>
             <button onClick={() => setTab("register")}
               className="flex-1 py-2.5 text-sm font-medium transition-colors"
-              style={{ backgroundColor: tab === "register" ? "#801A28" : "white", color: tab === "register" ? "white" : "#6b7280" }}>
+              style={{ backgroundColor: tab === "register" ? "#8C1325" : "white", color: tab === "register" ? "white" : "#6b7280" }}>
               Registrace
             </button>
           </div>
@@ -96,29 +96,29 @@ export default function Prihlaseni() {
                 <label className="text-sm font-medium" style={{ color: "#374151" }}>Jméno a příjmení</label>
                 <input type="text" value={jmeno} onChange={e => setJmeno(e.target.value)}
                   placeholder="Jana Nováková" required
-                  className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                  className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
               </div>
             )}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium" style={{ color: "#374151" }}>E-mail</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="jana@example.cz" required
-                className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium" style={{ color: "#374151" }}>Heslo</label>
               <input type="password" value={heslo} onChange={e => setHeslo(e.target.value)}
                 placeholder="••••••••" required minLength={6}
-                className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
             </div>
 
             {zprava && (
-              <p className="text-sm text-center" style={{ color: stav === "ok" ? "#16a34a" : "#801A28" }}>{zprava}</p>
+              <p className="text-sm text-center" style={{ color: stav === "ok" ? "#16a34a" : "#8C1325" }}>{zprava}</p>
             )}
 
             <button type="submit" disabled={stav === "loading"}
               className="rounded-full py-3 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
-              style={{ backgroundColor: "#801A28" }}>
+              style={{ backgroundColor: "#8C1325" }}>
               {stav === "loading" ? "Moment…" : tab === "login" ? "Přihlásit se" : "Vytvořit účet"}
             </button>
           </form>

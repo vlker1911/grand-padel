@@ -17,7 +17,7 @@ export default function AdminHome() {
               href="/admin/prezentace"
               className="block bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
             >
-              <h2 className="text-lg font-semibold mb-1" style={{ color: "#801A28" }}>
+              <h2 className="text-lg font-semibold mb-1" style={{ color: "#8C1325" }}>
                 Prezentace pro partnery
               </h2>
               <p className="text-sm" style={{ color: "#6b7280" }}>

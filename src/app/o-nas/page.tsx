@@ -34,7 +34,7 @@ export default function ONas() {
         <section className="py-16 px-4">
           <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-2xl font-bold mb-4" style={{ color: "#801A28" }}>Naše mise</h2>
+              <h2 className="text-2xl font-bold mb-4" style={{ color: "#8C1325" }}>Naše mise</h2>
               <p className="leading-relaxed mb-4" style={{ color: "#6b7280" }}>
                 Chceme přinést jeden z nejrychleji rostoucích sportů světa do všech koutů České republiky.
                 Každý areál Grand Padel nabídne profesionální kurty, kompletní zázemí a přátelskou atmosféru —
@@ -53,7 +53,7 @@ export default function ONas() {
                 { num: "1×", label: "center kurt v každé hale" },
               ].map((s) => (
                 <div key={s.label} className="rounded-2xl p-4" style={{ backgroundColor: "#F2EDE4" }}>
-                  <div className="text-3xl font-extrabold mb-1" style={{ color: "#801A28" }}>{s.num}</div>
+                  <div className="text-3xl font-extrabold mb-1" style={{ color: "#8C1325" }}>{s.num}</div>
                   <div className="text-xs leading-snug" style={{ color: "#6b7280" }}>{s.label}</div>
                 </div>
               ))}
@@ -62,7 +62,7 @@ export default function ONas() {
         </section>
 
         {/* Center kurt USP */}
-        <section className="py-16 px-4 text-white" style={{ backgroundColor: "#801A28" }}>
+        <section className="py-16 px-4 text-white" style={{ backgroundColor: "#8C1325" }}>
           <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-10 items-center">
             <Building2 size={96} strokeWidth={1.2} className="shrink-0" />
             <div>
@@ -86,7 +86,7 @@ export default function ONas() {
         {/* Plán otevírání */}
         <section className="py-16 px-4">
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-2xl font-bold mb-10 text-center" style={{ color: "#801A28" }}>Plán otevírání</h2>
+            <h2 className="text-2xl font-bold mb-10 text-center" style={{ color: "#8C1325" }}>Plán otevírání</h2>
             <div className="flex flex-col gap-6">
               {ARENAS.map((a, i) => (
                 <div key={a.city} className="rounded-2xl border border-zinc-100 overflow-hidden grid md:grid-cols-[200px_1fr_auto] hover:shadow-md transition-shadow">
@@ -94,13 +94,13 @@ export default function ONas() {
                     <Image src={a.photo} alt={`Grand Padel ${a.city}`} fill className="object-cover" />
                   </div>
                   <div className="p-6">
-                    <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#801A28" }}>{i === 2 ? "2027" : "2026"} — {a.date}</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#8C1325" }}>{i === 2 ? "2027" : "2026"} — {a.date}</span>
                     <h3 className="text-xl font-bold mt-1 mb-2" style={{ color: "#0A0A0A" }}>{a.city}</h3>
                     <p className="text-sm leading-relaxed" style={{ color: "#6b7280" }}>{a.detail}</p>
                   </div>
                   <div className="p-6 flex flex-col gap-2 text-sm justify-center shrink-0" style={{ color: "#6b7280" }}>
                     <div className="flex items-center gap-2"><CircleDot size={16} /><span>{a.courts} kurtů</span></div>
-                    <div className="flex items-center gap-2 font-medium" style={{ color: "#801A28" }}><Building2 size={16} /><span>center kurt</span></div>
+                    <div className="flex items-center gap-2 font-medium" style={{ color: "#8C1325" }}><Building2 size={16} /><span>center kurt</span></div>
                   </div>
                 </div>
               ))}
@@ -110,11 +110,11 @@ export default function ONas() {
 
         {/* CTA */}
         <section className="py-16 px-4 text-center" style={{ backgroundColor: "#F2EDE4" }}>
-          <h2 className="text-2xl font-bold mb-4" style={{ color: "#801A28" }}>Chcete být u otevření?</h2>
+          <h2 className="text-2xl font-bold mb-4" style={{ color: "#8C1325" }}>Chcete být u otevření?</h2>
           <p className="mb-8 max-w-md mx-auto" style={{ color: "#6b7280" }}>
             Zanechte nám kontakt a dáme vám vědět jako prvním, kdy a kde otevíráme.
           </p>
-          <Link href="/kontakt" className="rounded-full px-8 py-4 text-base font-semibold text-white transition-colors" style={{ backgroundColor: "#801A28" }}>
+          <Link href="/kontakt" className="rounded-full px-8 py-4 text-base font-semibold text-white transition-colors" style={{ backgroundColor: "#8C1325" }}>
             Kontaktovat nás
           </Link>
         </section>

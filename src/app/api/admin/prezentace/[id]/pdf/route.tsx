@@ -54,6 +54,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const url = new URL(req.url);
   const design = url.searchParams.get("design")?.toUpperCase() === "B" ? "B" : "A";
+  const delkaRaw = url.searchParams.get("delka");
+  const delka: "full" | "2p" | "1p" =
+    delkaRaw === "1p" ? "1p" : delkaRaw === "2p" ? "2p" : "full";
 
   const supabase = await createClient();
 
@@ -82,22 +85,31 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ chyba: "Prezentace nemá obsah" }, { status: 400 });
   }
 
-  const [logoFull, monogram, photos] = await Promise.all([
+  const [logoFull, monogramFull, monogramTransparent, wordmarkTransparent, photos] = await Promise.all([
     nacistObrazek("gp-logo-full.png"),
     nacistObrazek("gp-logo-monogram.png"),
+    nacistObrazek("logos-transparent/gp-monogram.png"),
+    nacistObrazek("logos-transparent/gp-full.png"),
     nacistFotky(id),
   ]);
 
   const element =
     design === "B" ? (
-      <PrezentacePdfB data={prezentace} monogramBase64={monogram} photos={photos} />
+      <PrezentacePdfB
+        data={prezentace}
+        monogramBase64={monogramTransparent ?? monogramFull}
+        wordmarkBase64={wordmarkTransparent}
+        photos={photos}
+        delka={delka}
+      />
     ) : (
       <PrezentacePdf data={prezentace} logoBase64={logoFull} photos={photos} />
     );
 
   const buffer = await renderToBuffer(element);
 
-  const filename = `grand-padel-${slugify(prezentace.firma_nazev)}-${design.toLowerCase()}.pdf`;
+  const delkaSuffix = delka === "full" ? "" : `-${delka}`;
+  const filename = `grand-padel-${slugify(prezentace.firma_nazev)}-${design.toLowerCase()}${delkaSuffix}.pdf`;
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,

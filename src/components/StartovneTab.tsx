@@ -170,7 +170,7 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
             {jeEditor && (
               <button onClick={() => setEditovat(true)}
                 className="rounded-lg px-4 py-2 text-xs font-semibold text-white"
-                style={{ backgroundColor: "#801A28" }}>
+                style={{ backgroundColor: "#8C1325" }}>
                 Upravit
               </button>
             )}
@@ -184,7 +184,7 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
           {jeEditor && (
             <button onClick={() => setEditovat(true)}
               className="mt-4 rounded-lg px-4 py-2 text-sm font-semibold text-white"
-              style={{ backgroundColor: "#801A28" }}>
+              style={{ backgroundColor: "#8C1325" }}>
               Nastavit startovné
             </button>
           )}
@@ -198,19 +198,19 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
               <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Předčíslí <span style={{ color: "#9ca3af" }}>(volitelné)</span></label>
               <input type="text" value={prefix} maxLength={6} placeholder="123456"
                 onChange={e => setPrefix(e.target.value.replace(/\D/g, ""))}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
             </div>
             <div className="sm:col-span-1">
               <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Číslo účtu *</label>
               <input type="text" value={cislo} maxLength={10} placeholder="1234567890"
                 onChange={e => setCislo(e.target.value.replace(/\D/g, ""))}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
             </div>
             <div className="sm:col-span-1">
               <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Kód banky *</label>
               <input type="text" value={banka} maxLength={4} placeholder="0100"
                 onChange={e => setBanka(e.target.value.replace(/\D/g, ""))}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
             </div>
           </div>
           {!validUcet && (prefix || cislo || banka) && (
@@ -225,13 +225,13 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
               <input type="number" min={0} step={1} value={castka}
                 onChange={e => { const n = parseFloat(e.target.value); setCastka(isNaN(n) ? "" : n); }}
                 placeholder="500"
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
             </div>
             <div>
               <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Variabilní symbol</label>
               <input type="text" value={vs} maxLength={10} placeholder="1234"
                 onChange={e => setVs(e.target.value.replace(/\D/g, ""))}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
             </div>
           </div>
 
@@ -239,7 +239,7 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
             <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Zpráva pro příjemce (max 60 znaků)</label>
             <input type="text" value={zprava} maxLength={60}
               onChange={e => setZprava(e.target.value)}
-              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
           </div>
 
           <div>
@@ -247,7 +247,7 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
             <textarea value={poznamka} rows={2}
               placeholder="Splatné do 18. 5. 2026. V hotovosti na místě možno taky."
               onChange={e => setPoznamka(e.target.value)}
-              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
           </div>
 
           {/* Nahled */}
@@ -268,7 +268,7 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
             </div>
           )}
 
-          {chyba && <p className="text-sm" style={{ color: "#801A28" }}>{chyba}</p>}
+          {chyba && <p className="text-sm" style={{ color: "#8C1325" }}>{chyba}</p>}
 
           <div className="flex gap-2 justify-end">
             {maUlozeneNastaveni && (
@@ -279,7 +279,7 @@ export default function StartovneTab({ hra, jeEditor }: { hra: HraInput; jeEdito
             )}
             <button onClick={uloz} disabled={ukladam || !validUcet}
               className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-              style={{ backgroundColor: "#801A28" }}>
+              style={{ backgroundColor: "#8C1325" }}>
               {ukladam ? "Ukládám..." : "Uložit"}
             </button>
           </div>

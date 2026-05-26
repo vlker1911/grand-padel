@@ -58,7 +58,7 @@ export default function MobileMenu() {
               href="/kontakt"
               onClick={() => setOpen(false)}
               className="mt-2 rounded-full px-5 py-3 text-sm font-semibold text-white text-center transition-colors"
-              style={{ backgroundColor: "#801A28" }}
+              style={{ backgroundColor: "#8C1325" }}
             >
               Mám zájem
             </Link>

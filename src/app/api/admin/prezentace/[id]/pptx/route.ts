@@ -52,6 +52,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const url = new URL(req.url);
   const design = url.searchParams.get("design")?.toUpperCase() === "B" ? "B" : "A";
+  const delkaRaw = url.searchParams.get("delka");
+  const delka: "full" | "2p" | "1p" =
+    delkaRaw === "1p" ? "1p" : delkaRaw === "2p" ? "2p" : "full";
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -79,20 +82,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ chyba: "Prezentace nemá obsah" }, { status: 400 });
   }
 
-  const [logoFullBase64, monogramBase64, photos] = await Promise.all([
+  const [logoFullBase64, monogramFull, monogramTransparent, wordmarkTransparent, photos] = await Promise.all([
     nacistObrazek("gp-logo-full.png"),
     nacistObrazek("gp-logo-monogram.png"),
+    nacistObrazek("logos-transparent/gp-monogram.png"),
+    nacistObrazek("logos-transparent/gp-full.png"),
     nacistFotky(id),
   ]);
 
-  const buffer = await generujPptx(design, {
+  const buffer = await generujPptx(design, delka, {
     data: prezentace,
     logoFullBase64,
-    monogramBase64,
+    monogramBase64: monogramTransparent ?? monogramFull,
+    wordmarkBase64: wordmarkTransparent,
     photos,
   });
 
-  const filename = `grand-padel-${slugify(prezentace.firma_nazev)}-${design.toLowerCase()}.pptx`;
+  const delkaSuffix = delka === "full" ? "" : `-${delka}`;
+  const filename = `grand-padel-${slugify(prezentace.firma_nazev)}-${design.toLowerCase()}${delkaSuffix}.pptx`;
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,

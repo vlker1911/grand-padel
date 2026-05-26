@@ -1054,11 +1054,11 @@ export default function NovaHraPage() {
         <div className="max-w-2xl mx-auto">
 
           <div className="mb-8">
-            <Link href="/hry" className="text-sm hover:underline" style={{ color: "#801A28" }}>Zpet na hry</Link>
-            <h1 className="text-2xl font-bold mt-3" style={{ color: "#801A28" }}>Nova hra</h1>
+            <Link href="/hry" className="text-sm hover:underline" style={{ color: "#8C1325" }}>Zpet na hry</Link>
+            <h1 className="text-2xl font-bold mt-3" style={{ color: "#8C1325" }}>Nova hra</h1>
             <div className="flex gap-2 mt-4">
               {Array.from({ length: maxKrok }, (_, i) => (
-                <div key={i} className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: krok > i ? "#801A28" : "#e5e7eb" }} />
+                <div key={i} className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: krok > i ? "#8C1325" : "#e5e7eb" }} />
               ))}
             </div>
           </div>
@@ -1070,14 +1070,14 @@ export default function NovaHraPage() {
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-base font-semibold" style={{ color: "#0A0A0A" }}>Format hry</h2>
                   <button onClick={() => setWizardOpen(true)}
-                    className="text-xs underline" style={{ color: "#801A28" }}>
+                    className="text-xs underline" style={{ color: "#8C1325" }}>
                     Doporuč variantu turnaje
                   </button>
                 </div>
                 <div className="flex flex-col gap-3">
                   {FORMATY.map(f => (
                     <button key={f.typ} onClick={() => setTyp(f.typ)}
-                      className={`text-left rounded-2xl border-2 p-5 bg-white transition-all ${typ === f.typ ? "border-[#801A28] shadow-md" : "border-zinc-200 hover:border-zinc-300"}`}>
+                      className={`text-left rounded-2xl border-2 p-5 bg-white transition-all ${typ === f.typ ? "border-[#8C1325] shadow-md" : "border-zinc-200 hover:border-zinc-300"}`}>
                       <p className="font-bold mb-1" style={{ color: "#0A0A0A" }}>{f.nazev}</p>
                       <p className="text-xs leading-relaxed" style={{ color: "#6b7280" }}>{f.popis}</p>
                     </button>
@@ -1096,14 +1096,14 @@ export default function NovaHraPage() {
                       { id: "social", label: "Socialni round robin" },
                     ].map(s => (
                       <button key={s.id} onClick={() => aplikujSablonu(s.id)}
-                        className="text-left rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-xs font-medium hover:border-[#801A28] transition-colors"
+                        className="text-left rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-xs font-medium hover:border-[#8C1325] transition-colors"
                         style={{ color: "#374151" }}>
                         {s.label}
                       </button>
                     ))}
                     <button onClick={otevriPrevModal}
-                      className="text-left rounded-xl border-2 border-dashed border-zinc-300 bg-white px-3 py-2.5 text-xs font-medium hover:border-[#801A28] transition-colors"
-                      style={{ color: "#801A28" }}>
+                      className="text-left rounded-xl border-2 border-dashed border-zinc-300 bg-white px-3 py-2.5 text-xs font-medium hover:border-[#8C1325] transition-colors"
+                      style={{ color: "#8C1325" }}>
                       ⟲ Z předchozího turnaje
                     </button>
                   </div>
@@ -1122,7 +1122,7 @@ export default function NovaHraPage() {
                       <label className="text-sm font-medium" style={{ color: "#374151" }}>Pocet hracu</label>
                       <input type="number" min={4} max={256} value={pocetHracu}
                         onChange={e => { const n = parseInt(e.target.value); if (!isNaN(n)) nastavPocetHracu(n); else setPocetHracu(""); }}
-                        className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                        className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                       <p className="text-xs" style={{ color: "#9ca3af" }}>Minimum 4, vzdy sudy pocet.</p>
                     </div>
                   )}
@@ -1136,16 +1136,16 @@ export default function NovaHraPage() {
                         if (!isNaN(n)) { setPocetKurtu(n); if (typ === "mexicano") setCislaMexicano(Array.from({ length: n }, (_, i) => i + 1).join(", ")); }
                         else setPocetKurtu("");
                       }}
-                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                   </div>
 
                   {/* Cas k dispozici */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium" style={{ color: "#374151" }}>Cas k dispozici</label>
                     <div className="flex items-center gap-3">
-                      <input type="time" value={casOd} onChange={e => setCasOd(e.target.value)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      <input type="time" value={casOd} onChange={e => setCasOd(e.target.value)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                       <span style={{ color: "#9ca3af" }}>–</span>
-                      <input type="time" value={casDo} onChange={e => setCasDo(e.target.value)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      <input type="time" value={casDo} onChange={e => setCasDo(e.target.value)} className="flex-1 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                     </div>
                   </div>
 
@@ -1155,7 +1155,7 @@ export default function NovaHraPage() {
                       <label className="text-sm font-medium" style={{ color: "#374151" }}>Body na zapas</label>
                       <div className="flex items-center gap-3">
                         <input type="number" min={8} max={99} value={bodyNaZapas} onChange={e => setBodyNaZapas(Number(e.target.value))}
-                          className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                          className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                         <p className="text-sm flex-1" style={{ color: "#6b7280" }}>= cca {odhadMinut(bodyNaZapas)} minut na zapas</p>
                       </div>
                     </div>
@@ -1170,13 +1170,13 @@ export default function NovaHraPage() {
                           setCislaMexicano(e.target.value);
                           const c = e.target.value.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
                           if (c.length > 0) setPocetKurtu(c.length);
-                        }} className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                        }} className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-medium" style={{ color: "#374151" }}>Minut na kolo</label>
                         <div className="flex items-center gap-3">
                           <input type="number" min={1} max={60} value={minutNaKolo} onChange={e => setMinutNaKolo(Number(e.target.value))}
-                            className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                            className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                           <span className="text-sm" style={{ color: "#6b7280" }}>min</span>
                         </div>
                         {(() => {
@@ -1192,7 +1192,7 @@ export default function NovaHraPage() {
                         <label className="text-sm font-medium" style={{ color: "#374151" }}>Cas na presun</label>
                         <div className="flex items-center gap-3">
                           <input type="number" min={0} max={30} value={minutPresunu} onChange={e => setMinutPresunu(Number(e.target.value))}
-                            className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                            className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                           <span className="text-sm" style={{ color: "#6b7280" }}>min</span>
                         </div>
                       </div>
@@ -1208,7 +1208,7 @@ export default function NovaHraPage() {
                         <div className="flex gap-2">
                           {(["pary", "singles", "mix"] as const).map(t => (
                             <button key={t} onClick={() => setTypParovani(t)}
-                              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${typParovani === t ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${typParovani === t ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
                               {t === "pary" ? "Pary" : t === "singles" ? "Jednotlivci" : "Mix"}
                             </button>
                           ))}
@@ -1222,13 +1222,13 @@ export default function NovaHraPage() {
                             <label className="text-sm font-medium" style={{ color: "#374151" }}>Pocet hotovych paru</label>
                             <input type="number" min={0} max={128} value={pocetTymu}
                               onChange={e => { const n = parseInt(e.target.value); if (!isNaN(n)) nastavPocetTymu(n); else setPocetTymu(""); }}
-                              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                           </div>
                           <div className="flex flex-col gap-1.5 flex-1">
                             <label className="text-sm font-medium" style={{ color: "#374151" }}>Pocet jednotlivcu</label>
                             <input type="number" min={0} max={256} value={pocetSinglesHracu}
                               onChange={e => { const n = parseInt(e.target.value); if (!isNaN(n)) nastavPocetSingles(n); else setPocetSinglesHracu(""); }}
-                              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                           </div>
                         </div>
                       ) : (
@@ -1243,7 +1243,7 @@ export default function NovaHraPage() {
                                 if (!isNaN(n)) typParovani === "pary" ? nastavPocetTymu(n) : nastavPocetSingles(n);
                                 else typParovani === "pary" ? setPocetTymu("") : setPocetSinglesHracu("");
                               }}
-                              className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                              className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                             <p className="text-sm flex-1" style={{ color: "#6b7280" }}>
                               {typParovani === "pary" && typeof pocetTymu === "number" && pocetTymu > 0
                                 ? `= ${pocetTymu * 2} hracu · ${vypocitejPocetSkupin(pocetTymu)} ${(() => { const n = vypocitejPocetSkupin(pocetTymu); return n === 1 ? "skupina" : n < 5 ? "skupiny" : "skupin"; })()}`
@@ -1269,7 +1269,7 @@ export default function NovaHraPage() {
                         <div className="flex gap-2">
                           {(["gamy", "sety", "body", "cas"] as const).map(t => (
                             <button key={t} onClick={() => { setScoringTyp(t); setScoringLimit(t === "gamy" ? 6 : t === "body" ? 24 : t === "cas" ? 12 : 6); setScoringLimitPlayoff(t === "gamy" ? 6 : t === "body" ? 24 : t === "cas" ? 12 : 6); }}
-                              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${scoringTyp === t ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold border-2 transition-all ${scoringTyp === t ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
                               {t === "gamy" ? "Gamy" : t === "body" ? "Body" : t === "cas" ? "Čas" : "Sety"}
                             </button>
                           ))}
@@ -1283,7 +1283,7 @@ export default function NovaHraPage() {
                               <div className="flex gap-2">
                                 {([1, 2, 3] as const).map(n => (
                                   <button key={n} onClick={() => setSetyVitezne(n)}
-                                    className={`flex-1 rounded-lg py-1.5 text-xs font-semibold border transition-all ${setyVitezne === n ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                    className={`flex-1 rounded-lg py-1.5 text-xs font-semibold border transition-all ${setyVitezne === n ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
                                     {n === 1 ? "1 set" : n === 2 ? "2 vítězné" : "3 vítězné"}
                                   </button>
                                 ))}
@@ -1294,7 +1294,7 @@ export default function NovaHraPage() {
                               <div className="flex gap-2">
                                 {[4, 5, 6].map(g => (
                                   <button key={g} onClick={() => setSetyDelkaSetu(g)}
-                                    className={`flex-1 rounded-lg py-1.5 text-xs font-semibold border transition-all ${setyDelkaSetu === g ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                    className={`flex-1 rounded-lg py-1.5 text-xs font-semibold border transition-all ${setyDelkaSetu === g ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
                                     do {g}
                                   </button>
                                 ))}
@@ -1321,7 +1321,7 @@ export default function NovaHraPage() {
                             {!autoKolo ? (
                               <p className="text-xs" style={{ color: "#6b7280" }}>Cas kola se spocita automaticky podle poctu kurtu, casu a poctu zapasu.</p>
                             ) : !autoKolo.validni ? (
-                              <p className="text-xs" style={{ color: "#801A28" }}>
+                              <p className="text-xs" style={{ color: "#8C1325" }}>
                                 <strong>Turnaj se nevejde do casu.</strong> Potreba kolo {autoKolo.delkaKola} min (minimum 10).
                                 Prodluz cas, sniz pocet tymu, nebo pridej kurt.
                               </p>
@@ -1336,7 +1336,7 @@ export default function NovaHraPage() {
                           <>
                             <div className="flex items-center gap-3 mt-1">
                               <input type="number" min={1} max={99} value={scoringLimit} onChange={e => setScoringLimit(Number(e.target.value))}
-                                className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                                className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                               <span className="text-sm" style={{ color: "#6b7280" }}>
                                 {scoringTyp === "gamy" ? "gamy na zapas" : "bodu na zapas"}
                               </span>
@@ -1356,8 +1356,8 @@ export default function NovaHraPage() {
                                     { v: "advantage", l: "Klasické výhody", p: "Bez limitu shod. Nejdelší." },
                                   ] as const).map(p => (
                                     <button key={p.v} onClick={() => setPointRule(p.v)}
-                                      className={`flex-1 text-left rounded-lg py-2 px-3 border-2 transition-all ${pointRule === p.v ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}
-                                      style={{ color: pointRule === p.v ? "#801A28" : "#374151" }}>
+                                      className={`flex-1 text-left rounded-lg py-2 px-3 border-2 transition-all ${pointRule === p.v ? "border-[#8C1325] bg-red-50" : "border-zinc-200"}`}
+                                      style={{ color: pointRule === p.v ? "#8C1325" : "#374151" }}>
                                       <div className="text-xs font-semibold">{p.l}</div>
                                       <div className="text-xs font-normal mt-0.5" style={{ color: "#9ca3af" }}>{p.p}</div>
                                     </button>
@@ -1373,7 +1373,7 @@ export default function NovaHraPage() {
                               <div className="flex items-center gap-3">
                                 <span className="text-xs shrink-0" style={{ color: "#6b7280" }}>Playoff:</span>
                                 <input type="number" min={1} max={99} value={scoringLimitPlayoff} onChange={e => setScoringLimitPlayoff(Number(e.target.value))}
-                                  className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                                  className="w-24 rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                                 <span className="text-sm" style={{ color: "#6b7280" }}>
                                   {scoringTyp === "gamy" ? "gamy" : "bodu"}
                                 </span>
@@ -1384,8 +1384,8 @@ export default function NovaHraPage() {
                               const chybiH = Math.floor(chybi / 60), chybiM = chybi % 60;
                               const chybiText = chybiH > 0 ? `${chybiH}h ${chybiM}min` : `${chybiM} min`;
                               return (
-                                <div className="rounded-xl p-3 mt-1" style={{ backgroundColor: "#fef2f2", borderLeft: "3px solid #801A28" }}>
-                                  <p className="text-xs font-semibold mb-2" style={{ color: "#801A28" }}>Turnaj nelze stihnout v zadanem case</p>
+                                <div className="rounded-xl p-3 mt-1" style={{ backgroundColor: "#fef2f2", borderLeft: "3px solid #8C1325" }}>
+                                  <p className="text-xs font-semibold mb-2" style={{ color: "#8C1325" }}>Turnaj nelze stihnout v zadanem case</p>
                                   <div className="grid grid-cols-3 gap-2 mb-2 text-xs" style={{ color: "#7f1d1d" }}>
                                     <div><span style={{ color: "#9ca3af" }}>Potreba:</span> <strong>{odhadTurnaje.text}</strong></div>
                                     <div><span style={{ color: "#9ca3af" }}>K dispozici:</span> <strong>{Math.floor(celkemMinut/60)}h {celkemMinut % 60}min</strong></div>
@@ -1406,7 +1406,7 @@ export default function NovaHraPage() {
                                     <li>Prepni na format <strong>Cas</strong> — kolo se zkrati a vse se vejde:</li>
                                   </ul>
                                   <button onClick={() => { setScoringTyp("cas"); setScoringLimit(12); setScoringLimitPlayoff(12); }}
-                                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: "#801A28" }}>
+                                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: "#8C1325" }}>
                                     Prepnout na Cas
                                   </button>
                                 </div>
@@ -1421,13 +1421,13 @@ export default function NovaHraPage() {
                         <label className="text-sm font-medium" style={{ color: "#374151" }}>Skupinová fáze</label>
                         <div className="flex gap-2">
                           <button onClick={() => setBezSkupin(false)}
-                            className={`flex-1 rounded-xl py-2.5 px-3 border-2 text-left transition-all ${!bezSkupin ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}>
-                            <p className="text-sm font-semibold" style={{ color: !bezSkupin ? "#801A28" : "#374151" }}>Ano — skupiny + playoff</p>
+                            className={`flex-1 rounded-xl py-2.5 px-3 border-2 text-left transition-all ${!bezSkupin ? "border-[#8C1325] bg-red-50" : "border-zinc-200"}`}>
+                            <p className="text-sm font-semibold" style={{ color: !bezSkupin ? "#8C1325" : "#374151" }}>Ano — skupiny + playoff</p>
                             <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>Tým si zahraje s každým ve skupině, pak playoff dle umístění.</p>
                           </button>
                           <button onClick={() => setBezSkupin(true)}
-                            className={`flex-1 rounded-xl py-2.5 px-3 border-2 text-left transition-all ${bezSkupin ? "border-[#801A28] bg-red-50" : "border-zinc-200"}`}>
-                            <p className="text-sm font-semibold" style={{ color: bezSkupin ? "#801A28" : "#374151" }}>Ne — rovnou playoff</p>
+                            className={`flex-1 rounded-xl py-2.5 px-3 border-2 text-left transition-all ${bezSkupin ? "border-[#8C1325] bg-red-50" : "border-zinc-200"}`}>
+                            <p className="text-sm font-semibold" style={{ color: bezSkupin ? "#8C1325" : "#374151" }}>Ne — rovnou playoff</p>
                             <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>Bez skupin. Týmy jdou rovnou do pavouka podle nasazení.</p>
                           </button>
                         </div>
@@ -1445,8 +1445,8 @@ export default function NovaHraPage() {
                             { v: "bez",      l: "Bez playoff",                     p: "Konečné pořadí podle skupin." },
                           ] as const).map(m => (
                             <button key={m.v} onClick={() => setPlayoffMode(m.v)}
-                              className={`text-left rounded-xl py-2.5 px-3 border-2 transition-all ${playoffMode === m.v ? "border-[#801A28] bg-red-50" : "border-zinc-200 hover:border-zinc-300"}`}>
-                              <p className="text-sm font-semibold" style={{ color: playoffMode === m.v ? "#801A28" : "#374151" }}>{m.l}</p>
+                              className={`text-left rounded-xl py-2.5 px-3 border-2 transition-all ${playoffMode === m.v ? "border-[#8C1325] bg-red-50" : "border-zinc-200 hover:border-zinc-300"}`}>
+                              <p className="text-sm font-semibold" style={{ color: playoffMode === m.v ? "#8C1325" : "#374151" }}>{m.l}</p>
                               <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>{m.p}</p>
                             </button>
                           ))}
@@ -1462,13 +1462,13 @@ export default function NovaHraPage() {
                                 { v: "top16", l: "Top 16 (R16)", d: "15 zapasu" },
                               ] as const).map(b => (
                                 <button key={b.v} onClick={() => setVitezBracket(b.v)}
-                                  className={`flex-1 rounded-lg py-2 px-2 text-xs font-semibold border-2 transition-all ${vitezBracket === b.v ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
+                                  className={`flex-1 rounded-lg py-2 px-2 text-xs font-semibold border-2 transition-all ${vitezBracket === b.v ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-600"}`}>
                                   <div>{b.l}</div>
                                   <div className="text-xs font-normal opacity-70 mt-0.5">{b.d}</div>
                                 </button>
                               ))}
                             </div>
-                            <label className="flex items-start gap-2 mt-2 cursor-pointer rounded-lg border border-zinc-200 p-3 hover:border-[#801A28]">
+                            <label className="flex items-start gap-2 mt-2 cursor-pointer rounded-lg border border-zinc-200 p-3 hover:border-[#8C1325]">
                               <input type="checkbox" checked={placementBracket}
                                 onChange={e => setPlacementBracket(e.target.checked)}
                                 className="mt-0.5" />
@@ -1527,7 +1527,7 @@ export default function NovaHraPage() {
 
                         {/* Utechovy pavouk — jen pro medaile/vitez (placement uz pokryva poražené) */}
                         {(playoffMode === "medaile" || playoffMode === "vitez") && (
-                          <label className="mt-3 flex items-start gap-2 cursor-pointer rounded-lg border border-zinc-200 p-3 hover:border-[#801A28]">
+                          <label className="mt-3 flex items-start gap-2 cursor-pointer rounded-lg border border-zinc-200 p-3 hover:border-[#8C1325]">
                             <input type="checkbox" checked={utechovyPavouk}
                               onChange={e => setUtechovyPavouk(e.target.checked)}
                               className="mt-0.5" />
@@ -1551,8 +1551,8 @@ export default function NovaHraPage() {
                             { v: "2-1",  l: "2 kurty = 1 skupina",      p: "Dvojice kurtu hraje jednu skupinu paralelne." },
                           ] as const).map(r => (
                             <button key={r.v} onClick={() => setRezimKurtu(r.v)}
-                              className={`text-left rounded-xl py-2.5 px-3 border-2 transition-all ${rezimKurtu === r.v ? "border-[#801A28] bg-red-50" : "border-zinc-200 hover:border-zinc-300"}`}>
-                              <p className="text-sm font-semibold" style={{ color: rezimKurtu === r.v ? "#801A28" : "#374151" }}>{r.l}</p>
+                              className={`text-left rounded-xl py-2.5 px-3 border-2 transition-all ${rezimKurtu === r.v ? "border-[#8C1325] bg-red-50" : "border-zinc-200 hover:border-zinc-300"}`}>
+                              <p className="text-sm font-semibold" style={{ color: rezimKurtu === r.v ? "#8C1325" : "#374151" }}>{r.l}</p>
                               <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>{r.p}</p>
                             </button>
                           ))}
@@ -1569,7 +1569,7 @@ export default function NovaHraPage() {
                 (typ === "turnaj" && scoringTyp !== "cas" && turnajSeNevejde)
               }
                 className="w-full rounded-full py-3 text-sm font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ backgroundColor: "#801A28" }}>
+                style={{ backgroundColor: "#8C1325" }}>
                 {typ === "turnaj" && turnajSeNevejde && scoringTyp !== "cas"
                   ? "Turnaj se nevejde do casu"
                   : "Pokracovat"}
@@ -1584,11 +1584,11 @@ export default function NovaHraPage() {
                 <label className="text-sm font-medium block mb-2" style={{ color: "#374151" }}>Nazev hry (volitelne)</label>
                 <input type="text" value={nazev} onChange={e => setNazev(e.target.value)}
                   placeholder={`${FORMATY.find(f => f.typ === typ)?.nazev} ${new Date().toLocaleDateString("cs-CZ")}`}
-                  className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                  className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setKrok(1)} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
-                <button onClick={() => setKrok(3)} className="flex-1 rounded-full py-3 text-sm font-semibold text-white" style={{ backgroundColor: "#801A28" }}>Pokracovat</button>
+                <button onClick={() => setKrok(3)} className="flex-1 rounded-full py-3 text-sm font-semibold text-white" style={{ backgroundColor: "#8C1325" }}>Pokracovat</button>
               </div>
             </div>
           )}
@@ -1605,9 +1605,9 @@ export default function NovaHraPage() {
                   <div key={i} className="bg-white rounded-xl border border-zinc-100 p-4 flex gap-3 items-center">
                     <span className="text-sm font-bold w-6 text-center shrink-0" style={{ color: "#9ca3af" }}>{i + 1}</span>
                     <input type="text" placeholder="Jmeno" value={h.jmeno} onChange={e => updateHrac(i, "jmeno", e.target.value)}
-                      className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                     <input type="email" placeholder="E-mail (nepovinne)" value={h.email} onChange={e => updateHrac(i, "email", e.target.value)}
-                      className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                      className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                     {hraci.length > 4 && (
                       <button onClick={() => odeberHrace(i)} className="text-zinc-400 hover:text-red-500 text-xl leading-none px-1">x</button>
                     )}
@@ -1615,16 +1615,16 @@ export default function NovaHraPage() {
                 ))}
               </div>
               <button onClick={pridejHrace}
-                className="w-full rounded-xl border-2 border-dashed border-zinc-300 py-3 text-sm font-medium hover:border-[#801A28] transition-colors"
+                className="w-full rounded-xl border-2 border-dashed border-zinc-300 py-3 text-sm font-medium hover:border-[#8C1325] transition-colors"
                 style={{ color: "#6b7280" }}>
                 Pridat hrace
               </button>
-              {chyba && <p className="text-sm text-center" style={{ color: "#801A28" }}>{chyba}</p>}
+              {chyba && <p className="text-sm text-center" style={{ color: "#8C1325" }}>{chyba}</p>}
               <div className="flex gap-3">
                 <button onClick={() => setKrok(2)} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
                 <button onClick={vytvorHru} disabled={stav === "loading"}
                   className="flex-1 rounded-full py-3 text-sm font-semibold text-white disabled:opacity-60"
-                  style={{ backgroundColor: "#801A28" }}>
+                  style={{ backgroundColor: "#8C1325" }}>
                   {stav === "loading" ? "Vytvarim..." : "Spustit hru"}
                 </button>
               </div>
@@ -1652,11 +1652,11 @@ export default function NovaHraPage() {
                   </div>
                   <div className="flex gap-1">
                     <button onClick={() => setPouzitNazvyTymu(false)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${!pouzitNazvyTymu ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${!pouzitNazvyTymu ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
                       Jmena
                     </button>
                     <button onClick={() => setPouzitNazvyTymu(true)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${pouzitNazvyTymu ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-all ${pouzitNazvyTymu ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
                       Nazev tymu
                     </button>
                   </div>
@@ -1685,22 +1685,22 @@ export default function NovaHraPage() {
                               nastavNasazeni(p.id, isNaN(n) || n <= 0 ? null : n);
                             }}
                             placeholder="—"
-                            className="w-14 rounded border border-zinc-200 px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                            className="w-14 rounded border border-zinc-200 px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                           {pary.length > 2 && <button onClick={() => odeberPar(p.id)} className="text-xs" style={{ color: "#9ca3af" }}>odebrat</button>}
                         </div>
                       </div>
                       {pouzitNazvyTymu ? (
                         <input type="text" placeholder="Nazev tymu" value={p.nazevTymu} onChange={e => updatePar(p.id, "nazevTymu", e.target.value)}
-                          className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                          className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                       ) : (
                       <div className="flex gap-3">
                         <div className="flex flex-col gap-1 flex-1">
                           <input type="text" placeholder="Hrac 1" value={p.jmeno1} onChange={e => updatePar(p.id, "jmeno1", e.target.value)}
-                            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                           <div className="flex gap-1">
                             {[{ v: "m", l: "M" }, { v: "z", l: "Z" }].map(g => (
                               <button key={g.v} onClick={() => updatePar(p.id, "pohlavi1", p.pohlavi1 === g.v ? "" : g.v)}
-                                className={`flex-1 rounded-lg py-1 text-xs font-semibold border transition-all ${p.pohlavi1 === g.v ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
+                                className={`flex-1 rounded-lg py-1 text-xs font-semibold border transition-all ${p.pohlavi1 === g.v ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
                                 {g.l}
                               </button>
                             ))}
@@ -1709,11 +1709,11 @@ export default function NovaHraPage() {
                         <span className="self-center text-sm" style={{ color: "#9ca3af" }}>/</span>
                         <div className="flex flex-col gap-1 flex-1">
                           <input type="text" placeholder="Hrac 2" value={p.jmeno2} onChange={e => updatePar(p.id, "jmeno2", e.target.value)}
-                            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                           <div className="flex gap-1">
                             {[{ v: "m", l: "M" }, { v: "z", l: "Z" }].map(g => (
                               <button key={g.v} onClick={() => updatePar(p.id, "pohlavi2", p.pohlavi2 === g.v ? "" : g.v)}
-                                className={`flex-1 rounded-lg py-1 text-xs font-semibold border transition-all ${p.pohlavi2 === g.v ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
+                                className={`flex-1 rounded-lg py-1 text-xs font-semibold border transition-all ${p.pohlavi2 === g.v ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
                                 {g.l}
                               </button>
                             ))}
@@ -1725,7 +1725,7 @@ export default function NovaHraPage() {
                   ))}
                   {pary.length < 128 && (
                     <button onClick={pridejPar}
-                      className="w-full rounded-xl border-2 border-dashed border-zinc-300 py-3 text-sm font-medium hover:border-[#801A28] transition-colors"
+                      className="w-full rounded-xl border-2 border-dashed border-zinc-300 py-3 text-sm font-medium hover:border-[#8C1325] transition-colors"
                       style={{ color: "#6b7280" }}>
                       Pridat par
                     </button>
@@ -1741,11 +1741,11 @@ export default function NovaHraPage() {
                     <div key={s.id} className="bg-white rounded-xl border border-zinc-100 p-4 flex gap-3 items-center">
                       <span className="text-sm font-bold w-5 shrink-0" style={{ color: "#9ca3af" }}>{i + 1}</span>
                       <input type="text" placeholder="Jmeno hrace" value={s.jmeno} onChange={e => updateSingle(s.id, "jmeno", e.target.value)}
-                        className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                        className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                       <div className="flex gap-1 shrink-0">
                         {[{ v: "m", l: "M" }, { v: "z", l: "Z" }].map(g => (
                           <button key={g.v} onClick={() => updateSingle(s.id, "pohlavi", s.pohlavi === g.v ? "" : g.v)}
-                            className={`w-9 rounded-lg py-2 text-xs font-semibold border transition-all ${s.pohlavi === g.v ? "border-[#801A28] text-[#801A28] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
+                            className={`w-9 rounded-lg py-2 text-xs font-semibold border transition-all ${s.pohlavi === g.v ? "border-[#8C1325] text-[#8C1325] bg-red-50" : "border-zinc-200 text-zinc-500"}`}>
                             {g.l}
                           </button>
                         ))}
@@ -1756,7 +1756,7 @@ export default function NovaHraPage() {
                     </div>
                   ))}
                   <button onClick={pridejSingle}
-                    className="w-full rounded-xl border-2 border-dashed border-zinc-300 py-3 text-sm font-medium hover:border-[#801A28] transition-colors"
+                    className="w-full rounded-xl border-2 border-dashed border-zinc-300 py-3 text-sm font-medium hover:border-[#8C1325] transition-colors"
                     style={{ color: "#6b7280" }}>
                     Pridat hrace
                   </button>
@@ -1764,10 +1764,10 @@ export default function NovaHraPage() {
                   {singlesHraci.filter(s => s.jmeno.trim()).length >= 2 && (
                     <div className="rounded-xl p-4" style={{ backgroundColor: "#F2EDE4" }}>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-semibold" style={{ color: "#801A28" }}>
+                        <p className="text-xs font-semibold" style={{ color: "#8C1325" }}>
                           {losovano ? "Vylosovane pary:" : "Losovani paru"}
                         </p>
-                        <button onClick={losuj} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: "#801A28" }}>
+                        <button onClick={losuj} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: "#8C1325" }}>
                           {losovano ? "Losovat znovu" : "Losovat"}
                         </button>
                       </div>
@@ -1782,14 +1782,14 @@ export default function NovaHraPage() {
                 </div>
               )}
 
-              {chyba && <p className="text-sm text-center" style={{ color: "#801A28" }}>{chyba}</p>}
+              {chyba && <p className="text-sm text-center" style={{ color: "#8C1325" }}>{chyba}</p>}
 
               <div className="flex gap-3">
                 <button onClick={() => setKrok(2)} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
                 <button onClick={() => {
                   if (efektivniTymy.length < 2) { setChyba("Zadej alespon 2 pary."); return; }
                   setChyba(""); setKrok(4);
-                }} className="flex-1 rounded-full py-3 text-sm font-semibold text-white" style={{ backgroundColor: "#801A28" }}>
+                }} className="flex-1 rounded-full py-3 text-sm font-semibold text-white" style={{ backgroundColor: "#8C1325" }}>
                   Pokracovat
                 </button>
               </div>
@@ -1815,7 +1815,7 @@ export default function NovaHraPage() {
                 {!losovaneTymy ? (
                   <button onClick={() => setLosovaneTymy(shuffleArray(efektivniTymy))}
                     className="shrink-0 rounded-lg px-4 py-1.5 text-xs font-semibold text-white"
-                    style={{ backgroundColor: "#801A28" }}>
+                    style={{ backgroundColor: "#8C1325" }}>
                     Rozlosovat
                   </button>
                 ) : (
@@ -1837,7 +1837,7 @@ export default function NovaHraPage() {
 
               {skupiny.map((skupina, si) => (
                 <div key={si} className="bg-white rounded-2xl border border-zinc-100 p-5">
-                  <p className="text-xs font-bold mb-3" style={{ color: "#801A28" }}>Skupina {SKUPINY_NAZVY[si]}</p>
+                  <p className="text-xs font-bold mb-3" style={{ color: "#8C1325" }}>Skupina {SKUPINY_NAZVY[si]}</p>
                   <div className="flex flex-col gap-1.5">
                     {skupina.map((tym, ti) => (
                       <div key={tym.id} className="flex items-center gap-2 text-sm">
@@ -1911,8 +1911,8 @@ export default function NovaHraPage() {
                         { v: "bonus_zapas" as const, l: "Bonus zápas", p: "Poslední tým hraje s nejhorším z předchozího pásma o 1 místo." },
                       ]).map(o => (
                         <button key={o.v} onClick={() => setPosledniSamotny(o.v)}
-                          className={`text-left rounded-lg py-2 px-3 border-2 transition-all ${posledniSamotny === o.v ? "border-[#801A28] bg-white" : "border-zinc-200 bg-white hover:border-zinc-300"}`}>
-                          <p className="text-xs font-semibold" style={{ color: posledniSamotny === o.v ? "#801A28" : "#374151" }}>{o.l}</p>
+                          className={`text-left rounded-lg py-2 px-3 border-2 transition-all ${posledniSamotny === o.v ? "border-[#8C1325] bg-white" : "border-zinc-200 bg-white hover:border-zinc-300"}`}>
+                          <p className="text-xs font-semibold" style={{ color: posledniSamotny === o.v ? "#8C1325" : "#374151" }}>{o.l}</p>
                           <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>{o.p}</p>
                         </button>
                       ))}
@@ -1957,13 +1957,13 @@ export default function NovaHraPage() {
                 )}
               </div>
 
-              {chyba && <p className="text-sm text-center" style={{ color: "#801A28" }}>{chyba}</p>}
+              {chyba && <p className="text-sm text-center" style={{ color: "#8C1325" }}>{chyba}</p>}
 
               <div className="flex gap-3">
                 <button onClick={() => { setKrok(3); setLosovaneTymy(null); }} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
                 <button onClick={() => setKrok(5)}
                   className="flex-1 rounded-full py-3 text-sm font-semibold text-white"
-                  style={{ backgroundColor: "#801A28" }}>
+                  style={{ backgroundColor: "#8C1325" }}>
                   Pokracovat na preview
                 </button>
               </div>
@@ -2024,13 +2024,13 @@ export default function NovaHraPage() {
                 </div>
               )}
 
-              {chyba && <p className="text-sm text-center" style={{ color: "#801A28" }}>{chyba}</p>}
+              {chyba && <p className="text-sm text-center" style={{ color: "#8C1325" }}>{chyba}</p>}
 
               <div className="flex gap-3">
                 <button onClick={() => setKrok(4)} className="flex-1 rounded-full py-3 text-sm font-semibold border border-zinc-300 bg-white" style={{ color: "#374151" }}>Zpet</button>
                 <button onClick={vytvorHru} disabled={stav === "loading" || !previewRozvrh}
                   className="flex-1 rounded-full py-3 text-sm font-semibold text-white disabled:opacity-60"
-                  style={{ backgroundColor: "#801A28" }}>
+                  style={{ backgroundColor: "#8C1325" }}>
                   {stav === "loading" ? "Vytvarim..." : "Spustit turnaj"}
                 </button>
               </div>
@@ -2058,7 +2058,7 @@ export default function NovaHraPage() {
                   const s = (h.settings ?? {}) as Record<string, unknown>;
                   return (
                     <button key={h.id} onClick={() => aplikujPredchoziTurnaj(h)}
-                      className="text-left rounded-xl border border-zinc-200 bg-white px-4 py-3 hover:border-[#801A28] transition-colors">
+                      className="text-left rounded-xl border border-zinc-200 bg-white px-4 py-3 hover:border-[#8C1325] transition-colors">
                       <p className="text-sm font-semibold" style={{ color: "#0A0A0A" }}>{h.nazev}</p>
                       <p className="text-xs mt-0.5" style={{ color: "#9ca3af" }}>
                         {new Date(h.created_at).toLocaleDateString("cs-CZ")}
@@ -2109,7 +2109,7 @@ export default function NovaHraPage() {
           return h > 0 ? `${h}h ${mm > 0 ? mm + "min" : ""}` : `${mm} min`;
         };
         const tagInfo = (tag: string) => {
-          if (tag === "optimalni") return { label: "OPTIMÁLNÍ", color: "#801A28" };
+          if (tag === "optimalni") return { label: "OPTIMÁLNÍ", color: "#8C1325" };
           if (tag === "nejvice") return { label: "MAX ZÁPASŮ", color: "#0f766e" };
           return { label: "S REZERVOU", color: "#16a34a" };
         };
@@ -2147,25 +2147,25 @@ export default function NovaHraPage() {
                   <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Počet týmů</label>
                   <input type="number" min={2} max={128} value={wizardTymu}
                     onChange={e => { const n = parseInt(e.target.value); setWizardTymu(isNaN(n) ? "" : n); }}
-                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                 </div>
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Max kurtů</label>
                   <input type="number" min={1} max={20} value={wizardMaxKurtu}
                     onChange={e => { const n = parseInt(e.target.value); setWizardMaxKurtu(isNaN(n) ? "" : n); }}
-                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                 </div>
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Hodiny</label>
                   <input type="number" min={0} max={12} value={wizardDelkaH}
                     onChange={e => { const n = parseInt(e.target.value); setWizardDelkaH(isNaN(n) ? "" : n); }}
-                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                 </div>
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: "#374151" }}>Minuty</label>
                   <input type="number" min={0} max={59} step={5} value={wizardDelkaM}
                     onChange={e => { const n = parseInt(e.target.value); setWizardDelkaM(isNaN(n) ? "" : n); }}
-                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#801A28]" />
+                    className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
                 </div>
               </div>
 
@@ -2180,7 +2180,7 @@ export default function NovaHraPage() {
                 ].map(p => (
                   <button key={p.label}
                     onClick={() => { setWizardDelkaH(p.h); setWizardDelkaM(p.m); }}
-                    className="rounded-full px-3 py-1 text-xs font-medium border border-zinc-200 hover:border-[#801A28] hover:text-[#801A28]"
+                    className="rounded-full px-3 py-1 text-xs font-medium border border-zinc-200 hover:border-[#8C1325] hover:text-[#8C1325]"
                     style={{ color: "#6b7280", backgroundColor: "white" }}>
                     {p.label}
                   </button>
@@ -2199,7 +2199,7 @@ export default function NovaHraPage() {
                     <button key={k} onClick={() => setWizardScoring(k)}
                       className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
                       style={wizardScoring === k
-                        ? { backgroundColor: "#801A28", color: "white", borderColor: "#801A28" }
+                        ? { backgroundColor: "#8C1325", color: "white", borderColor: "#8C1325" }
                         : { color: "#374151", borderColor: "#e5e7eb", backgroundColor: "white" }}>
                       {label}
                     </button>
@@ -2220,7 +2220,7 @@ export default function NovaHraPage() {
                       <button key={String(k)} onClick={() => setWizardGamyLimit(k)}
                         className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
                         style={wizardGamyLimit === k
-                          ? { backgroundColor: "#801A28", color: "white", borderColor: "#801A28" }
+                          ? { backgroundColor: "#8C1325", color: "white", borderColor: "#8C1325" }
                           : { color: "#374151", borderColor: "#e5e7eb", backgroundColor: "white" }}>
                         {label}
                       </button>
@@ -2242,7 +2242,7 @@ export default function NovaHraPage() {
                     <button key={k} onClick={() => setWizardPlayoff(k)}
                       className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
                       style={wizardPlayoff === k
-                        ? { backgroundColor: "#801A28", color: "white", borderColor: "#801A28" }
+                        ? { backgroundColor: "#8C1325", color: "white", borderColor: "#8C1325" }
                         : { color: "#374151", borderColor: "#e5e7eb", backgroundColor: "white" }}>
                       {label}
                     </button>
@@ -2261,7 +2261,7 @@ export default function NovaHraPage() {
                     <button key={k} onClick={() => setWizardStruktura(k)}
                       className="rounded-full px-3 py-1 text-xs font-medium border transition-colors"
                       style={wizardStruktura === k
-                        ? { backgroundColor: "#801A28", color: "white", borderColor: "#801A28" }
+                        ? { backgroundColor: "#8C1325", color: "white", borderColor: "#8C1325" }
                         : { color: "#374151", borderColor: "#e5e7eb", backgroundColor: "white" }}>
                       {label}
                     </button>
@@ -2271,7 +2271,7 @@ export default function NovaHraPage() {
 
               {wizardDoporuceni.length === 0 ? (
                 <div className="rounded-xl p-4" style={{ backgroundColor: "#fef2f2" }}>
-                  <p className="text-sm font-semibold" style={{ color: "#801A28" }}>Žádná varianta se nevejde do času.</p>
+                  <p className="text-sm font-semibold" style={{ color: "#8C1325" }}>Žádná varianta se nevejde do času.</p>
                   <p className="text-xs mt-1" style={{ color: "#7f1d1d" }}>
                     Zkus prodloužit čas, snížit počet týmů nebo přepnout způsob počítání.
                   </p>
@@ -2285,7 +2285,7 @@ export default function NovaHraPage() {
                     <div className="flex justify-center mb-3">
                       <button onClick={() => setWizardZobrazVse(true)}
                         className="text-xs font-medium underline"
-                        style={{ color: "#801A28" }}>
+                        style={{ color: "#8C1325" }}>
                         Zobrazit další varianty
                       </button>
                     </div>
