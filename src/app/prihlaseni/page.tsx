@@ -2,10 +2,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
 
+// Bezpečnostní filtr proti open redirect: dovolíme jen relativní URL na náš web.
+function safeNext(raw: string | null): string {
+  if (!raw) return "/";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/";
+  return raw;
+}
+
 export default function Prihlaseni() {
+  const sp = useSearchParams();
+  const next = safeNext(sp.get("next"));
+
   const [tab, setTab]           = useState<"login" | "register">("login");
   const [email, setEmail]       = useState("");
   const [heslo, setHeslo]       = useState("");
@@ -16,9 +27,10 @@ export default function Prihlaseni() {
   const supabase = createClient();
 
   async function handleGoogle() {
+    const callbackUrl = `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${location.origin}/auth/callback` },
+      options: { redirectTo: callbackUrl },
     });
   }
 
@@ -30,7 +42,7 @@ export default function Prihlaseni() {
     if (tab === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password: heslo });
       if (error) { setStav("chyba"); setZprava("Špatný e-mail nebo heslo."); }
-      else { setStav("ok"); setZprava(""); location.href = "/"; }
+      else { setStav("ok"); setZprava(""); location.href = next; }
     } else {
       const { error } = await supabase.auth.signUp({
         email,

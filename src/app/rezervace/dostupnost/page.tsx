@@ -337,9 +337,10 @@ export default function DostupnostPage() {
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {v.zacatky.map((min) => (
-                          <span
+                          <Link
                             key={min}
-                            className="rounded-lg px-3 py-1.5 text-sm font-medium border"
+                            href={`/rezervace/dostupnost/nova?kurt=${encodeURIComponent(v.kurt.id)}&datum=${datum}&zacatek=${min}&delka=${delka}`}
+                            className="rounded-lg px-3 py-1.5 text-sm font-medium border hover:text-white transition-colors"
                             style={{
                               borderColor: BRAND,
                               color: BRAND,
@@ -347,7 +348,7 @@ export default function DostupnostPage() {
                             }}
                           >
                             {formatMinuty(min)}
-                          </span>
+                          </Link>
                         ))}
                       </div>
                     )}

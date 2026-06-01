@@ -25,5 +25,8 @@ export async function GET(request: NextRequest) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  return NextResponse.redirect(`${origin}/`);
+  // Filtr proti open redirect — povolíme jen relativní cestu.
+  const nextRaw = searchParams.get("next");
+  const next = nextRaw && nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/";
+  return NextResponse.redirect(`${origin}${next}`);
 }
