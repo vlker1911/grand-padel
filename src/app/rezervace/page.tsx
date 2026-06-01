@@ -38,6 +38,25 @@ export default function Rezervace() {
           photoAlt="Hráč padelu"
         />
 
+        {/* Náhled dostupnosti — funkční preview mřížky volných kurtů (jen zobrazení, žádný zápis). */}
+        <section className="py-10 px-4 text-center" style={{ backgroundColor: "#F2EDE4" }}>
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-xl font-bold mb-2" style={{ color: "#8C1325" }}>
+              Chcete se podívat, kdy je volno?
+            </h2>
+            <p className="text-sm mb-5" style={{ color: "#6b7280" }}>
+              Mřížka volných kurtů Olomouc — zatím jen pro náhled, rezervovat půjde s otevřením haly.
+            </p>
+            <Link
+              href="/rezervace/dostupnost"
+              className="inline-block rounded-full px-6 py-3 text-base font-semibold text-white transition-colors"
+              style={{ backgroundColor: "#8C1325" }}
+            >
+              Zobrazit volné kurty
+            </Link>
+          </div>
+        </section>
+
         {/* Jak to funguje */}
         <section className="py-16 px-4 bg-white">
           <div className="max-w-5xl mx-auto">
