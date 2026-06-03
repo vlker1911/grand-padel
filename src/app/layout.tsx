@@ -1,10 +1,30 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin", "latin-ext"],
+// Brand fonty — Bandeja (nadpisy) + Mluvka (text), Fungi Type, self-hosted.
+// Zdroj: /vizual/manual-final-2026-05-23/typografie/, soubory v /public/fonts/.
+const bandeja = localFont({
+  variable: "--font-bandeja",
+  display: "swap",
+  src: [
+    { path: "./fonts/bandeja/Bandeja-Regular-web.woff2",  weight: "400", style: "normal" },
+    { path: "./fonts/bandeja/Bandeja-Medium-web.woff2",   weight: "500", style: "normal" },
+    { path: "./fonts/bandeja/Bandeja-SemiBold-web.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/bandeja/Bandeja-Bold-web.woff2",     weight: "700", style: "normal" },
+  ],
+});
+
+const mluvka = localFont({
+  variable: "--font-mluvka",
+  display: "swap",
+  src: [
+    { path: "./fonts/mluvka/Mluvka-Book-web.woff2",     weight: "300", style: "normal" },
+    { path: "./fonts/mluvka/Mluvka-Regular-web.woff2",  weight: "400", style: "normal" },
+    { path: "./fonts/mluvka/Mluvka-Medium-web.woff2",   weight: "500", style: "normal" },
+    { path: "./fonts/mluvka/Mluvka-SemiBold-web.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/mluvka/Mluvka-Bold-web.woff2",     weight: "700", style: "normal" },
+  ],
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://grandpadel.cz";
@@ -42,8 +62,8 @@ export const metadata: Metadata = {
     images: ["/photos/hero-homepage.jpg"],
   },
   icons: {
-    icon: "/gp-logo-monogram.png",
-    apple: "/gp-logo-monogram.png",
+    icon: "/logos/gp-red.png",
+    apple: "/logos/gp-red.png",
   },
 };
 
@@ -53,7 +73,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="cs" className={`${inter.variable} h-full antialiased`}>
+    <html lang="cs" className={`${bandeja.variable} ${mluvka.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-white text-zinc-900">
         {children}
       </body>

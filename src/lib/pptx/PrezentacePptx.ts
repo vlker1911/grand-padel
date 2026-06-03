@@ -8,16 +8,22 @@ import type { PhotoSet, PrezentaceData } from "@/lib/pdf/PrezentacePdf";
 const PAGE_W = 13.333;
 const PAGE_H = 7.5;
 
-// Brand barvy bez "#" (pptxgenjs požaduje hex bez prefixu)
-const COLOR_BORDO = "8C1325"; // sjednoceno s logem
-const COLOR_BORDO_ACCENT = "8C1325"; // web reality
-const COLOR_CREAM = "F2EDE4";
+// Brand barvy bez "#" (pptxgenjs požaduje hex bez prefixu).
+// Finalizováno 2026-06-03 podle brand manuálu v1.1.119.
+const COLOR_BORDO = "801928";          // Brand Red
+const COLOR_BORDO_ACCENT = "801928";   // Brand Red (akcenty)
+const COLOR_BORDO_DARK = "59111C";     // pro placeholders, hluboký bordó
+const COLOR_CREAM = "F8F6F1";          // Slonová kost
 const COLOR_WHITE = "FFFFFF";
-const COLOR_BLACK = "0A0A0A";
+const COLOR_BLACK = "0D0D0D";          // Měkká černá
 const COLOR_MUTED = "6B7280";
 const COLOR_BORDER = "E5E3DE";
 
-const FONT = "Poppins";
+// Brand fonty: Bandeja (nadpisy) + Mluvka (text).
+// Pozn.: PPTX fontFace nese jen jméno fontu — PowerPoint na příjemci je musí mít
+// instalované nebo použije fallback. Pro klienty bez Bandeji bude Arial fallback.
+const FONT_HEADING = "Bandeja";
+const FONT = "Mluvka"; // body default
 
 type Args = {
   data: PrezentaceData;
@@ -96,12 +102,12 @@ function shellPortraitB(
     });
   }
   // Vertikální čára (pravý okraj stripu)
-  s.addShape(pptx.shapes.RECTANGLE, {
+  s.addShape("rect" as never, {
     x: STRIP_W_IN, y: 0, w: LINE_W, h: PORTRAIT_H,
     fill: { color: COLOR_WHITE }, line: { color: COLOR_WHITE, width: 0 },
   });
   // Horizontální čára dole
-  s.addShape(pptx.shapes.RECTANGLE, {
+  s.addShape("rect" as never, {
     x: 0, y: PORTRAIT_H - 0.4, w: PORTRAIT_W, h: LINE_W,
     fill: { color: COLOR_WHITE }, line: { color: COLOR_WHITE, width: 0 },
   });
@@ -182,7 +188,7 @@ function sestavitDesignBKratky(pptx: PptxGenJS, args: Args, delka: "1p" | "2p") 
       });
     }
     // Divider
-    s.addShape(pptx.shapes.RECTANGLE, {
+    s.addShape("rect" as never, {
       x: STRIP_W_IN + MARGIN, y: 3.95, w: 0.7, h: 0.04,
       fill: { color: COLOR_WHITE }, line: { color: COLOR_WHITE, width: 0 },
     });
@@ -197,7 +203,7 @@ function sestavitDesignBKratky(pptx: PptxGenJS, args: Args, delka: "1p" | "2p") 
     // CTA hned pod hodnotami
     const ctaY = hodnotaEnd + 0.15;
     if (o?.call_to_action) {
-      s.addShape(pptx.shapes.RECTANGLE, {
+      s.addShape("rect" as never, {
         x: STRIP_W_IN + MARGIN - 0.05, y: ctaY, w: 0.04, h: 0.8,
         fill: { color: COLOR_CREAM }, line: { color: COLOR_CREAM, width: 0 },
       });
@@ -255,7 +261,7 @@ function sestavitDesignBKratky(pptx: PptxGenJS, args: Args, delka: "1p" | "2p") 
         color: COLOR_CREAM, fontSize: 11, fontFace: FONT, transparency: 10,
       });
     }
-    s1.addShape(pptx.shapes.RECTANGLE, {
+    s1.addShape("rect" as never, {
       x: STRIP_W_IN + MARGIN, y: 3.95, w: 0.7, h: 0.04,
       fill: { color: COLOR_WHITE }, line: { color: COLOR_WHITE, width: 0 },
     });
@@ -280,7 +286,7 @@ function sestavitDesignBKratky(pptx: PptxGenJS, args: Args, delka: "1p" | "2p") 
       x: STRIP_W_IN + MARGIN, y: 2.1, w: PORTRAIT_W - STRIP_W_IN - MARGIN * 2, h: 0.7,
       color: COLOR_WHITE, fontSize: 22, fontFace: FONT, bold: true,
     });
-    s2.addShape(pptx.shapes.RECTANGLE, {
+    s2.addShape("rect" as never, {
       x: STRIP_W_IN + MARGIN, y: 2.85, w: 0.7, h: 0.04,
       fill: { color: COLOR_WHITE }, line: { color: COLOR_WHITE, width: 0 },
     });
@@ -289,7 +295,7 @@ function sestavitDesignBKratky(pptx: PptxGenJS, args: Args, delka: "1p" | "2p") 
     // CTA hned pod návrhy
     const ctaY = navrhyEnd + 0.15;
     if (o?.call_to_action) {
-      s2.addShape(pptx.shapes.RECTANGLE, {
+      s2.addShape("rect" as never, {
         x: STRIP_W_IN + MARGIN - 0.05, y: ctaY, w: 0.04, h: 0.8,
         fill: { color: COLOR_CREAM }, line: { color: COLOR_CREAM, width: 0 },
       });
@@ -498,7 +504,7 @@ function sestavitDesignA(pptx: PptxGenJS, { data, logoFullBase64, photos }: Args
       color: COLOR_BLACK, fontSize: 32, fontFace: FONT, bold: true,
     });
     courtLine(s, pptx, COLOR_BORDO_ACCENT);
-    s.addShape(pptx.shapes.RECTANGLE, {
+    s.addShape("rect" as never, {
       x: 0.6, y: 2.7, w: 12.13, h: 1.5,
       fill: { color: COLOR_WHITE },
       line: { color: COLOR_BORDER, width: 1 },
@@ -560,12 +566,12 @@ function sestavitDesignB(pptx: PptxGenJS, { data, monogramBase64, photos }: Args
       s.addImage({ data: monogramBase64, x: 0.4, y: 0.4, w: 0.7, h: 0.7 });
     }
     // Vertikální bílá čára (oddělující strip)
-    s.addShape(pptx.shapes.LINE, {
+    s.addShape("line" as never, {
       x: 1.5, y: 0.3, w: 0, h: PAGE_H - 0.6,
       line: { color: COLOR_WHITE, width: 0.75 },
     });
     // Horizontální spodní čára
-    s.addShape(pptx.shapes.LINE, {
+    s.addShape("line" as never, {
       x: 0, y: PAGE_H - 0.4, w: PAGE_W, h: 0,
       line: { color: COLOR_WHITE, width: 0.5, transparency: 40 },
     });
@@ -647,7 +653,7 @@ function sestavitDesignB(pptx: PptxGenJS, { data, monogramBase64, photos }: Args
         color: COLOR_WHITE, fontSize: 11, fontFace: FONT, transparency: 15,
       });
       // Tenká čára pod
-      s.addShape(pptx.shapes.LINE, {
+      s.addShape("line" as never, {
         x: 1.8, y: y + 0.8, w: PAGE_W - 2.4, h: 0,
         line: { color: COLOR_WHITE, width: 0.5, transparency: 50 },
       });
@@ -742,10 +748,10 @@ function sestavitDesignB(pptx: PptxGenJS, { data, monogramBase64, photos }: Args
       if (f.src) {
         s.addImage({ data: f.src, x, y: 2.8, w: fotkaW, h: fotkaH, sizing: { type: "cover", w: fotkaW, h: fotkaH } });
       } else {
-        s.addShape(pptx.shapes.RECTANGLE, {
+        s.addShape("rect" as never, {
           x, y: 2.8, w: fotkaW, h: fotkaH,
-          fill: { color: "5F0C19" },
-          line: { color: "5F0C19", width: 0 },
+          fill: { color: COLOR_BORDO_DARK },
+          line: { color: COLOR_BORDO_DARK, width: 0 },
         });
       }
       s.addText(f.popis, {
@@ -764,7 +770,7 @@ function sestavitDesignB(pptx: PptxGenJS, { data, monogramBase64, photos }: Args
       color: COLOR_WHITE, fontSize: 46, fontFace: FONT, bold: true,
     });
     // CTA blok s levým bordó indikátorem
-    s.addShape(pptx.shapes.RECTANGLE, {
+    s.addShape("rect" as never, {
       x: 1.8, y: 3.0, w: 0.04, h: 1.6,
       fill: { color: COLOR_CREAM },
       line: { color: COLOR_CREAM, width: 0 },
@@ -809,7 +815,7 @@ function eyebrowA(s: PptxGenJS.Slide, text: string) {
 }
 
 function courtLine(s: PptxGenJS.Slide, pptx: PptxGenJS, color: string) {
-  s.addShape(pptx.shapes.RECTANGLE, {
+  s.addShape("rect" as never, {
     x: 0.6, y: 2.55, w: 0.9, h: 0.04,
     fill: { color },
     line: { color, width: 0 },
@@ -971,7 +977,7 @@ function balicekCardB(
   x: number, y: number, w: number, h: number,
   b: { nazev: string; popis: string; cena_min: number; cena_max: number; vhodne_pro: string },
 ) {
-  s.addShape(pptx.shapes.RECTANGLE, {
+  s.addShape("rect" as never, {
     x, y, w, h,
     fill: { color: COLOR_BORDO },
     line: { color: COLOR_WHITE, width: 1 },

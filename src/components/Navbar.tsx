@@ -18,18 +18,20 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
           <Image
-            src="/gp-logo-monogram.png"
+            src="/logos/gp-red.svg"
             alt="Grand Padel logo"
-            width={36}
+            width={63}
             height={36}
-            className="rounded-sm"
+            className="sm:hidden"
+            priority
           />
           <Image
-            src="/gp-logo-full.png"
+            src="/logos/grand-padel-red.svg"
             alt="Grand Padel"
             width={110}
-            height={44}
-            className="hidden sm:block rounded-sm"
+            height={47}
+            className="hidden sm:block"
+            priority
           />
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-600">
@@ -37,7 +39,7 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className="hover:text-[#8C1325] transition-colors"
+              className="hover:text-brand transition-colors"
             >
               {link.label}
             </Link>

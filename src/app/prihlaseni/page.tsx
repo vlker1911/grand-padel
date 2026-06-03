@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -13,7 +13,18 @@ function safeNext(raw: string | null): string {
   return raw;
 }
 
+// Next 16 vyžaduje, aby useSearchParams() byl wrapped v Suspense boundary
+// (jinak prerender padá s "missing-suspense-with-csr-bailout"). Outer komponenta
+// drží Suspense, inner komponenta useSearchParams.
 export default function Prihlaseni() {
+  return (
+    <Suspense>
+      <PrihlaseniInner />
+    </Suspense>
+  );
+}
+
+function PrihlaseniInner() {
   const sp = useSearchParams();
   const next = safeNext(sp.get("next"));
 
@@ -57,12 +68,12 @@ export default function Prihlaseni() {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="flex-1 flex items-center justify-center px-4 py-16" style={{ backgroundColor: "#F2EDE4" }}>
+      <main className="flex-1 flex items-center justify-center px-4 py-16" style={{ backgroundColor: "#F8F6F1" }}>
         <div className="w-full max-w-md bg-white rounded-2xl shadow-sm p-8">
 
           {/* Logo / nadpis */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold" style={{ color: "#8C1325" }}>Grand Padel</h1>
+            <h1 className="text-2xl font-bold" style={{ color: "#801928" }}>Grand Padel</h1>
             <p className="text-sm mt-1" style={{ color: "#6b7280" }}>
               {tab === "login" ? "Přihlaste se ke svému účtu" : "Vytvořte si účet zdarma"}
             </p>
@@ -72,12 +83,12 @@ export default function Prihlaseni() {
           <div className="flex rounded-xl overflow-hidden border border-zinc-200 mb-6">
             <button onClick={() => setTab("login")}
               className="flex-1 py-2.5 text-sm font-medium transition-colors"
-              style={{ backgroundColor: tab === "login" ? "#8C1325" : "white", color: tab === "login" ? "white" : "#6b7280" }}>
+              style={{ backgroundColor: tab === "login" ? "#801928" : "white", color: tab === "login" ? "white" : "#6b7280" }}>
               Přihlášení
             </button>
             <button onClick={() => setTab("register")}
               className="flex-1 py-2.5 text-sm font-medium transition-colors"
-              style={{ backgroundColor: tab === "register" ? "#8C1325" : "white", color: tab === "register" ? "white" : "#6b7280" }}>
+              style={{ backgroundColor: tab === "register" ? "#801928" : "white", color: tab === "register" ? "white" : "#6b7280" }}>
               Registrace
             </button>
           </div>
@@ -108,29 +119,29 @@ export default function Prihlaseni() {
                 <label className="text-sm font-medium" style={{ color: "#374151" }}>Jméno a příjmení</label>
                 <input type="text" value={jmeno} onChange={e => setJmeno(e.target.value)}
                   placeholder="Jana Nováková" required
-                  className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
+                  className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801928]" />
               </div>
             )}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium" style={{ color: "#374151" }}>E-mail</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="jana@example.cz" required
-                className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
+                className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801928]" />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium" style={{ color: "#374151" }}>Heslo</label>
               <input type="password" value={heslo} onChange={e => setHeslo(e.target.value)}
                 placeholder="••••••••" required minLength={6}
-                className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1325]" />
+                className="rounded-xl border border-zinc-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#801928]" />
             </div>
 
             {zprava && (
-              <p className="text-sm text-center" style={{ color: stav === "ok" ? "#16a34a" : "#8C1325" }}>{zprava}</p>
+              <p className="text-sm text-center" style={{ color: stav === "ok" ? "#16a34a" : "#801928" }}>{zprava}</p>
             )}
 
             <button type="submit" disabled={stav === "loading"}
               className="rounded-full py-3 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
-              style={{ backgroundColor: "#8C1325" }}>
+              style={{ backgroundColor: "#801928" }}>
               {stav === "loading" ? "Moment…" : tab === "login" ? "Přihlásit se" : "Vytvořit účet"}
             </button>
           </form>
@@ -140,7 +151,7 @@ export default function Prihlaseni() {
           </p>
         </div>
       </main>
-      <footer className="py-4 px-4 text-center text-xs" style={{ backgroundColor: "#F2EDE4", color: "#9ca3af" }}>
+      <footer className="py-4 px-4 text-center text-xs" style={{ backgroundColor: "#F8F6F1", color: "#9ca3af" }}>
         v{process.env.NEXT_PUBLIC_APP_VERSION}
       </footer>
     </div>

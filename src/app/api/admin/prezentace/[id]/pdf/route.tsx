@@ -85,11 +85,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ chyba: "Prezentace nemá obsah" }, { status: 400 });
   }
 
-  const [logoFull, monogramFull, monogramTransparent, wordmarkTransparent, photos] = await Promise.all([
-    nacistObrazek("gp-logo-full.png"),
-    nacistObrazek("gp-logo-monogram.png"),
-    nacistObrazek("logos-transparent/gp-monogram.png"),
-    nacistObrazek("logos-transparent/gp-full.png"),
+  // Finální SVG/PNG loga s průhledným pozadím (manual-final-2026-05-23/logo/).
+  // Bílé verze pro bordó pozadí Design B, červené pro bílé pozadí Design A.
+  const [logoRed, monogramWhite, wordmarkWhite, photos] = await Promise.all([
+    nacistObrazek("logos/grand-padel-red.png"),
+    nacistObrazek("logos/gp-white.png"),
+    nacistObrazek("logos/grand-padel-white.png"),
     nacistFotky(id),
   ]);
 
@@ -97,13 +98,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     design === "B" ? (
       <PrezentacePdfB
         data={prezentace}
-        monogramBase64={monogramTransparent ?? monogramFull}
-        wordmarkBase64={wordmarkTransparent}
+        monogramBase64={monogramWhite}
+        wordmarkBase64={wordmarkWhite}
         photos={photos}
         delka={delka}
       />
     ) : (
-      <PrezentacePdf data={prezentace} logoBase64={logoFull} photos={photos} />
+      <PrezentacePdf data={prezentace} logoBase64={logoRed} photos={photos} />
     );
 
   const buffer = await renderToBuffer(element);

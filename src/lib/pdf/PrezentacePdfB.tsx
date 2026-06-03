@@ -17,29 +17,34 @@ import { brand } from "@/lib/brand";
 import type { Balicek } from "@/app/api/admin/prezentace/ulozit/route";
 import type { PhotoSet, PrezentaceData } from "./PrezentacePdf";
 
-// Poppins font už zaregistrován v PrezentacePdf.tsx, ale Font.register
-// je idempotentní (stejná rodina + cesty = no-op).
-const FONT_DIR = path.join(process.cwd(), "public", "fonts", "poppins");
+// Brand fonty — Bandeja (nadpisy) + Mluvka (text), Fungi Type, self-hosted OTF.
+// Font.register je idempotentní — když už je registrace z PrezentacePdf.tsx, no-op.
+const BANDEJA_DIR = path.join(process.cwd(), "public", "fonts", "bandeja", "Desktop");
+const MLUVKA_DIR = path.join(process.cwd(), "public", "fonts", "mluvka", "Desktop");
 Font.register({
-  family: "Poppins",
+  family: "Bandeja",
   fonts: [
-    { src: path.join(FONT_DIR, "Poppins-Regular.ttf"), fontWeight: 400 },
-    { src: path.join(FONT_DIR, "Poppins-Medium.ttf"), fontWeight: 500 },
-    { src: path.join(FONT_DIR, "Poppins-SemiBold.ttf"), fontWeight: 600 },
-    { src: path.join(FONT_DIR, "Poppins-Bold.ttf"), fontWeight: 700 },
-    { src: path.join(FONT_DIR, "Poppins-Black.ttf"), fontWeight: 900 },
+    { src: path.join(BANDEJA_DIR, "Bandeja-Regular.otf"),   fontWeight: 400 },
+    { src: path.join(BANDEJA_DIR, "Bandeja-Medium.otf"),    fontWeight: 500 },
+    { src: path.join(BANDEJA_DIR, "Bandeja-SemiBold.otf"),  fontWeight: 600 },
+    { src: path.join(BANDEJA_DIR, "Bandeja-Bold.otf"),      fontWeight: 700 },
+    { src: path.join(BANDEJA_DIR, "Bandeja-ExtraBold.otf"), fontWeight: 800 },
+  ],
+});
+Font.register({
+  family: "Mluvka",
+  fonts: [
+    { src: path.join(MLUVKA_DIR, "Mluvka-Book.otf"),     fontWeight: 300 },
+    { src: path.join(MLUVKA_DIR, "Mluvka-Regular.otf"),  fontWeight: 400 },
+    { src: path.join(MLUVKA_DIR, "Mluvka-Medium.otf"),   fontWeight: 500 },
+    { src: path.join(MLUVKA_DIR, "Mluvka-SemiBold.otf"), fontWeight: 600 },
+    { src: path.join(MLUVKA_DIR, "Mluvka-Bold.otf"),     fontWeight: 700 },
   ],
 });
 
-// Pacifico — script font pro "Grand" v logu (placeholder dle brand DNA).
-const PACIFICO_PATH = path.join(process.cwd(), "public", "fonts", "pacifico", "Pacifico-Regular.ttf");
-Font.register({
-  family: "Pacifico",
-  fonts: [{ src: PACIFICO_PATH }],
-});
-
-const FONT = "Poppins";
-const BG = "#8C1325"; // Brand Red — pozadí Design B
+const FONT_HEADING = "Bandeja";
+const FONT_BODY = "Mluvka";
+const BG = brand.colors.red; // Brand Red #801928 — pozadí Design B
 
 // Landscape (dlouhá verze) — 16:9 widescreen
 const PAGE_W = 960;
@@ -56,7 +61,7 @@ const s = StyleSheet.create({
   page: {
     width: PAGE_W,
     height: PAGE_H,
-    fontFamily: FONT,
+    fontFamily: FONT_BODY,
     fontSize: 14,
     color: brand.colors.white,
     backgroundColor: BG,
@@ -112,12 +117,14 @@ const s = StyleSheet.create({
   },
   bigTitle: {
     fontSize: 56,
-    fontWeight: 900,
+    fontFamily: FONT_HEADING,
+    fontWeight: 800,
     lineHeight: 1.05,
     marginBottom: 18,
   },
   midTitle: {
     fontSize: 36,
+    fontFamily: FONT_HEADING,
     fontWeight: 700,
     lineHeight: 1.1,
     marginBottom: 16,
@@ -145,7 +152,8 @@ const s = StyleSheet.create({
   // Cover
   coverTitle: {
     fontSize: 80,
-    fontWeight: 900,
+    fontFamily: FONT_HEADING,
+    fontWeight: 800,
     lineHeight: 1,
     marginBottom: 12,
   },
@@ -154,7 +162,7 @@ const s = StyleSheet.create({
   // Stats
   statsRow: { flexDirection: "row", gap: 36, marginTop: 16 },
   stat: { flexDirection: "column" },
-  statBig: { fontSize: 40, fontWeight: 900, color: brand.colors.cream, lineHeight: 1 },
+  statBig: { fontSize: 40, fontFamily: FONT_HEADING, fontWeight: 800, color: brand.colors.cream, lineHeight: 1 },
   statLabel: { fontSize: 11, marginTop: 4, opacity: 0.85, maxWidth: 140 },
   // Centra list
   centrumRadek: {
@@ -166,6 +174,7 @@ const s = StyleSheet.create({
   },
   centrumNazev: {
     fontSize: 22,
+    fontFamily: FONT_HEADING,
     fontWeight: 700,
     color: brand.colors.white,
     flex: 1,
@@ -216,7 +225,7 @@ const s = StyleSheet.create({
   ctaText: { fontSize: 18, lineHeight: 1.4, fontWeight: 500 },
   kontaktRadek: { fontSize: 14, fontWeight: 500, marginBottom: 4 },
   // Děkujeme
-  bigClose: { fontSize: 110, fontWeight: 900, lineHeight: 1, marginBottom: 14 },
+  bigClose: { fontSize: 110, fontFamily: FONT_HEADING, fontWeight: 800, lineHeight: 1, marginBottom: 14 },
   closeSub: { fontSize: 20, opacity: 0.9 },
 });
 
@@ -414,7 +423,7 @@ export function PrezentacePdfB({
                 style={{ width: "100%", height: 320, objectFit: "cover", borderRadius: 4 }}
               />
             ) : (
-              <View style={{ width: "100%", height: 320, backgroundColor: "#5F0C19", borderRadius: 4 }} />
+              <View style={{ width: "100%", height: 320, backgroundColor: brand.colors.redActive, borderRadius: 4 }} />
             )}
           </View>
         </View>
@@ -479,7 +488,7 @@ function FotoCista({ src, popis }: { src: string | undefined; popis: string }) {
       {src ? (
         <Image src={src} style={{ flex: 1, width: "100%", objectFit: "cover", borderRadius: 4 }} />
       ) : (
-        <View style={{ flex: 1, width: "100%", backgroundColor: "#5F0C19", borderRadius: 4 }} />
+        <View style={{ flex: 1, width: "100%", backgroundColor: brand.colors.redActive, borderRadius: 4 }} />
       )}
       <Text style={{ fontSize: 10, color: brand.colors.cream, opacity: 0.85 }}>{popis}</Text>
     </View>
@@ -534,7 +543,7 @@ const portraitStyles = StyleSheet.create({
   page: {
     width: PORTRAIT_W,
     height: PORTRAIT_H,
-    fontFamily: FONT,
+    fontFamily: FONT_BODY,
     fontSize: 11,
     color: brand.colors.white,
     backgroundColor: BG,
@@ -550,61 +559,6 @@ const portraitStyles = StyleSheet.create({
     padding: 16,
     flexDirection: "column",
     justifyContent: "flex-start",
-  },
-  // Malý GP monogram v stripu (G script + P bold)
-  monogramWrap: { flexDirection: "column", alignItems: "flex-start" },
-  monogramG: {
-    fontFamily: "Pacifico",
-    fontSize: 28,
-    color: brand.colors.white,
-    lineHeight: 1,
-  },
-  monogramP: {
-    fontFamily: FONT,
-    fontSize: 22,
-    fontWeight: 900,
-    color: brand.colors.white,
-    lineHeight: 1,
-    marginTop: -6,
-    marginLeft: 8,
-  },
-  // BIG centrovaný "Grand Padel" wordmark NAHOŘE
-  wordmarkBig: {
-    alignItems: "center",
-    marginBottom: 22,
-  },
-  wordmarkGrand: {
-    fontFamily: "Pacifico",
-    fontSize: 56,
-    color: brand.colors.white,
-    lineHeight: 1,
-  },
-  wordmarkPadel: {
-    fontFamily: FONT,
-    fontSize: 44,
-    fontWeight: 900,
-    color: brand.colors.white,
-    lineHeight: 1,
-    marginTop: -10,
-  },
-  // Malý centrovaný wordmark (pro 2. stránku 2p)
-  wordmarkSmall: {
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  wordmarkGrandSmall: {
-    fontFamily: "Pacifico",
-    fontSize: 32,
-    color: brand.colors.white,
-    lineHeight: 1,
-  },
-  wordmarkPadelSmall: {
-    fontFamily: FONT,
-    fontSize: 26,
-    fontWeight: 900,
-    color: brand.colors.white,
-    lineHeight: 1,
-    marginTop: -6,
   },
   // Hlavní obsahová oblast
   main: {
@@ -641,7 +595,7 @@ const portraitStyles = StyleSheet.create({
     fontWeight: 500,
   },
   // Firma title
-  firmaTitle: { fontSize: 36, fontWeight: 900, lineHeight: 1.05 },
+  firmaTitle: { fontSize: 36, fontFamily: FONT_HEADING, fontWeight: 800, lineHeight: 1.05 },
   firmaTyp: { fontSize: 11, color: brand.colors.cream, marginTop: 6, opacity: 0.9 },
   divider: { width: 48, height: 2, backgroundColor: brand.colors.white, marginTop: 12, marginBottom: 16 },
   // Sekce
@@ -652,7 +606,7 @@ const portraitStyles = StyleSheet.create({
     fontWeight: 600,
     marginBottom: 8,
   },
-  sectionTitle: { fontSize: 22, fontWeight: 700, color: brand.colors.white, marginBottom: 12, lineHeight: 1.1 },
+  sectionTitle: { fontSize: 22, fontFamily: FONT_HEADING, fontWeight: 700, color: brand.colors.white, marginBottom: 12, lineHeight: 1.1 },
   bulletRow: { flexDirection: "row", marginBottom: 7, gap: 10 },
   bulletMark: { fontSize: 12, fontWeight: 700, color: brand.colors.cream, width: 16 },
   bulletText: { flex: 1, fontSize: 11, lineHeight: 1.5, color: brand.colors.white, opacity: 0.94 },
@@ -676,7 +630,7 @@ const portraitStyles = StyleSheet.create({
   // Fotky NA KONEC stránky
   photoRow: { flexDirection: "row", gap: 8, marginTop: "auto" },
   photoBox: { flex: 1, height: 150, borderRadius: 3, objectFit: "cover" },
-  photoPlaceholder: { flex: 1, height: 150, borderRadius: 3, backgroundColor: "#5F0C19" },
+  photoPlaceholder: { flex: 1, height: 150, borderRadius: 3, backgroundColor: brand.colors.redActive },
 });
 
 // Mapování slugů na labely typu spolupráce (vrátí "Sponzoring · Firemní turnaj…")
@@ -788,11 +742,13 @@ function renderOnePageB({ data, monogramBase64, wordmarkBase64, photos, datum }:
           </View>
         </View>
 
-        {/* Fotky NA KONEC */}
-        <View style={portraitStyles.photoRow}>
-          {photos.hero ? <Image src={photos.hero} style={portraitStyles.photoBox} /> : <View style={portraitStyles.photoPlaceholder} />}
-          {photos.teambuilding ? <Image src={photos.teambuilding} style={portraitStyles.photoBox} /> : <View style={portraitStyles.photoPlaceholder} />}
-        </View>
+        {/* Fotky NA KONEC — vynech pokud žádné nejsou */}
+        {(photos.hero || photos.teambuilding) && (
+          <View style={portraitStyles.photoRow}>
+            {photos.hero && <Image src={photos.hero} style={portraitStyles.photoBox} />}
+            {photos.teambuilding && <Image src={photos.teambuilding} style={portraitStyles.photoBox} />}
+          </View>
+        )}
       </PageShellPortrait>
     </Document>
   );
@@ -811,7 +767,7 @@ function renderTwoPageB({ data, monogramBase64, wordmarkBase64, photos, datum }:
         <View style={portraitStyles.divider} />
 
         <Text style={portraitStyles.sectionEyebrow}>PROČ GRAND PADEL JAKO PARTNER</Text>
-        {(obsah?.hodnota ?? []).map((h, i) => (
+        {(obsah?.hodnota ?? []).slice(0, 4).map((h, i) => (
           <View key={i} style={portraitStyles.bulletRow}>
             <Text style={portraitStyles.bulletMark}>—</Text>
             <Text style={portraitStyles.bulletText}>{h}</Text>
@@ -829,7 +785,7 @@ function renderTwoPageB({ data, monogramBase64, wordmarkBase64, photos, datum }:
         <Text style={portraitStyles.sectionTitle}>Co můžeme spolu udělat</Text>
         <View style={portraitStyles.divider} />
 
-        {(obsah?.konkretni_navrhy ?? []).slice(0, 5).map((n, i) => (
+        {(obsah?.konkretni_navrhy ?? []).slice(0, 4).map((n, i) => (
           <View key={i} style={portraitStyles.bulletRow}>
             <Text style={portraitStyles.bulletMark}>{`${i + 1}.`}</Text>
             <Text style={portraitStyles.bulletText}>{n}</Text>

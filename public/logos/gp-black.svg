@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 1440 826" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(1,0,0,1,-3252.436111,-11382.742179)">
+        <g id="GP_Logo_Black" transform="matrix(1.066667,0,0,0.764091,3252.436111,11382.742179)">
+            <rect x="0" y="0" width="1350" height="1080" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="0" y="0" width="1350" height="1080"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(0.944056,0,0,1.262658,-156.713287,111.113921)">
+                    <path d="M1057.382,-68L1352,-68C1504,-68 1596,-12 1596,114C1596,269 1482,409 1241,409L1078,409L996,677L804,677L969.995,135.838C937.545,147.093 903.042,155.588 870,161C820,169 777,170 740,165L747,144C788,149 831,146 870,137C962,116 1052,54 1052,-4C1052,-34 1030,-63 953,-63C594,-63 297,510 477,510C567,510 772,364 820,221L911,221C821,456 601,765 166,765L214,614C599,614 772,359 820,263L816,263C735,394 560,547 409,547C94,547 390,-88 912,-88C972.902,-88 1022.133,-81.3 1057.382,-68ZM1129,243L1285,243C1341,243 1394,199 1394,152C1394,121 1368,98 1329,98L1173,98L1129,243Z"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

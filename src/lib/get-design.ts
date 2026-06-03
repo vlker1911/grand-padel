@@ -74,5 +74,5 @@ export function readDesignOverride(
 
 /** Zavolej po UPDATE web_settings v admin Server Action. */
 export function revalidateWebSettings() {
-  revalidateTag(WEB_SETTINGS_TAG);
+  revalidateTag(WEB_SETTINGS_TAG, "max");
 }

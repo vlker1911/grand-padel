@@ -1,12 +1,16 @@
 @import "tailwindcss";
 
+/* Brand tokeny — finalizováno 2026-06-03 podle brand.grandpadel.cz v1.1.119.
+   Zdroj pravdy: /vizual/barvy/paleta.md a /vizual/typografie/fonty.md. */
 :root {
-  --background: #ffffff;
-  --foreground: #0A0A0A;
-  --brand:        #8C1325;
-  --brand-hover:  #6E1622;
-  --brand-active: #5C121C;
-  --cream:        #F2EDE4;
+  --background:   #ffffff;
+  --foreground:   #0D0D0D;
+  --brand:        #801928;
+  --brand-hover:  #6A1521;
+  --brand-active: #59111C;
+  --ivory:        #F8F6F1;
+  /* Alias pro backward compat — `cream` nahrazena `ivory` */
+  --cream:        #F8F6F1;
 }
 
 @theme inline {
@@ -15,8 +19,21 @@
   --color-brand:         var(--brand);
   --color-brand-hover:   var(--brand-hover);
   --color-brand-active:  var(--brand-active);
+  --color-ivory:         var(--ivory);
   --color-cream:         var(--cream);
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  /* Bandeja (nadpisy) + Mluvka (text) — self-hosted, viz layout.tsx */
+  --font-headline: var(--font-bandeja), Arial, system-ui, sans-serif;
+  --font-body:     var(--font-mluvka),  Arial, system-ui, sans-serif;
+  --font-sans:     var(--font-mluvka),  Arial, system-ui, sans-serif;
+}
+
+body {
+  font-weight: 300; /* Mluvka Book — manuál doporučuje pro delší texty */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-headline);
+  font-weight: 600; /* Bandeja SemiBold pro běžné nadpisy; 700 Bold tam, kde je headline přes fotku */
 }
 
 body {

@@ -11,24 +11,35 @@ import {
 import { brand } from "@/lib/brand";
 import type { GenerovanyObsah, Balicek } from "@/app/api/admin/prezentace/ulozit/route";
 
-// Poppins TTF lokálně v public/fonts/poppins/.
-const FONT_DIR = path.join(process.cwd(), "public", "fonts", "poppins");
+// Brand fonty — Bandeja (nadpisy) + Mluvka (text), Fungi Type, self-hosted OTF.
+const BANDEJA_DIR = path.join(process.cwd(), "public", "fonts", "bandeja", "Desktop");
+const MLUVKA_DIR = path.join(process.cwd(), "public", "fonts", "mluvka", "Desktop");
 Font.register({
-  family: "Poppins",
+  family: "Bandeja",
   fonts: [
-    { src: path.join(FONT_DIR, "Poppins-Regular.ttf"), fontWeight: 400 },
-    { src: path.join(FONT_DIR, "Poppins-Medium.ttf"), fontWeight: 500 },
-    { src: path.join(FONT_DIR, "Poppins-SemiBold.ttf"), fontWeight: 600 },
-    { src: path.join(FONT_DIR, "Poppins-Bold.ttf"), fontWeight: 700 },
-    { src: path.join(FONT_DIR, "Poppins-Black.ttf"), fontWeight: 900 },
+    { src: path.join(BANDEJA_DIR, "Bandeja-Regular.otf"),   fontWeight: 400 },
+    { src: path.join(BANDEJA_DIR, "Bandeja-Medium.otf"),    fontWeight: 500 },
+    { src: path.join(BANDEJA_DIR, "Bandeja-SemiBold.otf"),  fontWeight: 600 },
+    { src: path.join(BANDEJA_DIR, "Bandeja-Bold.otf"),      fontWeight: 700 },
+    { src: path.join(BANDEJA_DIR, "Bandeja-ExtraBold.otf"), fontWeight: 800 },
+  ],
+});
+Font.register({
+  family: "Mluvka",
+  fonts: [
+    { src: path.join(MLUVKA_DIR, "Mluvka-Book.otf"),     fontWeight: 300 },
+    { src: path.join(MLUVKA_DIR, "Mluvka-Regular.otf"),  fontWeight: 400 },
+    { src: path.join(MLUVKA_DIR, "Mluvka-Medium.otf"),   fontWeight: 500 },
+    { src: path.join(MLUVKA_DIR, "Mluvka-SemiBold.otf"), fontWeight: 600 },
+    { src: path.join(MLUVKA_DIR, "Mluvka-Bold.otf"),     fontWeight: 700 },
   ],
 });
 
-const FONT = "Poppins";
+const FONT_HEADING = "Bandeja";
+const FONT_BODY = "Mluvka";
 
-// Cover bordó SJEDNOCEN S LOGO PNG (#8C1325) aby okraje loga nebyly viditelné.
-// Brand Red akcenty zůstávají na #8C1325 (web reality).
-const COVER_BG = "#8C1325";
+// Cover Brand Red podle finalizovaného manuálu (brand.colors.red #801928)
+const COVER_BG = brand.colors.red;
 
 // 16:9 widescreen — 960 × 540pt
 const PAGE_W = 960;
@@ -38,7 +49,7 @@ const s = StyleSheet.create({
   page: {
     width: PAGE_W,
     height: PAGE_H,
-    fontFamily: FONT,
+    fontFamily: FONT_BODY,
     fontSize: 14,
     color: brand.colors.black,
     padding: 50,
@@ -46,7 +57,7 @@ const s = StyleSheet.create({
   pageDark: {
     width: PAGE_W,
     height: PAGE_H,
-    fontFamily: FONT,
+    fontFamily: FONT_BODY,
     fontSize: 14,
     color: brand.colors.white,
     backgroundColor: COVER_BG,
@@ -55,7 +66,7 @@ const s = StyleSheet.create({
   pageCream: {
     width: PAGE_W,
     height: PAGE_H,
-    fontFamily: FONT,
+    fontFamily: FONT_BODY,
     fontSize: 14,
     color: brand.colors.black,
     backgroundColor: brand.colors.cream,
@@ -64,12 +75,12 @@ const s = StyleSheet.create({
   // Cover
   coverWrap: { flex: 1, flexDirection: "column", justifyContent: "space-between" },
   coverHead: { fontSize: 11, opacity: 0.7, letterSpacing: 2 },
-  coverTitle: { fontSize: 48, fontWeight: 900, lineHeight: 1.1, marginBottom: 16 },
+  coverTitle: { fontSize: 48, fontFamily: FONT_HEADING, fontWeight: 800, lineHeight: 1.1, marginBottom: 16 },
   coverSub: { fontSize: 18, fontWeight: 400, opacity: 0.85 },
   coverFoot: { fontSize: 10, opacity: 0.6 },
   // Head bloky (eyebrow + title + court line)
   slideEyebrow: { fontSize: 10, letterSpacing: 2, color: brand.colors.red, marginBottom: 8, fontWeight: 600 },
-  slideTitle: { fontSize: 28, fontWeight: 700, lineHeight: 1.2 },
+  slideTitle: { fontSize: 28, fontFamily: FONT_HEADING, fontWeight: 600, lineHeight: 1.2 },
   // "Linka hřiště" = bílá/červená čára pod titulem jako brand prvek
   courtLine: {
     height: 2,
@@ -95,7 +106,7 @@ const s = StyleSheet.create({
   centrumFoto: { width: "100%", height: 140, objectFit: "cover" },
   centrumFotoPlaceholder: { width: "100%", height: 140, backgroundColor: "#E5E3DE" },
   centrumObsah: { padding: 16, flex: 1 },
-  centrumNazev: { fontSize: 18, fontWeight: 700, color: brand.colors.red },
+  centrumNazev: { fontSize: 18, fontFamily: FONT_HEADING, fontWeight: 700, color: brand.colors.red },
   centrumKdy: { fontSize: 11, color: brand.colors.muted, marginTop: 2 },
   centrumPopis: { fontSize: 12, lineHeight: 1.5, marginTop: 8 },
   // Balíček karta
@@ -108,7 +119,7 @@ const s = StyleSheet.create({
     padding: 12,
     backgroundColor: brand.colors.white,
   },
-  balicekNazev: { fontSize: 14, fontWeight: 700, color: brand.colors.red, marginBottom: 4 },
+  balicekNazev: { fontSize: 14, fontFamily: FONT_HEADING, fontWeight: 700, color: brand.colors.red, marginBottom: 4 },
   balicekPopis: { fontSize: 10, lineHeight: 1.4, marginBottom: 6 },
   balicekCena: { fontSize: 12, fontWeight: 600 },
   balicekVhodne: { fontSize: 9, color: brand.colors.muted, marginTop: 2 },
@@ -128,7 +139,7 @@ const s = StyleSheet.create({
   ctaText: { fontSize: 16, lineHeight: 1.4, fontWeight: 500 },
   kontaktRadek: { fontSize: 13, fontWeight: 500 },
   // Děkujeme
-  closeBig: { fontSize: 80, fontWeight: 900, color: brand.colors.white, lineHeight: 1, marginBottom: 16 },
+  closeBig: { fontSize: 80, fontFamily: FONT_HEADING, fontWeight: 800, color: brand.colors.white, lineHeight: 1, marginBottom: 16 },
   closeSub: { fontSize: 18, opacity: 0.85, color: brand.colors.white },
   // Atmosféra collage
   collageGrid: { flex: 1, flexDirection: "row", gap: 12 },
@@ -372,7 +383,7 @@ export function PrezentacePdf({
 function Statistika({ cislo, popis }: { cislo: string; popis: string }) {
   return (
     <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 22, fontWeight: 900, color: brand.colors.red }}>{cislo}</Text>
+      <Text style={{ fontSize: 22, fontFamily: FONT_HEADING, fontWeight: 800, color: brand.colors.red }}>{cislo}</Text>
       <Text style={{ fontSize: 9, color: brand.colors.muted, marginTop: 2 }}>{popis}</Text>
     </View>
   );
@@ -427,8 +438,8 @@ function PageFoot({ firma, cislo }: { firma: string; cislo: number }) {
   );
 }
 
-type FotoStyle = Parameters<typeof Image>[0]["style"];
+type FotoStyle = React.ComponentProps<typeof Image>["style"];
 function FotoNeboPlaceholder({ src, style }: { src: string | undefined; style: FotoStyle }) {
   if (src) return <Image src={src} style={style} />;
-  return <View style={[style, { backgroundColor: "#E5E3DE" }] as FotoStyle} />;
+  return <View style={[style, { backgroundColor: "#E5E3DE" }] as React.ComponentProps<typeof View>["style"]} />;
 }

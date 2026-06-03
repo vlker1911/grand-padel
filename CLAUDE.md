@@ -66,17 +66,19 @@ Vždy si přečti před prací:
 
 Pokud měníš brand v kódu (`globals.css`, `lib/brand.ts`, apod.), nejdřív ověř proti těmto souborům. Když najdeš nesoulad (kód říká X, paleta říká Y), **paleta vyhrává** a kód se upravuje.
 
-### ⚠ Logo na barevném pozadí — KRITICKÉ pravidlo
+### Logo — finální SVG s průhledným pozadím
 
-Soubory `vizual/loga/*.png` mají **vlastní pozadí v starším placeholderu `#801A28`**, NIKOLI v oficiální Brand Red `#8C1325`. Když umístíš PNG logo na bordó stránku (cover prezentace, hero sekce), vznikne viditelný obdélníkový okraj kolem loga.
+Od 2026-06-03 jsou k dispozici **finální vektorová loga (SVG, EPS, PNG)** v `vizual/manual-final-2026-05-23/logo/` — primární `GrandPadel_Logo_*` a zkrácené `GP_Logo_*`, varianty bílá/černá/červená. SVG má **průhledné pozadí** — lze pokládat na libovolnou barvu bez okraje.
 
 **Pravidla:**
-1. **NIKDY** nepokládat PNG logo s vlastním bordó pozadím přímo na bordó plochu.
-2. Pro PDF/PPTX bordó pozadí použít **textový wordmark** `Grand Padel` v Poppins 900 bílá.
-3. Pro web na bordó použít SVG (až bude od grafika) nebo CSS-rendered logo.
-4. PNG je OK **jen na bílé / krémové pozadí**, kde je vlastní pozadí PNG neviditelné.
+1. Pro web a digitální výstupy přednostně **SVG**. PNG jen tam, kde SVG nelze (MS Office, e-mail).
+2. Vybrat variantu podle pozadí: na červené/černé bílé logo, na bílé/slonové kosti červené nebo černé logo.
+3. Dodržet **ochranné zóny** a **minimální velikosti** (12 mm primární, 7 mm zkrácené GP).
+4. Zakázáno: deformace, jiné barvy, nekontrastní podklad.
 
 Plné pravidlo: `vizual/loga/PRAVIDLA-POUZITI.md`.
+
+> **Historická pozn.:** Do 2026-06-03 měly PNG loga vlastní pozadí v `#801A28`, které se nesrovnávalo s tehdejším Brand Red `#8C1325`. Workaround byl textový wordmark v PDF a pixelové generování průhledných PNG (`web-app/scripts/make-logo-transparent.mjs`). Tento problém je s finálními SVG vyřešen — workaround obsoletní.
 
 ## Struktura souborů
 

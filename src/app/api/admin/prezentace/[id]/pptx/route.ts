@@ -82,19 +82,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ chyba: "Prezentace nemá obsah" }, { status: 400 });
   }
 
-  const [logoFullBase64, monogramFull, monogramTransparent, wordmarkTransparent, photos] = await Promise.all([
-    nacistObrazek("gp-logo-full.png"),
-    nacistObrazek("gp-logo-monogram.png"),
-    nacistObrazek("logos-transparent/gp-monogram.png"),
-    nacistObrazek("logos-transparent/gp-full.png"),
+  // Finální SVG/PNG loga (manual-final-2026-05-23/logo/).
+  // Design A: bílé pozadí + červené logo. Design B: bordó pozadí + bílé logo.
+  const [logoRedFull, monogramWhite, wordmarkWhite, photos] = await Promise.all([
+    nacistObrazek("logos/grand-padel-white.png"),
+    nacistObrazek("logos/gp-white.png"),
+    nacistObrazek("logos/grand-padel-white.png"),
     nacistFotky(id),
   ]);
 
   const buffer = await generujPptx(design, delka, {
     data: prezentace,
-    logoFullBase64,
-    monogramBase64: monogramTransparent ?? monogramFull,
-    wordmarkBase64: wordmarkTransparent,
+    logoFullBase64: logoRedFull,
+    monogramBase64: monogramWhite,
+    wordmarkBase64: wordmarkWhite,
     photos,
   });
 

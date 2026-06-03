@@ -1,27 +1,47 @@
 // Grand Padel brand tokeny — JEDEN zdroj pro kód.
 // Hodnoty pocházejí z vizual/barvy/paleta.md a vizual/typografie/fonty.md.
-// Když grafik dodá finál, mění se POUZE tento soubor.
+// Když se brand změní, mění se POUZE tento soubor.
+//
+// Finalizováno 2026-06-03 podle oficiálního brand manuálu brand.grandpadel.cz v1.1.119.
 
 export const brand = {
   colors: {
-    red: "#8C1325",
-    redHover: "#761020",
-    redActive: "#5F0C19",
-    black: "#0A0A0A",
-    white: "#FFFFFF",
-    cream: "#F2EDE4",
-    zincLight: "#F5F4F1",
+    // Hlavní paleta z manuálu
+    red:    "#801928",   // Červená — primární brand color
+    ivory:  "#F8F6F1",   // Slonová kost — krémová alternativa k bílé
+    white:  "#FFFFFF",   // Bílá
+    black:  "#0D0D0D",   // Měkká černá — text a tmavá pozadí
+
+    // UI tonal scale pro červenou (manuál "Rozšířená paleta" zatím nedodán — placeholder)
+    redHover:  "#6A1521",
+    redActive: "#59111C",
+
+    // UI utility (ne brand) — světlejší pozadí, jemné okraje, neutrální gray
+    zincLight:  "#F5F4F1",
     zincBorder: "#E5E3DE",
-    muted: "#6b7280",
+    muted:      "#6b7280",
+
+    // Alias pro backward compat — staré `cream` (#F2EDE4) je nahrazeno `ivory` (#F8F6F1)
+    cream: "#F8F6F1",
   },
   fonts: {
-    headline: "Poppins, system-ui, sans-serif",
-    body: "Poppins, system-ui, sans-serif",
-    logoDisplay: "Poppins, system-ui, sans-serif",
+    // Brand fonty (Fungi Type, custom pro Grand Padel) — self-host v public/fonts/
+    headline:    "Bandeja, Arial, system-ui, sans-serif",
+    body:        "Mluvka, Arial, system-ui, sans-serif",
+    logoDisplay: "Bandeja, Arial, system-ui, sans-serif",
   },
   logo: {
-    fullPng: "/gp-logo-full.png",
-    monogramPng: "/gp-logo-monogram.png",
+    // Finální SVG s průhledným pozadím (manual-final-2026-05-23/logo/).
+    // Použít přednostně SVG; PNG jen kde SVG nelze (MS Office, e-mail).
+    fullSvg:     "/logos/grand-padel-red.svg",
+    monogramSvg: "/logos/gp-red.svg",
+    fullPng:     "/logos/grand-padel-red.png",
+    monogramPng: "/logos/gp-red.png",
+    // Bílé varianty pro tmavá pozadí
+    fullWhiteSvg:     "/logos/grand-padel-white.svg",
+    monogramWhiteSvg: "/logos/gp-white.svg",
+    fullWhitePng:     "/logos/grand-padel-white.png",
+    monogramWhitePng: "/logos/gp-white.png",
   },
 };
 
@@ -49,3 +69,7 @@ export const VELIKOSTI_FIRMY = [
 export type TypSpoluprace = (typeof TYPY_SPOLUPRACE)[number]["value"];
 export type Lokalita = (typeof LOKALITY)[number]["value"];
 export type VelikostFirmy = (typeof VELIKOSTI_FIRMY)[number]["value"];
+
+// Aktivní brand design webu — varianta A (čistá, světlá) nebo B (bordó-dominantní).
+// Přepíná se z /admin/design, uloženo v public.web_settings.
+export type BrandDesign = "A" | "B";
